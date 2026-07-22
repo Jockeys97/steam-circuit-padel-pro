@@ -1,0 +1,163 @@
+export const COURT = {
+  left: 80,
+  right: 880,
+  top: 56,
+  bottom: 564,
+  netY: 310,
+  netHeight: 38,
+};
+
+export const WIN_SCORE = 11;
+
+/** Parametri globali di bilanciamento — unico punto di tuning */
+export const BALANCE = {
+  gravity: 38,
+  ballGravity: 720,
+  groundRestitution: 0.56,
+  groundRestitutionBoost: 0.07,
+  minimumBounceVz: 118,
+  groundTangentialDamping: 0.955,
+  groundSpinTransfer: 0.38,
+  airDrag: 0.9985,
+  airSpinCurve: 0.42,
+  wallTangentialDamping: 0.975,
+  netClearance: 42,
+  playableHitHeight: 108,
+  serviceBounceTime: 0.92,
+  basePaddleSpeed: 498,
+  basePaddleWidth: 112,
+  hitCooldownPlayer: 0.18,
+  hitCooldownAi: 0.26,
+  baseHitLift: 430,
+  baseHitAngle: 345,
+  spinInfluence: 0.32,
+  spinDecay: 0.992,
+  specialMinCharge: 0.32,
+  specialRegen: 0.3,
+  serveVy: 380,
+  serveVx: 125,
+  outMargin: 36,
+  wallEventCooldown: 1.4,
+  comboStep: 4,
+  comboMax: 4,
+};
+
+export const ATHLETES = [
+  {
+    id: "maestro",
+    name: "IL MAESTRO",
+    image: "assets/athletes/maestro.png",
+    sprite: "assets/sprites/maestro.png",
+    backSprite: "assets/sprites/back/maestro.png",
+    role: "Tecnica",
+    color: "#00e5ff",
+    visual: { frame: "athletic", skin: "#c98258", hair: "#241b19", hairStyle: "short", headband: "#f4fbff", kit: "#08bfe8", secondary: "#102d68", accent: "#f4fbff", kitStyle: "diagonal", shoes: "#123f78" },
+    desc: "Precisione millimetrica e lettura di gioco superiore.",
+    stats: { speed: 0.96, power: 0.94, control: 1.28, reach: 1.12, stamina: 1.05 },
+    special: {
+      name: "Colpo di Precisione",
+      cooldown: 3.0,
+      desc: "Angolo estremo e palla difficile da leggere.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#1c1e50 0,#1c1e50 10px,#14163e 10px,#14163e 20px)",
+  },
+  {
+    id: "pantera",
+    name: "LA PANTERA",
+    image: "assets/athletes/pantera.png",
+    sprite: "assets/sprites/pantera.png",
+    backSprite: "assets/sprites/back/pantera.png",
+    role: "Velocità",
+    color: "#ff4b6e",
+    visual: { frame: "slim", skin: "#b96543", hair: "#251516", hairStyle: "long-pony", headband: "#f52f61", kit: "#ed3e5d", secondary: "#29283b", accent: "#ff7690", kitStyle: "side", shoes: "#9d304b" },
+    desc: "Riflessi fulminei e movimenti imprevedibili a rete.",
+    stats: { speed: 1.3, power: 1.0, control: 0.96, reach: 0.98, stamina: 0.98 },
+    special: {
+      name: "Scatto Fulmineo",
+      cooldown: 2.6,
+      desc: "Dash laterale e volée rapidissima.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#301222 0,#301222 10px,#201018 10px,#201018 20px)",
+  },
+  {
+    id: "steamer",
+    name: "LO STEAMER",
+    image: "assets/athletes/steamer.png",
+    sprite: "assets/sprites/steamer.png",
+    backSprite: "assets/sprites/back/steamer.png",
+    role: "Potenza",
+    color: "#ff8c00",
+    visual: { frame: "broad", skin: "#cf7b4e", hair: "#43251b", hairStyle: "spiked", headband: "#ff711c", kit: "#f47713", secondary: "#172c57", accent: "#ff9a35", kitStyle: "raglan", shoes: "#e66b18", beard: true },
+    desc: "Smash devastanti e colpi wall che sfondano ogni difesa.",
+    stats: { speed: 0.86, power: 1.24, control: 0.9, reach: 0.94, stamina: 0.94 },
+    special: {
+      name: "Smash a Vapore",
+      cooldown: 3.4,
+      desc: "Potenza massima con effetto wall.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#301a06 0,#301a06 10px,#201208 10px,#201208 20px)",
+  },
+  {
+    id: "fiamma",
+    name: "LA FIAMMA",
+    image: "assets/athletes/fiamma.png",
+    sprite: "assets/sprites/fiamma.png",
+    backSprite: "assets/sprites/back/fiamma.png",
+    role: "Resistenza",
+    color: "#1aff8a",
+    visual: { frame: "slim", skin: "#c87848", hair: "#251717", hairStyle: "curly-pony", headband: null, kit: "#a9e71d", secondary: "#162d56", accent: "#d7ff4b", kitStyle: "side", shoes: "#9ee31d" },
+    desc: "Inossidabile, recupera ogni punto e stanca gli avversari.",
+    stats: { speed: 1.02, power: 0.98, control: 1.06, reach: 1.06, stamina: 1.38 },
+    special: {
+      name: "Scudo di Vapore",
+      cooldown: 2.8,
+      desc: "Assorbe la pressione e rallenta la palla avversaria.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#0c2c10 0,#0c2c10 10px,#081e0c 10px,#081e0c 20px)",
+  },
+];
+
+export const ARENAS = [
+  {
+    id: "officina",
+    name: "Officina a Vapore",
+    desc: "Campo equilibrato, riferimento del circuito.",
+    image: "assets/arenas/officina-vapore.png",
+    wallBounce: 0.89,
+    floorGrip: 1.0,
+    palette: { floor: "#1a2840", accent: "#00e5ff", gear: "#c89000" },
+  },
+  {
+    id: "locomotive",
+    name: "Deposito Locomotive",
+    desc: "Vetro più vivo, palla più veloce dopo il wall.",
+    image: "assets/arenas/deposito-locomotive.png",
+    wallBounce: 0.92,
+    floorGrip: 0.97,
+    palette: { floor: "#241818", accent: "#ffcc00", gear: "#cc2040" },
+  },
+  {
+    id: "clockwork",
+    name: "Clockwork Factory",
+    desc: "Pavimento pesante, rally più lunghi.",
+    image: "assets/arenas/clockwork-factory.png",
+    wallBounce: 0.86,
+    floorGrip: 1.06,
+    palette: { floor: "#1a2038", accent: "#ff4b6e", gear: "#ffcc00" },
+  },
+];
+
+export const AI_OPPONENTS = [
+  { name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
+  { name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
+  { name: "Campione Steampunk", skill: 0.76, speed: 428, power: 1.05 },
+];
+
+export const EVENT_LINES = [
+  "Rimbalzo sul vetro: angolo perfetto!",
+  "Combo attiva: pressione sul fondo!",
+  "Lettura steampunk: palla letta al millimetro.",
+  "Volée fulminea sul circuito!",
+  "Smash a vapore: difesa sfondata!",
+  "Wall shot: il vetro lavora per te.",
+];

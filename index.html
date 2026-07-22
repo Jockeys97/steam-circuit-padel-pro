@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Steam Circuit Padel Pro — arcade padel steampunk con fisica realistica, 4 campioni e modalità torneo."
+    />
+    <title>Steam Circuit Padel Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- MENU PRINCIPALE -->
+      <section class="screen screen--active" id="screen-menu" aria-label="Menu principale">
+        <nav class="top-nav">
+          <div class="brand">
+            <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#00e5ff" stroke-width="4" />
+              <circle cx="44" cy="22" r="8" fill="#ffcc00" />
+            </svg>
+            <span>STEAM CIRCUIT PADEL PRO</span>
+          </div>
+        </nav>
+
+        <div class="hero">
+          <div class="hero-copy">
+            <div class="badge">
+              <span class="badge-dot"></span>
+              VIDEOGIOCO · PC · BROWSER
+            </div>
+            <h1>IL CIRCUITO A VAPORE<br /><span>TI ASPETTA</span></h1>
+            <p>
+              Gameplay arcade esplosivo, fisica realistica del padel e arene steampunk.
+              Sfida l'IA o scala il circuito in solitaria.
+            </p>
+            <button class="btn btn--primary" type="button" data-action="to-characters">
+              GIOCA ORA
+            </button>
+          </div>
+          <div class="hero-preview">
+            <canvas id="menuPreview" width="480" height="270" aria-hidden="true"></canvas>
+            <div class="hero-tags">
+              <span>PC Browser</span>
+              <span>Arcade</span>
+              <span>Alpha 0.1</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SELEZIONE ATLETA -->
+      <section class="screen" id="screen-characters" aria-label="Selezione atleta">
+        <header class="screen-header">
+          <button class="btn btn--ghost" type="button" data-action="to-menu">← Indietro</button>
+          <div>
+            <h2>GLI ATLETI</h2>
+            <p>4 campioni con stili e abilità uniche — chi scegli?</p>
+          </div>
+        </header>
+        <div class="athlete-grid" id="athleteGrid"></div>
+        <div class="screen-footer">
+          <button class="btn btn--primary" type="button" data-action="to-modes" disabled id="confirmAthlete">
+            CONFERMA ATLETA
+          </button>
+        </div>
+      </section>
+
+      <!-- SELEZIONE MODALITÀ -->
+      <section class="screen" id="screen-modes" aria-label="Selezione modalità">
+        <header class="screen-header">
+          <button class="btn btn--ghost" type="button" data-action="to-characters">← Indietro</button>
+          <div>
+            <h2>MODALITÀ DI GIOCO</h2>
+            <p>Scegli come scendere in campo</p>
+          </div>
+        </header>
+        <div class="mode-grid">
+          <article class="mode-card" data-mode="quick">
+            <div class="mode-card__icon mode-card__icon--cyan">
+              <svg viewBox="0 0 24 24" width="40" height="40"><polygon points="5,3 19,12 5,21" fill="currentColor" /></svg>
+            </div>
+            <h3>PARTITA RAPIDA</h3>
+            <p>Scendi in campo subito contro l'IA. Primo a 11 punti vince.</p>
+            <span class="mode-card__tag mode-card__tag--ready">Disponibile</span>
+          </article>
+          <article class="mode-card" data-mode="tournament">
+            <div class="mode-card__icon mode-card__icon--gold">
+              <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor" /></svg>
+            </div>
+            <h3>TORNEO CAMPIONATO</h3>
+            <p>3 match con difficoltà crescente. Conquista il trofeo del circuito.</p>
+            <span class="mode-card__tag mode-card__tag--ready">Disponibile</span>
+          </article>
+          <article class="mode-card mode-card--locked" data-mode="career">
+            <div class="mode-card__icon mode-card__icon--red">
+              <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08s5.97 1.09 6 3.08c-1.29 1.94-3.5 3.22-6 3.22z" fill="currentColor" /></svg>
+            </div>
+            <h3>CARRIERA</h3>
+            <p>Crea il tuo campione e scala i vertici del circuito nel lungo percorso verso la gloria.</p>
+            <span class="mode-card__tag">Prossimamente</span>
+          </article>
+        </div>
+      </section>
+
+      <!-- ARENA -->
+      <section class="screen" id="screen-arena" aria-label="Selezione arena">
+        <header class="screen-header">
+          <button class="btn btn--ghost" type="button" data-action="to-modes">← Indietro</button>
+          <div>
+            <h2>CAMPI STEAMPUNK</h2>
+            <p>Scegli l'arena del circuito</p>
+          </div>
+        </header>
+        <div class="arena-grid" id="arenaGrid"></div>
+      </section>
+
+      <!-- PARTITA -->
+      <section class="screen" id="screen-game" aria-label="Partita in corso">
+        <div class="game-hud">
+          <section class="scoreboard" aria-label="Punteggio partita">
+            <span class="scoreboard__title">SCORE</span>
+            <div class="scoreboard__teams">
+              <div><span class="game-hud__label" id="playerName">TU</span><strong id="playerScore">0</strong></div>
+              <span class="scoreboard__versus">VS</span>
+              <div><span class="game-hud__label" id="aiName">AVVERSARIO</span><strong id="aiScore">0</strong></div>
+            </div>
+            <span class="scoreboard__match" id="matchInfo">Partita Rapida</span>
+            <span class="scoreboard__control" id="activePlayerLabel">CONTROLLO: FONDO</span>
+            <span id="comboDisplay">Combo x1</span>
+          </section>
+          <div class="game-hud__actions">
+            <section class="game-timer" aria-label="Tempo partita">
+              <span class="game-timer__ball" aria-hidden="true"></span>
+              <span><small>GAME TIME</small><strong id="gameTimer">00:00</strong></span>
+            </section>
+            <button class="hud-pause" type="button" data-action="pause" aria-label="Metti in pausa" title="Pausa">
+              <span aria-hidden="true">Ⅱ</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="game" width="960" height="700" aria-label="Campo da padel"></canvas>
+          <div class="serve-banner" id="serveBanner">SERVIZIO</div>
+          <aside class="mini-map" aria-label="Mini mappa campo">
+            <span>MAPPA</span>
+            <canvas id="miniMap" width="108" height="154" aria-hidden="true"></canvas>
+          </aside>
+          <div class="action-deck" aria-label="Azioni di gioco">
+            <button data-dir="hit" type="button" aria-label="Colpo"><b>◒</b><span>COLPO</span></button>
+            <button data-dir="switch" type="button" aria-label="Cambia giocatore"><b>⇄</b><span>CAMBIA</span></button>
+            <button data-dir="special" type="button" aria-label="Abilità speciale"><b>✦</b><span>SPECIALE</span></button>
+          </div>
+          <div class="touch-controls" aria-label="Controlli touch">
+            <button data-dir="up" type="button" aria-label="Avanti">▲</button>
+            <button data-dir="left" type="button" aria-label="Sinistra">◀</button>
+            <button data-dir="hit" type="button" aria-label="Colpo">HIT</button>
+            <button data-dir="right" type="button" aria-label="Destra">▶</button>
+            <button data-dir="down" type="button" aria-label="Indietro">▼</button>
+            <button data-dir="switch" type="button" aria-label="Cambia giocatore">⇄</button>
+            <button data-dir="special" type="button" aria-label="Colpo speciale">⚡</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Muovi e vai a rete</span></div>
+          <div><kbd>Space</kbd><span>Carica e rilascia il colpo</span></div>
+          <div><kbd>⌘</kbd><span>Carica e rilascia lo slice</span></div>
+          <div><kbd>A</kbd><kbd>D</kbd><kbd>←</kbd><kbd>→</kbd><span>Mira mentre carichi</span></div>
+          <div><kbd>Shift</kbd><span>Abilità speciale</span></div>
+          <div><kbd>Z</kbd><span>Cambia giocatore</span></div>
+          <div><kbd>Esc</kbd><span>Pausa</span></div>
+        </div>
+
+        <div class="special-meter">
+          <span>Abilità</span>
+          <div class="special-meter__bar"><div id="specialFill"></div></div>
+        </div>
+        <div class="shot-meter" aria-label="Controllo colpo">
+          <span>Potenza</span>
+          <div class="shot-meter__power"><div id="shotPowerFill"></div></div>
+          <span>Mira</span>
+          <div class="shot-meter__aim"><i id="shotAimNeedle"></i></div>
+        </div>
+
+        <div class="match-feed">
+          <button class="match-feed__toggle" id="eventLogToggle" type="button" aria-expanded="false" aria-controls="eventLog" title="Apri cronaca">
+            <span aria-hidden="true">☰</span><span>CRONACA</span>
+          </button>
+          <ul class="event-log" id="eventLog" aria-live="polite" hidden></ul>
+        </div>
+      </section>
+
+      <!-- RISULTATO -->
+      <section class="screen" id="screen-result" aria-label="Risultato partita">
+        <div class="result-card">
+          <p class="badge">Fine match</p>
+          <h2 id="resultTitle">VITTORIA!</h2>
+          <p id="resultMessage">Hai conquistato l'arena.</p>
+          <div class="result-scores">
+            <div><span>Tu</span><strong id="resultPlayer">0</strong></div>
+            <div><span>Avversario</span><strong id="resultAi">0</strong></div>
+          </div>
+          <div class="result-actions">
+            <button class="btn btn--primary" type="button" data-action="rematch">RIGIOCA</button>
+            <button class="btn btn--ghost" type="button" data-action="to-menu">MENU</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAUSA -->
+      <div class="pause-overlay" id="pauseOverlay" hidden>
+        <div class="pause-card">
+          <h2>PAUSA</h2>
+          <button class="btn btn--primary" type="button" data-action="resume">CONTINUA</button>
+          <button class="btn btn--secondary" type="button" data-action="rematch">RIGIOCA</button>
+          <button class="btn btn--ghost" type="button" data-action="quit-match">ESCI</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js?v=20260721-service-formation-v1"></script>
+  </body>
+</html>
