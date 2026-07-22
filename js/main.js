@@ -260,7 +260,7 @@ renderArenas(() => startMatch());
 
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
-  if ([" ", "meta", "tab", "z", "arrowleft", "arrowright", "arrowup", "arrowdown", "shift"].includes(key)) {
+  if ([" ", "meta", "alt", "tab", "z", "arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) {
     event.preventDefault();
   }
   if (key === "escape" && matchState?.running) {
@@ -269,7 +269,7 @@ window.addEventListener("keydown", (event) => {
     else pauseGame();
     return;
   }
-  if (key === "shift") specialQueued = true;
+  if (key === "alt") specialQueued = true;
   if (key === "tab" || key === "z") switchQueued = true;
   keys.add(key);
 });
