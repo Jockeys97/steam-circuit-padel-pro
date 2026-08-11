@@ -796,6 +796,17 @@ kbd {
   text-align: center;
 }
 
+.shot-meter__advice {
+  min-width: 130px;
+  color: #d9f8ff;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+}
+
+.shot-meter__advice[data-profile="control"] { color: #8fffd0; }
+.shot-meter__advice[data-profile="attack"] { color: #fff36a; }
+.shot-meter__advice[data-profile="risk"] { color: #ff9a5c; }
+
 .shot-meter__intent[data-intent="slice"] { color: #a8ffcf; }
 .shot-meter__intent[data-intent="lob"] { color: #fff36a; }
 .shot-meter__intent[data-intent="smash"] { color: #ff9a5c; }
@@ -804,7 +815,8 @@ kbd {
 .shot-meter__intent[data-intent="defensive-lob"] { color: #ffe58a; }
 
 .shot-meter__power,
-.shot-meter__aim {
+.shot-meter__aim,
+.shot-meter__timing {
   position: relative;
   width: 170px;
   height: 10px;
@@ -812,6 +824,35 @@ kbd {
   border: 2px solid #1b527e;
   border-radius: 4px;
   background: #0c2946;
+}
+
+.shot-meter__timing {
+  overflow: visible;
+  background: linear-gradient(90deg, #153454, #245879);
+}
+
+#shotTimingPerfect {
+  position: absolute;
+  top: 1px;
+  height: 6px;
+  left: 48%;
+  width: 10%;
+  border-radius: 2px;
+  background: #62f7ad;
+  box-shadow: 0 0 9px rgba(98, 247, 173, 0.65);
+  transition: left 0.08s linear, width 0.08s linear;
+}
+
+#shotTimingNeedle {
+  position: absolute;
+  top: -5px;
+  left: -10px;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 7px rgba(255,255,255,0.8);
+  transition: left 0.05s linear;
 }
 
 #shotPowerFill {

@@ -155,9 +155,15 @@ per traiettorie casuali o colpi inevitabili.
   radiale regolabile e curva progressiva per conservare micro-movimenti e diagonali.
 - A carica il drive, X carica slice o vibora, Y carica il lob, B usa l'abilita'
   speciale e LB cambia rapidamente giocatore.
-- Durante la carica lo stick sinistro smette di muovere l'atleta e controlla la mira
-  assoluta su due assi: gli estremi laterali corrispondono agli angoli estremi del
+- Durante la carica lo stick sinistro controlla la mira assoluta su due assi e
+  conserva un movimento ridotto: il giocatore puo' aggiustare i piedi, ma perde
+  stabilita' se corre. Gli estremi laterali corrispondono agli angoli estremi del
   campo, mentre avanti allunga il colpo e indietro lo accorcia.
+- Il timing meter mostra prima del contatto una finestra perfetta contestuale:
+  corsa, energia, altezza e uscita dal vetro la restringono; lo split-step la amplia.
+  Il consiglio tattico suggerisce il colpo piu' sicuro, ma non limita la scelta.
+- I profili di esecuzione sono controllo (margine e profondita'), attacco (angolo e
+  ritmo) e rischio (massima liberta' di mira, ma dispersione piu' alta).
 - Lo smash usa un input temporale: si carica e rilascia A su una palla alta a rete,
   poi si preme nuovamente A all'impatto. Lo stick sinistro avanti seleziona X2,
   diagonale seleziona X3, neutro produce lo smash piatto e indietro la bandeja.

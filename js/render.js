@@ -463,6 +463,36 @@ export function drawHitZone(ctx, paddle, color) {
   ctx.restore();
 }
 
+export function drawTeamGeometry(ctx, state) {
+  if (!ctx.__padelProject || state.coop) return;
+  const active = state[state.activePlayerKey];
+  const mate = state.activePlayerKey === "player" ? state.playerMate : state.player;
+  const a = ctx.__padelProject(active.x, active.y);
+  const b = ctx.__padelProject(mate.x, mate.y);
+  const center = ctx.__padelProject((active.x + mate.x) / 2, (active.y + mate.y) / 2);
+  const overlap = state.shotRead?.overlap;
+  ctx.save();
+  ctx.setLineDash([7, 7]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = overlap ? "rgba(255,112,96,0.9)" : "rgba(120,232,255,0.38)";
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y - 18 * a.scale);
+  ctx.lineTo(b.x, b.y - 18 * b.scale);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = overlap ? "rgba(255,112,96,0.9)" : "rgba(120,232,255,0.5)";
+  ctx.beginPath();
+  ctx.arc(center.x, center.y - 14 * center.scale, 5 * center.scale, 0, Math.PI * 2);
+  ctx.fill();
+  if (overlap) {
+    ctx.font = "800 11px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffb09a";
+    ctx.fillText("COPRI IL CENTRO", center.x, center.y - 30 * center.scale);
+  }
+  ctx.restore();
+}
+
 export function drawActiveIndicator(
   ctx,
   paddle,

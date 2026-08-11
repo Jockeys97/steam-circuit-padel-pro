@@ -18,6 +18,7 @@ import {
   drawPaddle,
   drawServeBox,
   drawShotFeedback,
+  drawTeamGeometry,
 } from "./render.js?v=20260811-opponent-scale-v6";
 import {
   applyLanguage,
@@ -808,6 +809,7 @@ function gameLoop(now, generation) {
     drawArena(ctx, canvas, matchState.arena, now / 1000);
   drawServeBox(ctx, matchState, now / 1000);
   drawLandingMarker(ctx, matchState.ball, now / 1000);
+  drawTeamGeometry(ctx, matchState);
   drawHitZone(ctx, matchState[matchState.activePlayerKey], "#fff36a");
   drawPaddle(ctx, matchState.opponent, matchState.opponentAthlete.color, false, matchState.opponent.swing,
     matchState.humanMode === "pvp" && matchState.pvpActiveKey === "opponent" ? matchState.opponent.charge : 0,

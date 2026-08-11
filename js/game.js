@@ -144,6 +144,7 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     rallyHits: 0,
     rallyEnergy: { player: 1, ai: 1 },
     shotFeedback: null,
+    shotRead: { active: false, eta: null, perfectWindow: 0.055, advice: "read", profile: "control", overlap: false },
     specialCooldown: 0,
     specialReady: 1,
     serveSide: "player",
@@ -189,6 +190,7 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     aiTeamShape: "defend",
     playerTeamTactic: "balanced",
     tacticFlash: 0,
+    aiX3Recovery: 0,
     playerSwingBuffer: 0,
     queuedShotPower: 1,
     queuedShotAim: 0,
@@ -682,6 +684,48 @@ function shotMode(charge) {
   return "balanced";
 }
 
+function shotProfile(charge, aim, quality) {
+  const aggression = charge * 0.72 + Math.abs(aim) * 0.28;
+  if (aggression > 0.88 && quality >= 0.62) return "risk";
+  if (aggression > 0.42) return "attack";
+  return "control";
+}
+
+function updateShotRead(state, paddle) {
+  const { ball } = state;
+  const incoming = ballPlayableDirection("player", ball) && ball.y > COURT.netY;
+  const eta = incoming && ball.vy > 28 ? (paddle.y - ball.y) / ball.vy : null;
+  const energy = state.rallyEnergy.player;
+  const moving = paddle.moveRatio ?? 0;
+  const glassBall = ball.postGlassSide === "player";
+  const nearGlass = paddle.y > COURT.bottom - 145 || glassBall;
+  const nearNet = paddle.y < COURT.netY + 145;
+  const highBall = ball.z >= BALANCE.smashMinHeight;
+  const opponentsForward = opponentsNearNet("ai", [state.opponent, state.opponentMate]);
+  let advice = "read";
+  if (incoming) {
+    if (nearGlass && ball.z < 62) advice = opponentsForward ? "lob" : "chiquita";
+    else if (nearNet && highBall) advice = "smash";
+    else if (nearNet && ball.z >= 42) advice = "vibora";
+    else if (opponentsForward && ball.z < 48) advice = "lob";
+    else advice = "drive";
+  }
+  const perfectWindow = clamp(
+    BALANCE.perfectTimingWindow
+      - moving * 0.018
+      - Math.max(0, 0.65 - energy) * 0.018
+      - (glassBall ? 0.009 : 0)
+      + (paddle.splitStep ?? 0) * 0.012,
+    0.026,
+    0.07,
+  );
+  const profile = shotProfile(state.shotCharge, state.shotAim, clamp(1 - moving * 0.25, 0, 1));
+  const mate = state.playerMate;
+  const overlap = Math.abs(paddle.x - mate.x) < (paddle.w + mate.w) * 0.52
+    && Math.abs(paddle.y - mate.y) < 92;
+  state.shotRead = { active: incoming && eta !== null && eta > -0.16 && eta < 1.15, eta, perfectWindow, advice, profile, overlap };
+}
+
 function evaluateShotQuality(
   state,
   paddle,
@@ -740,6 +784,7 @@ function evaluateShotQuality(
     0,
     1.25,
   );
+  const profile = shotProfile(charge, aim, quality);
   const grade = timing >= 0.9
     ? "perfect"
     : passedDistance > 12
@@ -747,7 +792,7 @@ function evaluateShotQuality(
       : timing >= 0.7
         ? "good"
         : "early";
-  return { quality, timing, position, balance, height, energy, aggression, risk, mode, grade };
+  return { quality, timing, position, balance, height, energy, aggression, risk, profile, mode, grade };
 }
 
 function consumeRallyEnergy(state, paddle, assessment, variant, slice) {
@@ -775,6 +820,7 @@ function showShotFeedback(state, paddle, assessment) {
   state.shotFeedback = {
     text: labels[assessment.grade],
     mode: t(`shotMode${assessment.mode[0].toUpperCase()}${assessment.mode.slice(1)}`),
+    profile: assessment.profile,
     grade: assessment.grade,
     quality: assessment.quality,
     life: 0.78,
@@ -1023,11 +1069,11 @@ export function hitBall(
   ball.wallAngleResolved = false;
   if (paddle.controlled) {
     const shotPower = clamp(powerMul, 0.34, 1.5);
-    const aimFreedom = assessment.mode === "control"
-      ? 1
-      : assessment.mode === "balanced"
-        ? 0.94
-        : 0.86;
+    const aimFreedom = assessment.profile === "control"
+      ? 0.78
+      : assessment.profile === "attack"
+        ? 0.96
+        : 1.1;
     const aimedOffset = clamp(aim * control * aimFreedom + offset * 0.24, -1, 1);
     const aimedDepth = clamp(aimY, -1, 1);
     const centerX = (COURT.left + COURT.right) / 2;
@@ -1059,12 +1105,13 @@ export function hitBall(
     const safePower = 1.16 + (control - 1) * 0.16;
     const overchargeRisk = Math.max(0, shotPower - safePower);
     const controlRisk = clamp(1.3 - control, 0.06, 0.46);
-    const executionRisk = assessment.risk * (0.72 + controlRisk * 0.7);
+    const profileRisk = assessment.profile === "risk" ? 1.34 : assessment.profile === "attack" ? 1 : 0.62;
+    const executionRisk = assessment.risk * (0.72 + controlRisk * 0.7) * profileRisk;
     const lateralJitter = (Math.random() - 0.5)
       * (overchargeRisk * controlRisk * 300 + executionRisk * 170);
     const depthJitter = (Math.random() - 0.44)
       * (overchargeRisk * controlRisk * 480 + executionRisk * 210);
-    const targetMargin = seeksSideGlass ? 30 : 72;
+    const targetMargin = seeksSideGlass ? 30 : assessment.profile === "control" ? 108 : assessment.profile === "attack" ? 72 : 48;
     const rawTargetX = centerX + aimedOffset * (COURT.right - COURT.left) * 0.42
       + lateralJitter;
     const targetX = overchargeRisk > 0.04 || executionRisk > 0.34
@@ -1229,6 +1276,7 @@ export function hitBall(
     if (ball.shotType === "smash-x2" || ball.shotType === "smash-x3") {
       const smashReadPenalty = ball.shotType === "smash-x2" ? 0.48 : 0.18;
       state.aiReactionDelay += smashReadPenalty + (1 - state.ai.skill) * 0.16;
+      if (ball.shotType === "smash-x3") state.aiX3Recovery = 0.9 + state.ai.skill * 0.22;
     } else if (ball.shotType === "lob") {
       state.aiReactionDelay = Math.max(0.04, state.aiReactionDelay - state.ai.skill * 0.08);
     }
@@ -1512,8 +1560,27 @@ function handleWalls(state) {
     addEvent(state, t("evOwnWallOut"));
   }
   if (hitSideWall && ball.shotType === "smash-x3" && ball.smashStage >= 2) {
-    scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"));
-    return true;
+    const defenders = side === "ai" ? [state.opponent, state.opponentMate] : [state.player, state.playerMate];
+    const recovery = defenders
+      .map((paddle) => ({ paddle, distance: Math.hypot(paddle.x - ball.x, paddle.y - ball.y) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    const aiRead = side === "ai" && state.aiX3Recovery > 0;
+    const recovered = aiRead && recovery.distance <= recovery.paddle.reach * 2.05
+      && recovery.paddle.y < COURT.top + 158;
+    if (!recovered) {
+      scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"));
+      return true;
+    }
+    // The defender has read the exit and plays it off the side glass instead of granting an automatic winner.
+    ball.x = clamp(ball.x, COURT.left + ball.r, COURT.right - ball.r);
+    ball.vx *= -state.arena.wallBounce * 0.72;
+    ball.vy = Math.max(180, Math.abs(ball.vy) * 0.7);
+    ball.vz = Math.max(160, ball.vz * 0.62);
+    ball.shotType = "x3-recovered";
+    ball.smashStage = 0;
+    state.aiX3Recovery = 0;
+    addEvent(state, t("evX3Recovered"));
+    return false;
   }
   if (hitSideWall) {
     ball.x = clamp(ball.x, COURT.left + ball.r, COURT.right - ball.r);
@@ -1703,8 +1770,15 @@ function moveOpponentTeam(state, dt) {
   if (defending) {
     // Difesa di coppia: entrambi dietro, su due corsie e quasi sulla stessa linea.
     const glassReturnOffset = ball.postGlassSide === "ai" ? 42 : -18;
-    primaryTargetY = clamp(ball.y + glassReturnOffset, COURT.top + 76, COURT.netY - 104);
-    supportTargetY = clamp(primaryTargetY - 10, COURT.top + 70, COURT.netY - 112);
+    const x3Read = state.aiX3Recovery > 0 && ball.shotType === "smash-x3";
+    primaryTargetY = x3Read
+      ? COURT.top + 66
+      : clamp(ball.y + glassReturnOffset, COURT.top + 76, COURT.netY - 104);
+    supportTargetY = x3Read ? COURT.top + 98 : clamp(primaryTargetY - 10, COURT.top + 70, COURT.netY - 112);
+    if (x3Read) {
+      primaryTargetX = clamp(ball.x - ball.vx * 0.12, COURT.left + 58, COURT.right - 58);
+      supportTargetX = primaryTargetX < centerX ? centerX + courtWidth * 0.24 : centerX - courtWidth * 0.24;
+    }
     state.aiTeamShape = "defend";
   } else if (attacking) {
     // Dopo un buon colpo avanzano insieme, mantenendo il centro coperto.
@@ -2150,6 +2224,7 @@ export function updateMatch(state, dt, input, input2 = null) {
   state.manualSwitchFlash = Math.max(0, state.manualSwitchFlash - dt);
   state.pvpSwitchFlash = Math.max(0, state.pvpSwitchFlash - dt);
   state.tacticFlash = Math.max(0, state.tacticFlash - dt);
+  state.aiX3Recovery = Math.max(0, state.aiX3Recovery - dt);
   setPlayerTeamTactic(state, input.teamTactic);
   if (state.shotFeedback) {
     state.shotFeedback.life = Math.max(0, state.shotFeedback.life - dt);
@@ -2232,7 +2307,8 @@ export function updateMatch(state, dt, input, input2 = null) {
 
     const splitStep = input.charging ? 0 : clamp(input.splitStep ?? 0, 0, 1);
     const sprint = input.charging || splitStep > 0.15 ? 0 : clamp(input.sprint ?? 0, 0, 1);
-    const chargeMovement = input.charging ? 0.32 : 1;
+    // In padel the player can adjust the feet while preparing: slower, but never frozen.
+    const chargeMovement = input.charging ? 0.58 : 1;
     const movementMultiplier = chargeMovement
       * (1 - splitStep * (1 - BALANCE.splitStepSpeed))
       * (1 + sprint * BALANCE.sprintSpeedBonus);
@@ -2336,6 +2412,8 @@ export function updateMatch(state, dt, input, input2 = null) {
     BALANCE.rallyEnergyFloor,
     1,
   );
+
+  updateShotRead(state, activePlayer(state));
 
   const previousBall = { x: ball.x, y: ball.y, z: ball.z };
   const previousVz = ball.vz;

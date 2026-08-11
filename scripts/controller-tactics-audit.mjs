@@ -42,11 +42,14 @@ function movementDistance(input) {
 }
 
 const normal = movementDistance({});
+const charging = movementDistance({ charging: true });
 const splitStep = movementDistance({ splitStep: 1 });
 const sprint = movementDistance({ sprint: 1 });
 assert(splitStep.distance < normal.distance, "Lo split-step deve privilegiare stabilita rispetto alla velocita");
 assert(sprint.distance > normal.distance, "RT deve aumentare progressivamente la velocita");
 assert(sprint.energy < normal.energy, "Lo sprint deve consumare energia");
+assert(charging.distance < normal.distance && charging.distance > normal.distance * 0.5,
+  "Durante la carica il giocatore deve potersi aggiustare, ma piu lentamente");
 
 const tactic = movementDistance({ teamTactic: "attack" }).state;
 assert.equal(tactic.playerTeamTactic, "attack");
@@ -56,6 +59,7 @@ console.log(JSON.stringify({
   shots: [chiquita.ball.shotType, vibora.ball.shotType, defensiveLob.ball.shotType],
   movement: {
     splitStep: Number(splitStep.distance.toFixed(2)),
+    charging: Number(charging.distance.toFixed(2)),
     normal: Number(normal.distance.toFixed(2)),
     sprint: Number(sprint.distance.toFixed(2)),
   },

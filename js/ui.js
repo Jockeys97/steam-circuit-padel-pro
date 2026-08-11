@@ -334,6 +334,24 @@ export function updateHud(state) {
     intentLabel.textContent = (labels[state.shotIntent] ?? t("shot")).toUpperCase();
     intentLabel.dataset.intent = state.shotIntent;
   }
+  const adviceLabel = document.getElementById("shotAdviceLabel");
+  const advice = state.shotRead?.advice ?? "read";
+  if (adviceLabel) {
+    adviceLabel.textContent = t(`shotAdvice_${advice}`).toUpperCase();
+    adviceLabel.dataset.profile = state.shotRead?.profile ?? "control";
+  }
+  const timingNeedle = document.getElementById("shotTimingNeedle");
+  const timingPerfect = document.getElementById("shotTimingPerfect");
+  if (timingNeedle && timingPerfect) {
+    const timing = state.shotRead;
+    const eta = timing?.active ? timing.eta : null;
+    // The meter is a forecast: the cursor reaches the green zone when the ball reaches the contact plane.
+    const position = eta === null ? -8 : Math.max(-8, Math.min(108, 52 - eta * 72));
+    const width = Math.max(5, Math.min(17, (timing?.perfectWindow ?? 0.055) * 155));
+    timingNeedle.style.left = `${position}%`;
+    timingPerfect.style.left = `${52 - width / 2}%`;
+    timingPerfect.style.width = `${width}%`;
+  }
 
   const banner = document.getElementById("serveBanner");
   const betweenPoints = state.pointPause > 0;

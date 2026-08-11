@@ -188,6 +188,10 @@
               <h3 data-i18n="helpCharge">Carica e colpisci</h3>
               <p data-i18n="helpChargeDesc">Tieni premuto il tasto colpo per caricare potenza, poi rilascia. Muovi lo stick mentre carichi per mirare.</p>
             </article>
+            <article class="help-card help-card--academy">
+              <h3 data-i18n="helpAcademy">Academy del Circuito</h3>
+              <p data-i18n="helpAcademyDesc">Impara timing, vetro, recupero della rete, víbora e smash. Il consiglio live indica la scelta più sicura, senza giocare al posto tuo.</p>
+            </article>
             <article class="help-card">
               <h3 data-i18n="helpSlice">Slice</h3>
               <p data-i18n="helpSliceDesc">Effetto che abbassa la traiettoria e sorprende l'avversario.</p>
@@ -420,10 +424,13 @@
         </div>
         <div class="shot-meter" aria-label="Controllo colpo" data-i18n-aria="ariaShotMeter">
           <strong class="shot-meter__intent" id="shotIntentLabel" data-i18n="shot">COLPO</strong>
+          <strong class="shot-meter__advice" id="shotAdviceLabel">LEGGI LA PALLA</strong>
           <span data-i18n="power">Potenza</span>
           <div class="shot-meter__power"><div id="shotPowerFill"></div></div>
           <span data-i18n="aim">Mira</span>
           <div class="shot-meter__aim"><i id="shotAimNeedle"></i></div>
+          <span>TIMING</span>
+          <div class="shot-meter__timing"><i id="shotTimingPerfect"></i><b id="shotTimingNeedle"></b></div>
         </div>
 
         <div class="match-feed">
