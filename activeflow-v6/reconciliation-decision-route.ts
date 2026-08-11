@@ -1,3 +1,0 @@
-import { NextResponse } from "next/server";
-import { decideReconciliationProposal } from "../../../../../db/reconciliation";
-export async function POST(request: Request) { try { const body = await request.json() as { correlationId?: string; decision?: string }; if (!body.correlationId || !["approve", "reject"].includes(body.decision || "")) return NextResponse.json({ error: "correlationId and a valid decision are required" }, { status: 400 }); return NextResponse.json(await decideReconciliationProposal(body.correlationId, body.decision as "approve" | "reject"), { headers: { "Cache-Control": "no-store" } }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Decision could not be applied" }, { status: 500 }); } }
