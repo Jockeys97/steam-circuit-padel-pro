@@ -1,0 +1,170 @@
+{
+  "input": "/Users/alessiofantini/Documents/Padel/.codex-tmp/conflavoro-cv/Curriculum Vitae Fantini Alessio.docx",
+  "fonts_by_char_count": {
+    "Arial": 223
+  },
+  "direct_run_formatting_runs": 75,
+  "direct_paragraph_formatting_paragraphs": 61,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 1,
+      "text": "PROFILO",
+      "style": "Normal"
+    },
+    {
+      "para_index": 3,
+      "text": "COMPETENZE CHIAVE",
+      "style": "Normal"
+    },
+    {
+      "para_index": 4,
+      "text": "ESPERIENZA PROFESSIONALE",
+      "style": "Normal"
+    },
+    {
+      "para_index": 5,
+      "text": "Full-Stack & Automation Developer | Accademia Italiana Fitness",
+      "style": "Normal"
+    },
+    {
+      "para_index": 17,
+      "text": "PROGETTI SELEZIONATI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 18,
+      "text": "Green Active - ecosistema mobile, gestionale e chatbot",
+      "style": "Normal"
+    },
+    {
+      "para_index": 22,
+      "text": "iOS: Apple App Store   |   Android: Google Play",
+      "style": "Normal"
+    },
+    {
+      "para_index": 23,
+      "text": "SIGNAL - AI Operational Intelligence",
+      "style": "Normal"
+    },
+    {
+      "para_index": 26,
+      "text": "Stack: React 19, TypeScript, Express, SQLite, REST API e workflow AI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 27,
+      "text": "Live demo: Open   |   Source: GitHub",
+      "style": "Normal"
+    },
+    {
+      "para_index": 28,
+      "text": "Steam Circuit Padel Pro - gioco browser 2-vs-2 con gameplay AI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 31,
+      "text": "Stack: HTML5 Canvas, JavaScript ES6+, CSS, fisica custom e gameplay AI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 32,
+      "text": "Live demo: Open   |   Source: GitHub",
+      "style": "Normal"
+    },
+    {
+      "para_index": 33,
+      "text": "ESPERIENZE PRECEDENTI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 34,
+      "text": "Complete Web Developer | Zero to Mastery | Dic 2023 - Mar 2024 | Roma",
+      "style": "Normal"
+    },
+    {
+      "para_index": 36,
+      "text": "Digital Marketing Assistant | Rational Tomato | Ago 2023 - Dic 2023 | Lisbona",
+      "style": "Normal"
+    },
+    {
+      "para_index": 38,
+      "text": "FORMAZIONE",
+      "style": "Normal"
+    },
+    {
+      "para_index": 39,
+      "text": "Laurea Magistrale con lode - Marketing & Digital Communication",
+      "style": "Normal"
+    },
+    {
+      "para_index": 41,
+      "text": "Laurea Triennale - Scienze Politiche",
+      "style": "Normal"
+    },
+    {
+      "para_index": 43,
+      "text": "Diploma di Liceo Scientifico",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 1,
+        "text": "PROFILO",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "text": "Profilo AI automation e conversational systems con esperienza concreta su Botpress Cloud e n8n. Ho lavorato su chatbot G",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "text": "COMPETENZE CHIAVE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "text": "ESPERIENZA PROFESSIONALE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "text": "Full-Stack & Automation Developer | Accademia Italiana Fitness",
+        "style": "Normal"
+      }
+    ],
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "PROFILO",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "run_text": "Profilo AI automation e conversational systems con esperienza concreta su Botpre",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "COMPETENZE CHIAVE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "run_text": "ESPERIENZA PROFESSIONALE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "run_text": "Full-Stack & Automation Developer",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

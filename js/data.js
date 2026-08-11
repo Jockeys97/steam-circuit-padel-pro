@@ -40,6 +40,26 @@ export const BALANCE = {
   wallEventCooldown: 1.4,
   comboStep: 4,
   comboMax: 4,
+  shotBufferWindow: 0.28,
+  smashBufferWindow: 0.9,
+  smashDoubleTapWindow: 0.7,
+  smashContactGrace: 0.18,
+  smashTimingAgeCap: 0.11,
+  perfectTimingWindow: 0.055,
+  goodTimingWindow: 0.13,
+  rallyEnergyRecovery: 0.045,
+  rallyEnergyFloor: 0.16,
+  splitStepSpeed: 0.62,
+  splitStepQualityBonus: 0.075,
+  sprintSpeedBonus: 0.34,
+  sprintEnergyDrain: 0.105,
+  sprintAccuracyPenalty: 0.12,
+  smashNetWindow: 190,
+  smashMinHeight: 46,
+  smashMinPower: 0.98,
+  smashX2MinQuality: 0.6,
+  smashX3MinQuality: 0.7,
+  smashFlatMinQuality: 0.48,
 };
 
 export const ATHLETES = [
@@ -49,6 +69,10 @@ export const ATHLETES = [
     image: "assets/athletes/maestro.png",
     sprite: "assets/sprites/maestro.png",
     backSprite: "assets/sprites/back/maestro.png",
+    actionSprite: "assets/sprites/maestro-action.png",
+    backActionSprite: "assets/sprites/back/maestro-action.png",
+    runSprite: "assets/sprites/maestro-run-v2.png",
+    backRunSprite: "assets/sprites/back/maestro-run-v2.png",
     role: "Tecnica",
     color: "#00e5ff",
     visual: { frame: "athletic", skin: "#c98258", hair: "#241b19", hairStyle: "short", headband: "#f4fbff", kit: "#08bfe8", secondary: "#102d68", accent: "#f4fbff", kitStyle: "diagonal", shoes: "#123f78" },
@@ -67,6 +91,10 @@ export const ATHLETES = [
     image: "assets/athletes/pantera.png",
     sprite: "assets/sprites/pantera.png",
     backSprite: "assets/sprites/back/pantera.png",
+    actionSprite: "assets/sprites/pantera-action.png",
+    backActionSprite: "assets/sprites/back/pantera-action.png",
+    runSprite: "assets/sprites/pantera-run-v2.png",
+    backRunSprite: "assets/sprites/back/pantera-run-v2.png",
     role: "Velocità",
     color: "#ff4b6e",
     visual: { frame: "slim", skin: "#b96543", hair: "#251516", hairStyle: "long-pony", headband: "#f52f61", kit: "#ed3e5d", secondary: "#29283b", accent: "#ff7690", kitStyle: "side", shoes: "#9d304b" },
@@ -85,6 +113,10 @@ export const ATHLETES = [
     image: "assets/athletes/steamer.png",
     sprite: "assets/sprites/steamer.png",
     backSprite: "assets/sprites/back/steamer.png",
+    actionSprite: "assets/sprites/steamer-action.png",
+    backActionSprite: "assets/sprites/back/steamer-action.png",
+    runSprite: "assets/sprites/steamer-run-v2.png",
+    backRunSprite: "assets/sprites/back/steamer-run-v2.png",
     role: "Potenza",
     color: "#ff8c00",
     visual: { frame: "broad", skin: "#cf7b4e", hair: "#43251b", hairStyle: "spiked", headband: "#ff711c", kit: "#f47713", secondary: "#172c57", accent: "#ff9a35", kitStyle: "raglan", shoes: "#e66b18", beard: true },
@@ -103,6 +135,10 @@ export const ATHLETES = [
     image: "assets/athletes/fiamma.png",
     sprite: "assets/sprites/fiamma.png",
     backSprite: "assets/sprites/back/fiamma.png",
+    actionSprite: "assets/sprites/fiamma-action.png",
+    backActionSprite: "assets/sprites/back/fiamma-action.png",
+    runSprite: "assets/sprites/fiamma-run-v2.png",
+    backRunSprite: "assets/sprites/back/fiamma-run-v2.png",
     role: "Resistenza",
     color: "#1aff8a",
     visual: { frame: "slim", skin: "#c87848", hair: "#251717", hairStyle: "curly-pony", headband: null, kit: "#a9e71d", secondary: "#162d56", accent: "#d7ff4b", kitStyle: "side", shoes: "#9ee31d" },
@@ -114,6 +150,40 @@ export const ATHLETES = [
       desc: "Assorbe la pressione e rallenta la palla avversaria.",
     },
     pattern: "repeating-linear-gradient(135deg,#0c2c10 0,#0c2c10 10px,#081e0c 10px,#081e0c 20px)",
+  },
+  {
+    id: "oracolo",
+    name: "L'ORACOLO",
+    image: "assets/athletes/maestro.png",
+    role: "Tecnica",
+    color: "#c98bff",
+    unlock: { trophies: 1 },
+    visual: { frame: "slim", skin: "#8a5a3b", hair: "#0e0c16", hairStyle: "long-pony", headband: "#c98bff", kit: "#6b3df0", secondary: "#1a0f38", accent: "#e3c6ff", kitStyle: "diagonal", shoes: "#3c1f8a" },
+    desc: "Prevede ogni traiettoria: controllo e lettura ai massimi livelli.",
+    stats: { speed: 1.0, power: 0.96, control: 1.34, reach: 1.1, stamina: 1.1 },
+    special: {
+      name: "Visione Perfetta",
+      cooldown: 2.7,
+      desc: "Angolo impossibile calcolato al millimetro.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#241640 0,#241640 10px,#180f2c 10px,#180f2c 20px)",
+  },
+  {
+    id: "colosso",
+    name: "IL COLOSSO",
+    image: "assets/athletes/steamer.png",
+    role: "Potenza",
+    color: "#ffd54a",
+    unlock: { stars: 6 },
+    visual: { frame: "broad", skin: "#b06a3f", hair: "#1c130d", hairStyle: "spiked", headband: "#ffd54a", kit: "#e8b400", secondary: "#2b1e07", accent: "#ffe98a", kitStyle: "raglan", shoes: "#8a6a00", beard: true },
+    desc: "Una potenza bruta che piega il vetro ad ogni impatto.",
+    stats: { speed: 0.9, power: 1.32, control: 0.92, reach: 1.0, stamina: 1.0 },
+    special: {
+      name: "Martello a Vapore",
+      cooldown: 3.2,
+      desc: "Smash che fa tremare l'intera officina.",
+    },
+    pattern: "repeating-linear-gradient(135deg,#3a2a06 0,#3a2a06 10px,#241a04 10px,#241a04 20px)",
   },
 ];
 
@@ -145,12 +215,32 @@ export const ARENAS = [
     floorGrip: 1.06,
     palette: { floor: "#1a2038", accent: "#ff4b6e", gear: "#ffcc00" },
   },
+  {
+    id: "cattedrale",
+    name: "Cattedrale di Vapore",
+    desc: "Vetro reattivo e palla veloce: premi la precisione.",
+    image: "assets/arenas/deposito-locomotive.png",
+    wallBounce: 0.94,
+    floorGrip: 0.95,
+    unlock: { trophies: 2 },
+    palette: { floor: "#101c3a", accent: "#c98bff", gear: "#5a7bff" },
+  },
+  {
+    id: "forgia",
+    name: "Forgia Abyssal",
+    desc: "Grip altissimo e vetro smorzato: rally fisici e tecnici.",
+    image: "assets/arenas/clockwork-factory.png",
+    wallBounce: 0.83,
+    floorGrip: 1.1,
+    unlock: { stars: 10 },
+    palette: { floor: "#241014", accent: "#ffd54a", gear: "#ff5c3a" },
+  },
 ];
 
 export const AI_OPPONENTS = [
-  { name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
-  { name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
-  { name: "Campione Steampunk", skill: 0.76, speed: 428, power: 1.05 },
+  { id: "rivale", name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
+  { id: "ingegnere", name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
+  { id: "campione", name: "Campione Steampunk", skill: 0.76, speed: 428, power: 1.05 },
 ];
 
 export const EVENT_LINES = [
@@ -161,3 +251,48 @@ export const EVENT_LINES = [
   "Smash a vapore: difesa sfondata!",
   "Wall shot: il vetro lavora per te.",
 ];
+
+/**
+ * Progressione carriera — sbloccabili.
+ * `unlock` può richiedere `trophies` (trofei vinti) o `stars` (stelle guadagnate).
+ */
+export function isUnlocked(item, career) {
+  if (!item?.unlock) return true;
+  const { trophies = 0, stars = 0 } = item.unlock;
+  return (career?.trophies ?? 0) >= trophies && (career?.stars ?? 0) >= stars;
+}
+
+/** Pool obiettivi di stagione / match. Ogni obiettivo ha una metrica e un target. */
+export const OBJECTIVE_DEFS = {
+  smashWins: { metric: "smashWinners", unit: "count" },
+  noDoubleFault: { metric: "doubleFaults", unit: "max" },
+  winPoints: { metric: "pointsWon", unit: "count" },
+  winRally: { metric: "longestRally", unit: "count" },
+  winners: { metric: "winners", unit: "count" },
+  fewErrors: { metric: "errors", unit: "max" },
+};
+
+/** Obiettivi di stagione: tre per stagione, scelti deterministicamente. */
+export function seasonObjectives(season) {
+  const pool = [
+    { id: "smashWins", target: 3 + Math.floor(season / 2) },
+    { id: "winners", target: 6 + season },
+    { id: "winRally", target: 8 + season },
+    { id: "noDoubleFault", target: 0 },
+    { id: "winPoints", target: 20 + season * 2 },
+    { id: "fewErrors", target: Math.max(4, 8 - season) },
+  ];
+  const offset = (season - 1) % pool.length;
+  return [0, 1, 2].map((i) => pool[(offset + i) % pool.length]);
+}
+
+/** Obiettivo bonus casuale per il singolo match di carriera. */
+export function matchObjective(season, matchIndex) {
+  const pool = [
+    { id: "smashWins", target: 1 },
+    { id: "winners", target: 2 },
+    { id: "winRally", target: 6 },
+    { id: "noDoubleFault", target: 0 },
+  ];
+  return pool[(season * 7 + matchIndex * 3) % pool.length];
+}

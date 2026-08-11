@@ -1,0 +1,119 @@
+{
+  "document_title": "Curriculum Vitae Fantini Alessio - AI Automation e Agenti Conversazionali",
+  "document_subject": "Candidatura Conflavoro PMI - AI Automation e Agenti Conversazionali",
+  "keywords": "Botpress, chatbot, agenti conversazionali, WhatsApp, n8n, automazione, REST API, webhook, Strapi, JavaScript, Claude Code, Cursor, troubleshooting",
+  "headline": "AI AUTOMATION & CONVERSATIONAL AGENTS",
+  "contact_line": "Roma | Disponibile full remote | +39 366 266 4944 | alessiofant@gmail.com",
+  "section_titles": {
+    "profile": "PROFILO",
+    "skills": "COMPETENZE CHIAVE",
+    "experience": "ESPERIENZA PROFESSIONALE",
+    "projects": "PROGETTI SELEZIONATI",
+    "additional": "ESPERIENZE PRECEDENTI",
+    "education": "FORMAZIONE",
+    "training": "CORSI E LINGUE"
+  },
+  "profile": "Profilo AI automation e conversational systems con esperienza concreta su Botpress Cloud e n8n. Sul chatbot Green Active ho lavorato a un'architettura articolata con flow, nodi autonomi, knowledge base, scenari WhatsApp e integrazioni Botpress-Strapi via REST API. Sviluppo inoltre gestionali e tool AI-assisted con JavaScript/TypeScript, Node.js, PHP, Angular, Strapi e SQL, usando terminale, Git e log per verificare codice e flussi. Attento a privacy, credenziali e dati riservati.",
+  "skills": [
+    {
+      "label": "Botpress e chatbot",
+      "value": "Botpress Cloud/Studio, flow e scenari, prompt, variabili, tool, routing, quick reply, WhatsApp, Inspect e publishing"
+    },
+    {
+      "label": "Automation e integrazioni",
+      "value": "n8n, REST API, webhook, JSON, Strapi, servizi esterni, workflow event-driven, validazione e fallback"
+    },
+    {
+      "label": "Sviluppo AI-assisted",
+      "value": "Claude Code, Cursor, JavaScript, TypeScript, Node.js, PHP, Angular, Flutter, terminale, Git e GitHub"
+    },
+    {
+      "label": "Affidabilità e sicurezza",
+      "value": "Testing, log e risposte API, troubleshooting, error handling, monitoraggio, protezione credenziali e dati riservati"
+    }
+  ],
+  "experiences": [
+    {
+      "title": "Full-Stack & Automation Developer",
+      "company": "Accademia Italiana Fitness",
+      "dates": "Set 2025 - Presente",
+      "location": "Roma",
+      "bullets": [
+        "Lavoro hands-on sul chatbot Botpress Cloud Green Active: architettura con flow e nodi autonomi, knowledge base, scenari, prompt, variabili, tool e routing.",
+        "Integrazione Botpress-WhatsApp-Strapi via REST API ed eventi conversazionali; test, publishing e troubleshooting tramite Inspect, deployment, conversazioni e messaggi.",
+        "Progettazione di workflow n8n tra gestionali, webhook, notifiche, documenti e servizi esterni, con validazione, fallback, log e monitoraggio.",
+        "Sviluppo di gestionali e tool con Angular, PHP/Node.js, Strapi e SQL, usando Claude Code e Cursor con verifica autonoma di codice e risultati."
+      ]
+    },
+    {
+      "title": "CRM & Contract Operations Specialist",
+      "company": "Team Service Soc. Cons. a r.l.",
+      "dates": "Apr 2024 - Giu 2025",
+      "location": "Roma",
+      "bullets": [
+        "Gestione di processi CRM in ARXivar e Archibus per contratti, scadenze, assicurazioni e accesso strutturato alla documentazione.",
+        "Configurazione di percorsi approvativi, notifiche e dashboard per migliorare accuratezza, tracciabilità e continuità delle attività.",
+        "Supporto agli utenti e coordinamento con RUP, broker e clienti istituzionali, traducendo esigenze operative in procedure verificabili."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Green Active",
+      "descriptor": "ecosistema mobile, gestionale e chatbot",
+      "bullets": [
+        "Contributo all'app pubblicata iOS/Android e ai gestionali collegati per onboarding, allenamenti, progressi, trainer e processi operativi.",
+        "Chatbot Botpress/WhatsApp con flow per registrazione, questionari, clienti attivi, wellness, allenamenti, sonno e calendario, integrati con Strapi, API e n8n."
+      ],
+      "stack": "Botpress Cloud, WhatsApp, Flutter, Angular, Strapi, REST API, SQL, n8n e workflow AI"
+    },
+    {
+      "name": "SIGNAL",
+      "descriptor": "AI Operational Intelligence",
+      "bullets": [
+        "Dashboard operativa per analizzare eventi e segnali aziendali, interpretare le cause probabili e presentare azioni raccomandate.",
+        "Architettura predisposta per n8n, webhook e knowledge base, con timeline degli eventi e interfacce di monitoraggio dei workflow."
+      ],
+      "stack": "React 19, TypeScript, Express, SQLite, REST API e workflow AI"
+    },
+    {
+      "name": "Steam Circuit Padel Pro",
+      "descriptor": "gioco browser 2-vs-2 con gameplay AI",
+      "bullets": [
+        "Implementazione di servizi diagonali, rimbalzi su pareti e rete, tiro caricato, mira, slice e cambio giocatore.",
+        "Sviluppo di avversari e compagni controllati dall'AI, controlli responsive e tre arene con modificatori distinti."
+      ],
+      "stack": "HTML5 Canvas, JavaScript ES6+, CSS, fisica custom e gameplay AI"
+    }
+  ],
+  "additional_experience": [
+    {
+      "header": "Complete Web Developer | Zero to Mastery | Dic 2023 - Mar 2024 | Roma",
+      "bullet": "Percorso tecnico con progetti full-stack in React, Node.js, REST API e componenti responsive riutilizzabili."
+    },
+    {
+      "header": "Digital Marketing Assistant | Rational Tomato | Ago 2023 - Dic 2023 | Lisbona",
+      "bullet": "Lavoro autonomo in un contesto internazionale, con coordinamento delle attività digitali e reportistica delle performance."
+    }
+  ],
+  "education": [
+    {
+      "title": "Laurea Magistrale con lode - Marketing & Digital Communication",
+      "meta": "Università LUMSA | 2021 - 2023 | Roma"
+    },
+    {
+      "title": "Laurea Triennale - Scienze Politiche",
+      "meta": "Università Roma Tre | 2016 - 2020 | Roma"
+    },
+    {
+      "title": "Diploma di Liceo Scientifico",
+      "meta": "Istituto Lucio Anneo Seneca | 2012 - 2016 | Roma"
+    }
+  ],
+  "training_label": "Formazione tecnica: ",
+  "training": "Complete Web Developer - Zero to Mastery; AI Prompt Engineering Bootcamp; Asfaleia Cybersecurity Course.",
+  "languages_label": "Lingue: ",
+  "languages": "Italiano: madrelingua; Inglese: B2 (CLIC Language Center B2.1; Wall Street English Level 11).",
+  "availability": "Disponibilità: full-time | Full remote | Autorizzato a lavorare in Italia",
+  "footer_label": "Alessio Fantini | AI Automation & Conversational Agents | "
+}

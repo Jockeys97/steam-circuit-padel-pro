@@ -1,7 +1,32 @@
-import { COURT } from "./data.js?v=20260720-ball-physics-v1";
+import { BALANCE, COURT } from "./data.js?v=20260811-opponent-scale-v6";
+import { t } from "./i18n.js?v=20260811-opponent-scale-v6";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+const SERV_LINE = 126;
+
+function reflectRange(value, min, max) {
+  let v = value;
+  while (v < min || v > max) {
+    if (v < min) v = min + (min - v);
+    if (v > max) v = max - (v - max);
+  }
+  return v;
+}
+
+export function predictLanding(ball) {
+  if (!ball || ball.vz >= 0) return null;
+  const g = BALANCE.ballGravity;
+  const disc = ball.vz * ball.vz + 2 * g * Math.max(0, ball.z);
+  if (!(disc > 0)) return null;
+  const t = (ball.vz + Math.sqrt(disc)) / g;
+  if (t < 0.06 || t > 2.4) return null;
+  const drag = Math.pow(BALANCE.airDrag, t * 60);
+  const x = reflectRange(ball.x + ball.vx * drag * t, COURT.left + 12, COURT.right - 12);
+  const y = reflectRange(ball.y + ball.vy * drag * t, COURT.top + 12, COURT.bottom - 12);
+  return { x, y, t };
 }
 
 export function roundedRect(ctx, x, y, width, height, radius) {
@@ -419,7 +444,7 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.fillStyle = palette.accent;
   ctx.font = "900 13px Nunito, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(scene === "locomotive" ? "LOCOMOTIVE DEPOT" : scene === "clockwork" ? "CLOCKWORK FACTORY" : "PADEL FLOW", 480, 139);
+  ctx.fillText(scene === "locomotive" ? t("arena_locomotive_name").toUpperCase() : scene === "clockwork" ? t("arena_clockwork_name").toUpperCase() : t("arena_officina_name").toUpperCase(), 480, 139);
 
   // Store projection for the sprites drawn after the court.
   ctx.__padelProject = point;
@@ -438,26 +463,119 @@ export function drawHitZone(ctx, paddle, color) {
   ctx.restore();
 }
 
-export function drawActiveIndicator(ctx, paddle, tallSprite = false) {
+export function drawActiveIndicator(
+  ctx,
+  paddle,
+  tallSprite = false,
+  charge = 0,
+  smashChargeThreshold = 0.78,
+  smashIntent = false,
+  rallyEnergy = 1,
+  smashStatus = "",
+) {
   const p = ctx.__padelProject ? ctx.__padelProject(paddle.x, paddle.y) : paddle;
+  const scale = p.scale ?? 1;
+  const cursorY = p.y - (tallSprite ? 139 : 80) * scale;
   ctx.save();
-  ctx.strokeStyle = "#fff36a";
-  ctx.lineWidth = 4;
+
+  // FIFA-style selection cursor: compact, readable and clear of the player's feet.
+  ctx.shadowColor = "rgba(255, 243, 106, 0.72)";
+  ctx.shadowBlur = 9 * scale;
+  ctx.fillStyle = "#fff36a";
+  ctx.strokeStyle = "#102b50";
+  ctx.lineWidth = Math.max(1.5, 2 * scale);
   ctx.beginPath();
-  ctx.arc(p.x, p.y + 34 * p.scale, 30 * p.scale, 0, Math.PI * 2);
-  ctx.stroke();
-  const labelY = p.y - (tallSprite ? 132 : 73) * p.scale;
-  ctx.fillStyle = "#0b2545";
-  ctx.strokeStyle = "#fff36a";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(p.x - 22 * p.scale, labelY - 13 * p.scale, 44 * p.scale, 20 * p.scale, 6 * p.scale);
+  ctx.moveTo(p.x, cursorY + 13 * scale);
+  ctx.lineTo(p.x - 9 * scale, cursorY);
+  ctx.lineTo(p.x + 9 * scale, cursorY);
+  ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "#fff36a";
-  ctx.font = `800 ${Math.max(9, 11 * p.scale)}px Nunito, sans-serif`;
+  ctx.shadowBlur = 0;
+
+  if (charge > 0.015) {
+    const width = 70 * scale;
+    const height = Math.max(6, 7 * scale);
+    const x = p.x - width / 2;
+    const y = p.y + 43 * scale;
+    const fillWidth = Math.max(0, Math.min(width, width * charge));
+
+    ctx.fillStyle = "rgba(4, 14, 32, 0.88)";
+    ctx.strokeStyle = smashIntent && charge >= smashChargeThreshold ? "#ff9a5c" : "#8eefff";
+    ctx.lineWidth = Math.max(1, 1.5 * scale);
+    ctx.beginPath();
+    ctx.roundRect(x - 2 * scale, y - 2 * scale, width + 4 * scale, height + 4 * scale, 4 * scale);
+    ctx.fill();
+    ctx.stroke();
+
+    const gradient = ctx.createLinearGradient(x, y, x + width, y);
+    gradient.addColorStop(0, "#28d7e8");
+    gradient.addColorStop(0.58, "#9ef05b");
+    gradient.addColorStop(0.8, "#fff36a");
+    gradient.addColorStop(1, "#ff7048");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(x, y, fillWidth, height, 2 * scale);
+    ctx.fill();
+
+    const thresholdX = x + width * Math.max(0, Math.min(1, smashChargeThreshold));
+    ctx.strokeStyle = "rgba(255,255,255,0.92)";
+    ctx.lineWidth = Math.max(1, 1.4 * scale);
+    ctx.beginPath();
+    ctx.moveTo(thresholdX, y - 2 * scale);
+    ctx.lineTo(thresholdX, y + height + 2 * scale);
+    ctx.stroke();
+
+    if (smashIntent && smashStatus) {
+      ctx.font = `700 ${Math.max(8, 9 * scale)}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = charge >= smashChargeThreshold ? "#fff36a" : "#dffaff";
+      ctx.strokeStyle = "rgba(4, 14, 32, 0.92)";
+      ctx.lineWidth = Math.max(2, 3 * scale);
+      ctx.strokeText(smashStatus, p.x, y - 5 * scale);
+      ctx.fillText(smashStatus, p.x, y - 5 * scale);
+    }
+  }
+
+  const energyWidth = 52 * scale;
+  const energyX = p.x - energyWidth / 2;
+  const energyY = p.y + 54 * scale;
+  ctx.fillStyle = "rgba(4, 14, 32, 0.72)";
+  ctx.fillRect(energyX - scale, energyY - scale, energyWidth + 2 * scale, 4 * scale);
+  ctx.fillStyle = rallyEnergy > 0.55 ? "#56e8d8" : rallyEnergy > 0.3 ? "#ffd45c" : "#ff6b64";
+  ctx.fillRect(energyX, energyY, energyWidth * clamp(rallyEnergy, 0, 1), 2 * scale);
+  ctx.restore();
+}
+
+export function drawShotFeedback(ctx, state) {
+  const feedback = state.shotFeedback;
+  if (!feedback?.life) return;
+  const paddle = state[feedback.paddleKey];
+  if (!paddle) return;
+  const p = ctx.__padelProject ? ctx.__padelProject(paddle.x, paddle.y) : paddle;
+  const alpha = clamp(feedback.life / 0.28, 0, 1);
+  const colors = {
+    perfect: "#74ffba",
+    good: "#77e7ff",
+    early: "#ffd45c",
+    late: "#ff8b70",
+  };
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.textAlign = "center";
-  ctx.fillText("TU", p.x, labelY + 1 * p.scale);
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.font = "700 14px system-ui, sans-serif";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(4, 14, 32, 0.9)";
+  const y = p.y - 105 * (p.scale ?? 1) - (0.78 - feedback.life) * 18;
+  ctx.strokeText(feedback.text, p.x, y);
+  ctx.fillStyle = colors[feedback.grade] ?? "#ffffff";
+  ctx.fillText(feedback.text, p.x, y);
+  ctx.font = "600 9px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.fillText(feedback.mode, p.x, y + 15);
   ctx.restore();
 }
 
@@ -505,14 +623,46 @@ function drawHairFront(ctx, style, hair, facing) {
   }
 }
 
-export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appearance = null, sprite = null) {
+function actionFrameForIntent(intent) {
+  if (intent?.startsWith("smash")) return 0;
+  if (["vibora", "slice", "bandeja", "wall-angle"].includes(intent)) return 1;
+  if (["lob", "defensive-lob"].includes(intent)) return 2;
+  if (intent === "serve") return 3;
+  return null;
+}
+
+function spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame) {
+  // Back-facing human-team sheets were already authored at the correct visual scale.
+  if (isPlayer) return useActionSprite ? 118 : useRunSprite ? 114 : 112;
+
+  // Front-facing run/action sheets leave more transparent space around the opponent.
+  // Compensate only that artwork so advancing toward the net keeps a stable body size.
+  if (useRunSprite) return 144;
+  if (useActionSprite) return [112, 122, 108, 128][actionFrame] ?? 112;
+  return 112;
+}
+
+export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appearance = null, sprite = null, actionSprite = null, runSprite = null, time = 0) {
   const projected = ctx.__padelProject ? ctx.__padelProject(paddle.x, paddle.y) : { ...paddle, scale: 1 };
 
-  if (sprite?.complete && sprite.naturalWidth > 0) {
-    const frameWidth = sprite.naturalWidth / 4;
-    const frame = charge > 0.08 ? 2 : swing > 0.08 ? 3 : paddle.motion > 0.12 ? 1 : 0;
-    const destWidth = 112 * projected.scale;
-    const destHeight = destWidth * (sprite.naturalHeight / frameWidth);
+  const actionFrame = paddle.actionPose > 0 ? actionFrameForIntent(paddle.actionIntent) : null;
+  const useActionSprite = actionFrame !== null && actionSprite?.complete && actionSprite.naturalWidth > 0;
+  const useRunSprite = !useActionSprite
+    && charge <= 0.08
+    && paddle.motion > 0.12
+    && runSprite?.complete
+    && runSprite.naturalWidth > 0;
+  const activeSprite = useActionSprite ? actionSprite : useRunSprite ? runSprite : sprite;
+
+  if (activeSprite?.complete && activeSprite.naturalWidth > 0) {
+    const frameWidth = activeSprite.naturalWidth / 4;
+    const frame = useActionSprite
+      ? actionFrame
+      : useRunSprite
+        ? Math.floor(paddle.runPhase ?? 0) % 4
+      : charge > 0.08 ? 2 : swing > 0.08 ? 3 : paddle.motion > 0.12 ? 1 : 0;
+    const destWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame) * projected.scale;
+    const destHeight = destWidth * (activeSprite.naturalHeight / frameWidth);
     const feetY = projected.y + 46 * projected.scale;
     const transparentFootMargin = destHeight * 0.085;
 
@@ -525,17 +675,20 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
     ctx.beginPath();
     ctx.ellipse(projected.x, feetY, 17 * projected.scale, 3 * projected.scale, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.drawImage(
-      sprite,
-      frame * frameWidth,
-      0,
-      frameWidth,
-      sprite.naturalHeight,
-      projected.x - destWidth / 2,
-      feetY - destHeight + transparentFootMargin,
-      destWidth,
-      destHeight,
-    );
+    const drawFrame = (frameIndex) => {
+      ctx.drawImage(
+        activeSprite,
+        frameIndex * frameWidth,
+        0,
+        frameWidth,
+        activeSprite.naturalHeight,
+        projected.x - destWidth / 2,
+        feetY - destHeight + transparentFootMargin,
+        destWidth,
+        destHeight,
+      );
+    };
+    drawFrame(frame);
     ctx.restore();
     return;
   }
@@ -703,22 +856,60 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
 }
 
 export function drawBall(ctx, ball, flash = 0) {
-  const projected = ctx.__padelProject ? ctx.__padelProject(ball.x, ball.y) : { ...ball, scale: 1 };
-  const visualRadius = Math.max(6.5, ball.r * 0.64);
+  const project = ctx.__padelProject;
+  const projected = project ? project(ball.x, ball.y) : { ...ball, scale: 1 };
+  // Keep the collision radius generous for playability, but render a padel-sized ball.
+  const visualRadius = Math.max(5.4, ball.r * 0.56);
   ctx.save();
   const lift = (ball.z ?? 0) * projected.scale;
 
+  const ring = ball.landRing ?? 0;
+  if (ring > 0) {
+    const life = clamp(ring / 0.5, 0, 1);
+    const r = (0.5 - ring) * 150 * projected.scale + visualRadius;
+    ctx.globalAlpha = life * 0.5;
+    ctx.strokeStyle = "#eaffff";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(projected.x, projected.y, r, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = life * 0.22;
+    ctx.fillStyle = "#d8ff5f";
+    ctx.beginPath();
+    ctx.ellipse(projected.x, projected.y, r * 0.7, r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (ball.trail?.length) {
+    for (const point of ball.trail) {
+      const t = project ? project(point.x, point.y) : { ...point, scale: 1 };
+      const echoLift = (point.z ?? 0) * t.scale;
+      ctx.globalAlpha = Math.max(0, point.life / 0.3) * 0.34;
+      ctx.fillStyle = flash > 0 ? "#fff6a0" : "#c9f06a";
+      ctx.beginPath();
+      ctx.arc(t.x, t.y - echoLift, visualRadius * 0.54, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = "rgba(0,0,0,0.2)";
   ctx.beginPath();
-  ctx.ellipse(projected.x + 3, projected.y + 7, 8 * projected.scale, 4 * projected.scale, 0, 0, Math.PI * 2);
+  ctx.ellipse(projected.x + 2, projected.y + 5, 5.5 * projected.scale, 2.6 * projected.scale, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.translate(projected.x, projected.y - lift);
   const bouncePulse = clamp(ball.bouncePulse ?? 0, 0, 1);
+  const speed = Math.hypot(ball.vx ?? 0, ball.vy ?? 0);
+  const motionStretch = clamp(speed / 620, 0, 1) * 0.16;
+  const motionAngle = Math.atan2(ball.vy ?? 0, ball.vx ?? 0);
+  ctx.rotate(motionAngle);
   ctx.scale(
-    projected.scale * (1 + bouncePulse * 0.14),
-    projected.scale * (1 - bouncePulse * 0.12),
+    projected.scale * (1 + bouncePulse * 0.08) * (1 + motionStretch),
+    projected.scale * (1 - bouncePulse * 0.07) * (1 - motionStretch * 0.5),
   );
+  ctx.rotate(-motionAngle);
 
   const ballColor = (ball.netCord ?? 0) > 0 ? "#ffffff" : flash > 0 ? "#fff6a0" : "#d8ff5f";
   ctx.fillStyle = ballColor;
@@ -747,6 +938,72 @@ export function drawBall(ctx, ball, flash = 0) {
     ctx.arc(0, 0, visualRadius + 3, 0.25, Math.PI * 1.75);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+export function drawFx(ctx, state) {
+  const fx = state.fx;
+  const project = ctx.__padelProject;
+  if (!fx || !fx.particles.length || !project) return;
+  for (const p of fx.particles) {
+    const t = project(p.x, p.y);
+    const lift = p.z * t.scale;
+    const alpha = Math.max(0, p.life / p.maxLife);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y - lift, Math.max(1.5, p.size * t.scale), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+export function drawLandingMarker(ctx, ball, time) {
+  const landing = predictLanding(ball);
+  const project = ctx.__padelProject;
+  if (!landing || !project) return;
+  const p = project(landing.x, landing.y);
+  const pulse = 0.5 + 0.5 * Math.sin(time * 7);
+  ctx.save();
+  ctx.globalAlpha = 0.16 + pulse * 0.14;
+  ctx.strokeStyle = "#fff36a";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([7, 6]);
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y, 34 * p.scale, 14 * p.scale, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 0.1 + pulse * 0.1;
+  ctx.fill();
+  ctx.restore();
+}
+
+export function drawServeBox(ctx, state, time) {
+  const project = ctx.__padelProject;
+  if (!project || !state.serving) return;
+  const { ball } = state;
+  const half = (COURT.left + COURT.right) / 2;
+  const isLeft = ball.serveTargetSide === "left";
+  const x1 = isLeft ? COURT.left : half;
+  const x2 = isLeft ? half : COURT.right;
+  const receiverIsAi = state.serveSide === "player";
+  const y1 = receiverIsAi ? COURT.netY - SERV_LINE : COURT.netY;
+  const y2 = receiverIsAi ? COURT.netY : COURT.netY + SERV_LINE;
+  const a = project(x1, y1);
+  const b = project(x2, y1);
+  const c = project(x2, y2);
+  const d = project(x1, y2);
+  const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+  ctx.save();
+  ctx.globalAlpha = 0.14 + pulse * 0.08;
+  ctx.fillStyle = state.arena.palette.accent;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.lineTo(c.x, c.y);
+  ctx.lineTo(d.x, d.y);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 

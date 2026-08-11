@@ -1,0 +1,140 @@
+{
+  "name": "ActiveFlow - Service Continuity Flagship",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "activeflow-continuity-v2", "responseMode": "responseNode", "options": {} },
+      "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [-1420, 80],
+      "id": "b6af6290-79c6-4a2e-a558-063f7aca1ff0", "name": "Continuity Incident Webhook", "webhookId": "activeflow-continuity-flagship-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $input.first().json;\nconst raw = envelope.body ?? envelope;\nconst payload = raw.payload && typeof raw.payload === 'object' ? raw.payload : {};\nconst sensitivePattern = /(password|secret|token|authorization|api[_-]?key|cookie|credential)/i;\nconst sensitiveFields = [];\nfunction scan(value, path = 'body') {\n  if (!value || typeof value !== 'object') return;\n  for (const [key, nested] of Object.entries(value)) {\n    const nextPath = `${path}.${key}`;\n    if (sensitivePattern.test(key)) sensitiveFields.push(nextPath);\n    if (nested && typeof nested === 'object') scan(nested, nextPath);\n  }\n}\nscan(raw);\nconst requestId = String(raw.requestId ?? `continuity-${Date.now()}`);\nconst unavailableProfessionalId = String(payload.unavailableProfessionalId ?? '');\nconst professionals = Array.isArray(payload.professionals) ? payload.professionals : [];\nconst sessions = Array.isArray(payload.sessions) ? payload.sessions : [];\nconst errors = [];\nif (!unavailableProfessionalId) errors.push('unavailableProfessionalId is required');\nif (!professionals.length) errors.push('professionals dataset is required');\nif (!sessions.length) errors.push('sessions dataset is required');\nif (sensitiveFields.length) errors.push('credential-like fields are forbidden');\nlet hash = 2166136261;\nfor (const char of `${requestId}:${unavailableProfessionalId}`) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619); }\nconst idempotencyKey = `continuity-${(hash >>> 0).toString(16)}`;\nreturn [{ json: {\n  valid: errors.length === 0, errors, requestId, unavailableProfessionalId, professionals, sessions,\n  simulateFailure: Boolean(payload.simulateFailure),\n  correlationId: `af_continuity_${requestId}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100),\n  idempotencyKey, receivedAt: new Date().toISOString(), mode: 'portfolio-sandbox'\n} }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [-1180, 80],
+      "id": "2746fa21-e20a-4597-831f-b1f57eced019", "name": "Validate Contract and Secrets"
+    },
+    {
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 }, "conditions": [{ "id": "8b054619-f989-4b13-909b-2ea63d9af192", "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }], "combinator": "and" }, "options": {} },
+      "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [-940, 80],
+      "id": "20b1e49e-b240-4d4f-854a-090d6125e5bf", "name": "Contract Valid?"
+    },
+    {
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 }, "conditions": [{ "id": "538aaf9c-1374-4a69-a7b8-a90857b727cc", "leftValue": "={{ $json.simulateFailure }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }], "combinator": "and" }, "options": {} },
+      "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [-700, 0],
+      "id": "b208572a-94f7-4417-88b3-fce0839f080b", "name": "Inject Failure?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst now = Date.now();\nconst affectedSessions = ctx.sessions.filter((session) =>\n  session.professionalId === ctx.unavailableProfessionalId &&\n  session.status === 'scheduled' &&\n  new Date(session.startsAt).getTime() > now\n);\nreturn [{ json: { ...ctx, affectedSessions, affectedCount: affectedSessions.length, hasAffectedSessions: affectedSessions.length > 0 } }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [-460, -80],
+      "id": "f2d8d987-e0fa-4bb1-bbd1-1cc43f82f95f", "name": "Load Future Sessions"
+    },
+    {
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 }, "conditions": [{ "id": "d2338837-d154-4748-835e-dd3cce5dd405", "leftValue": "={{ $json.hasAffectedSessions }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }], "combinator": "and" }, "options": {} },
+      "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [-220, -80],
+      "id": "cc750349-0330-45dc-b4db-4409b8e86dc1", "name": "Sessions Found?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst unavailable = ctx.professionals.find((item) => item.id === ctx.unavailableProfessionalId);\nconst requiredSlots = [...new Set(ctx.affectedSessions.map((item) => item.slot))];\nconst requiredSkills = [...new Set(ctx.affectedSessions.map((item) => item.serviceType))];\nconst candidates = ctx.professionals\n  .filter((item) => item.active && item.role === unavailable?.role && item.id !== ctx.unavailableProfessionalId)\n  .map((candidate) => {\n    const availability = Array.isArray(candidate.availability) ? candidate.availability : [];\n    const skills = Array.isArray(candidate.skills) ? candidate.skills : [];\n    const coveredSlots = requiredSlots.filter((slot) => availability.includes(slot));\n    const coveredSkills = requiredSkills.filter((skill) => skills.includes(skill));\n    const currentLoad = ctx.sessions.filter((session) => session.professionalId === candidate.id && session.status === 'scheduled').length;\n    const availabilityRatio = requiredSlots.length ? coveredSlots.length / requiredSlots.length : 0;\n    const skillRatio = requiredSkills.length ? coveredSkills.length / requiredSkills.length : 0;\n    return {\n      professionalId: candidate.id, name: candidate.name, priority: Number(candidate.priority ?? 0), currentLoad,\n      availabilityRatio, skillRatio, fullCoverage: availabilityRatio === 1,\n      reasons: [`${coveredSlots.length}/${requiredSlots.length} time windows`, `${coveredSkills.length}/${requiredSkills.length} service skills`, `${currentLoad} existing sessions`]\n    };\n  });\nreturn [{ json: { ...ctx, requiredSlots, requiredSkills, candidates, hasCandidates: candidates.some((item) => item.fullCoverage) } }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [20, -160],
+      "id": "96771804-fec5-4233-9dbe-c7c433dfc17e", "name": "Evaluate Eligibility"
+    },
+    {
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 }, "conditions": [{ "id": "bbf46467-7f56-476c-9bda-5184556a7d4b", "leftValue": "={{ $json.hasCandidates }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }], "combinator": "and" }, "options": {} },
+      "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [260, -160],
+      "id": "27747b39-0951-4b23-af81-d95c3fd09e18", "name": "Coverage Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst scorecard = ctx.candidates.map((candidate) => ({\n  ...candidate,\n  score: Math.max(0, Math.min(100, Math.round(candidate.priority * 0.45 + candidate.availabilityRatio * 35 + candidate.skillRatio * 20 - candidate.currentLoad * 3)))\n})).sort((a, b) => b.score - a.score);\nconst complete = scorecard.filter((candidate) => candidate.fullCoverage);\nconst selected = complete[0];\nconst fallback = complete[1] ?? null;\nconst sessionUpdates = ctx.affectedSessions.map((session) => ({\n  sessionId: session.id, memberAlias: session.memberAlias, fromProfessionalId: session.professionalId,\n  toProfessionalId: selected.professionalId, expectedVersion: Number(session.version)\n}));\nreturn [{ json: { ...ctx, scorecard, selected, fallback, sessionUpdates } }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [500, -240],
+      "id": "57db3039-d397-45df-b3dd-61b45355a521", "name": "Score and Rank Candidates"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst selectedName = ctx.selected.name || ctx.selected.professionalId;\nconst explanation = `${selectedName} is recommended because the candidate covers every affected time window, matches ${Math.round(ctx.selected.skillRatio * 100)}% of the required service skills, and has an operational score of ${ctx.selected.score}/100. The proposal changes only future scheduled sessions and remains blocked until human approval.`;\nreturn [{ json: { ...ctx, explanation } }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [740, -240],
+      "id": "88ad45d1-11b0-464b-9099-1a5e62092a89", "name": "Generate Explainable Recommendation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst proposal = {\n  scenario: 'continuity', contractVersion: '2.0',\n  outcome: `${ctx.affectedCount} future session${ctx.affectedCount === 1 ? '' : 's'} ready for safe reassignment`,\n  explanation: ctx.explanation,\n  businessRules: ['future sessions only', 'same-role replacement', 'complete time-window coverage', 'optimistic version check', 'human approval required'],\n  proposedAction: {\n    selectedCandidate: ctx.selected.professionalId,\n    fallbackCandidate: ctx.fallback?.professionalId ?? null,\n    sessionUpdates: ctx.sessionUpdates,\n    scorecard: ctx.scorecard.map(({ professionalId, score, reasons, fullCoverage }) => ({ professionalId, score, reasons, fullCoverage }))\n  }\n};\nreturn [{ json: {\n  ok: true, project: 'ActiveFlow', scenario: 'continuity', status: 'awaiting_human_approval',\n  requestId: ctx.requestId, correlationId: ctx.correlationId, idempotencyKey: ctx.idempotencyKey,\n  message: 'A version-checked proposal was created. No session has changed yet.', proposal,\n  audit: { correlationId: ctx.correlationId, idempotencyKey: ctx.idempotencyKey, timestamp: new Date().toISOString(), externalWrites: 0, companySystemsContacted: 0 },\n  portfolioSafety: { syntheticData: true, proprietaryCode: false, companyEndpoints: false, credentials: false }\n} }];"
+      },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [980, -240],
+      "id": "4540e12d-8b3c-4f39-b144-79b016894c4f", "name": "Create Human Approval Gate"
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ $json }}", "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Cache-Control", "value": "no-store" }] } } },
+      "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [1220, -240],
+      "id": "7edc728b-4a42-409a-82c7-f01edc4c92ab", "name": "Return Proposal"
+    },
+    {
+      "parameters": { "jsCode": "const ctx = $input.first().json;\nreturn [{ json: { ok: false, statusCode: 400, error: 'invalid_contract', message: 'The incident request failed validation.', details: ctx.errors, correlationId: ctx.correlationId } }];" },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [-700, 300],
+      "id": "0ef1807b-dcbb-48c2-b9d6-ecb3547cdd65", "name": "Invalid Contract Error"
+    },
+    {
+      "parameters": { "jsCode": "const ctx = $input.first().json;\nreturn [{ json: { ok: false, statusCode: 503, error: 'controlled_dependency_failure', message: 'A controlled downstream failure was injected. The workflow stopped before any mutation.', correlationId: ctx.correlationId, retryable: true } }];" },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [-460, 180],
+      "id": "a0bdd672-3873-416a-84d2-ac2317c19a87", "name": "Controlled Failure Envelope"
+    },
+    {
+      "parameters": { "jsCode": "const ctx = $input.first().json;\nreturn [{ json: { ok: false, statusCode: 422, error: 'no_affected_sessions', message: 'No future scheduled sessions require reassignment.', correlationId: ctx.correlationId } }];" },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [20, 100],
+      "id": "4a167af0-47c0-4b11-9ee4-43777481e5db", "name": "No Sessions Error"
+    },
+    {
+      "parameters": { "jsCode": "const ctx = $input.first().json;\nreturn [{ json: { ok: false, statusCode: 422, error: 'no_complete_coverage', message: 'No eligible professional covers every affected time window. Manual coordination is required.', correlationId: ctx.correlationId, candidatesEvaluated: ctx.candidates.length } }];" },
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [500, 20],
+      "id": "a02451cf-7090-4ab3-a63b-1810528d5aa0", "name": "Manual Coordination Error"
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ $json }}", "options": { "responseCode": "={{ $json.statusCode || 422 }}", "responseHeaders": { "entries": [{ "name": "Cache-Control", "value": "no-store" }] } } },
+      "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [740, 180],
+      "id": "4db40d27-781f-4890-9af3-cf8399721e9d", "name": "Return Safe Error"
+    },
+    {
+      "parameters": { "content": "## 1 · Intake and guardrails\nValidates the versioned incident contract, rejects secret-like fields, assigns correlation and idempotency keys, and supports a controlled failure test.", "height": 430, "width": 810, "color": 4 },
+      "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-1480, -120],
+      "id": "576ba9e5-5e8a-4101-a889-dc39de493418", "name": "Intake Note"
+    },
+    {
+      "parameters": { "content": "## 2 · Deterministic continuity engine\nLoads future sessions, evaluates role and time-window coverage, scores candidates, creates version-checked updates and explains the recommendation.", "height": 570, "width": 1510, "color": 5 },
+      "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-540, -340],
+      "id": "68e41269-9b3b-4b04-bae2-a757910f1492", "name": "Decision Engine Note"
+    },
+    {
+      "parameters": { "content": "## Portfolio safety\nOriginal logic and synthetic data only. No company APIs, credentials, customer records or proprietary implementation. The workflow proposes changes but the website performs the human-approved database commit.", "height": 220, "width": 530, "color": 3 },
+      "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [900, -340],
+      "id": "8f7a4b4e-f025-4ff6-bcc2-608392b0bdd1", "name": "Safety Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Continuity Incident Webhook": { "main": [[{ "node": "Validate Contract and Secrets", "type": "main", "index": 0 }]] },
+    "Validate Contract and Secrets": { "main": [[{ "node": "Contract Valid?", "type": "main", "index": 0 }]] },
+    "Contract Valid?": { "main": [[{ "node": "Inject Failure?", "type": "main", "index": 0 }], [{ "node": "Invalid Contract Error", "type": "main", "index": 0 }]] },
+    "Inject Failure?": { "main": [[{ "node": "Controlled Failure Envelope", "type": "main", "index": 0 }], [{ "node": "Load Future Sessions", "type": "main", "index": 0 }]] },
+    "Load Future Sessions": { "main": [[{ "node": "Sessions Found?", "type": "main", "index": 0 }]] },
+    "Sessions Found?": { "main": [[{ "node": "Evaluate Eligibility", "type": "main", "index": 0 }], [{ "node": "No Sessions Error", "type": "main", "index": 0 }]] },
+    "Evaluate Eligibility": { "main": [[{ "node": "Coverage Available?", "type": "main", "index": 0 }]] },
+    "Coverage Available?": { "main": [[{ "node": "Score and Rank Candidates", "type": "main", "index": 0 }], [{ "node": "Manual Coordination Error", "type": "main", "index": 0 }]] },
+    "Score and Rank Candidates": { "main": [[{ "node": "Generate Explainable Recommendation", "type": "main", "index": 0 }]] },
+    "Generate Explainable Recommendation": { "main": [[{ "node": "Create Human Approval Gate", "type": "main", "index": 0 }]] },
+    "Create Human Approval Gate": { "main": [[{ "node": "Return Proposal", "type": "main", "index": 0 }]] },
+    "Invalid Contract Error": { "main": [[{ "node": "Return Safe Error", "type": "main", "index": 0 }]] },
+    "Controlled Failure Envelope": { "main": [[{ "node": "Return Safe Error", "type": "main", "index": 0 }]] },
+    "No Sessions Error": { "main": [[{ "node": "Return Safe Error", "type": "main", "index": 0 }]] },
+    "Manual Coordination Error": { "main": [[{ "node": "Return Safe Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "saveDataErrorExecution": "all", "saveDataSuccessExecution": "all", "saveExecutionProgress": true },
+  "versionId": "3c825b82-a0dd-4cdd-94d6-cb29c8f67d41",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

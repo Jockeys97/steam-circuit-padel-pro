@@ -1,0 +1,112 @@
+--- a
++++ b
+@@ -1,59 +1,59 @@
+ ALESSIO FANTINI
+-IT AUTOMATION & WORKFLOW SPECIALIST
+-Rome, Italy | Open to remote work | +39 366 266 4944 | alessiofant@gmail.com
++AI AUTOMATION & FULL-STACK DEVELOPER
++Roma, Italia | Remoto / ibrido | +39 366 266 4944 | alessiofant@gmail.com
+ LinkedIn  |  GitHub  |  Portfolio
+-PROFILE
+-IT Automation and Integration specialist with hands-on experience building and maintaining n8n workflows, REST API and webhook integrations, and AI-assisted operational processes. I turn manual workflows into structured automations with validation, monitoring, troubleshooting and clear documentation. My background combines application development with CRM and contract operations, giving me a strong service mindset and experience coordinating sensitive, business-critical information with internal and external stakeholders.
+-CORE SKILLS
++PROFILO
++AI Automation & Full-Stack Developer con esperienza pratica nello sviluppo e nella manutenzione di applicazioni web e mobile, chatbot conversazionali e workflow aziendali. Lavoro con Angular, Flutter, Node.js/PHP, Strapi, SQL, REST API, n8n e Botpress, integrando servizi e componenti AI in prodotti reali. Unisco analisi dei processi, troubleshooting e comunicazione con stakeholder tecnici e business.
++COMPETENZE CHIAVE
++AI Agents & Conversational
++Botpress, conversation flow, agent logic, variabili e tool, prompt design e knowledge base
+ Automation & Integration
+-n8n, REST APIs, webhooks, JSON, event-driven workflows, authentication concepts, Strapi and SQL
+-Reliability & Support
+-Workflow testing, logs and API responses, error handling, monitoring, validation, troubleshooting and user support
+-Development
+-JavaScript ES6+, TypeScript, Node.js, PHP, Angular, React, Flutter, Git and GitHub
+-Operations & Documentation
+-CRM workflows, process mapping, technical documentation, data quality and stakeholder coordination
+-PROFESSIONAL EXPERIENCE
++n8n, REST API, webhook, JSON, Strapi, SQL, workflow AI, validazione e fallback
++Full-Stack & Mobile
++Angular, TypeScript, JavaScript, Node.js, PHP, React, Flutter, HTML e CSS
++Reliability & Delivery
++Testing, error handling, log e API response, Git/GitHub, Vercel e troubleshooting
++ESPERIENZA PROFESSIONALE
+ Full-Stack & Automation Developer | Accademia Italiana Fitness
+-Sep 2025 - Present  |  Rome, Italy
+-Design and maintain n8n workflows for CRM processes, customer onboarding, notifications, cross-service data synchronisation and webhook/API integrations.
+-Develop and support Angular applications and PHP/Node.js APIs connected to Strapi and SQL data, including user roles and business-process flows.
+-Implement AI-assisted workflows for chatbot operations, request classification, dynamic routing and scoring, with validation and human review where required.
+-Diagnose integration issues through workflow executions, logs and API responses; test changes, monitor outcomes and document operational behaviour.
++Set 2025 - Presente  |  Roma
++Sviluppo e manutenzione di gestionali Angular e API PHP/Node.js con Strapi e SQL, dedicati a utenti, dati e processi aziendali.
++Progettazione di workflow n8n per orchestrare REST API, webhook, notifiche, documenti e passaggi AI, con validazione degli output e gestione dei fallback.
++Evoluzione di un assistente Botpress tramite flussi conversazionali, variabili, istruzioni agentiche e azioni integrate con Strapi e n8n.
++Supporto all'app Flutter pubblicata su iOS e Android, con test delle integrazioni, analisi di log e risposte API e troubleshooting cross-platform.
+ CRM & Contract Operations Specialist | Team Service Soc. Cons. a r.l.
+-Apr 2024 - Jun 2025  |  Rome, Italy
+-Managed daily CRM-based operations in ARXivar and Archibus for contracts, deadlines, insurance records and structured document access.
+-Configured approval paths, notifications and monitoring dashboards to improve data accuracy, traceability and timely operational follow-up.
+-Supported users and coordinated with public-sector stakeholders, brokers and institutional clients while handling compliance-sensitive information.
+-SELECTED PROJECTS
+-Green Active Mobile App - Professional product published on iOS and Android
+-Contributed to the mobile app renewal across onboarding, trainer management, workouts, progress tracking and Strapi backend integration.
+-Built and validated related data flows and operational automations, with cross-platform troubleshooting on a live user-facing product.
+-Stack: Flutter, Strapi, REST APIs, SQL, n8n and AI-assisted workflows
++Apr 2024 - Giu 2025  |  Roma
++Gestione dei processi CRM in ARXivar e Archibus per contratti, scadenze, documentazione assicurativa e accesso strutturato alle informazioni.
++Configurazione di percorsi approvativi, notifiche e dashboard per qualità, tracciabilità e monitoraggio operativo dei dati.
++Coordinamento con RUP, broker, clienti istituzionali e utenti interni, traducendo esigenze operative in processi strutturati.
++PROGETTI SELEZIONATI
++Green Active Mobile App - Prodotto professionale pubblicato su iOS e Android
++Contributo all'evoluzione dell'app tra onboarding, gestione trainer, allenamenti, progressi e integrazione con il backend Strapi.
++Sviluppo e validazione di flussi dati e automazioni collegate, con troubleshooting su un prodotto reale destinato agli utenti.
++Stack: Flutter, Strapi, REST API, SQL, n8n e workflow AI
+ iOS: Apple App Store   |   Android: Google Play
+ SIGNAL - AI Operational Intelligence
+-Operational dashboard for analysing business events and signals, interpreting likely causes and presenting recommended actions.
+-Architecture designed for n8n, webhooks and knowledge-base integrations, with event timelines and workflow monitoring interfaces.
+-Stack: React 19, TypeScript, Express, SQLite, REST APIs and AI workflows
++Dashboard operativa per analizzare eventi e segnali aziendali, interpretare possibili cause e presentare azioni raccomandate.
++Architettura predisposta per integrazioni con n8n, webhook e knowledge base, timeline degli eventi e monitoraggio dei workflow.
++Stack: React 19, TypeScript, Express, SQLite, REST API e workflow AI
+ Live demo: Open   |   Source: GitHub
+-Steam Circuit Padel Pro - 2-vs-2 browser arcade game
+-Implemented diagonal serves, wall and net bounces, charged shots, aiming, slice controls and player switching.
+-Added AI-controlled opponents and teammates, responsive controls and three arenas with distinct gameplay modifiers.
+-Stack: HTML5 Canvas, JavaScript ES6+, CSS, custom game physics and gameplay AI
++Steam Circuit Padel Pro - Browser game 2 contro 2 con gameplay AI
++Implementazione di servizi diagonali, rimbalzi su vetro e rete, caricamento dei colpi, mira, slice e cambio giocatore.
++Sviluppo di avversari e compagni controllati dall'AI, controlli responsivi e tre arene con modificatori distinti.
++Stack: HTML5 Canvas, JavaScript ES6+, CSS, fisica custom e gameplay AI
+ Live demo: Open   |   Source: GitHub
+-ADDITIONAL EXPERIENCE
+-Junior Web Developer | Zero to Mastery | Dec 2023 - Mar 2024 | Rome
+-Built and maintained full-stack training projects with React, Node.js, REST APIs and reusable responsive components.
+-Digital Marketing Assistant | Rational Tomato | Aug 2023 - Dec 2023 | Lisbon
+-Worked independently in an international environment, coordinating digital operations and performance reporting.
+-EDUCATION
+-Master's Degree with honours - Marketing & Digital Communication
+-LUMSA University | 2021 - 2023 | Rome
+-Bachelor's Degree - Political Science
+-Roma Tre University | 2016 - 2020 | Rome
+-Scientific High School Diploma
+-Istituto Lucio Anneo Seneca | 2012 - 2016 | Rome
+-TRAINING AND LANGUAGES
+-Technical training: Complete Web Developer - Zero to Mastery; AI Prompt Engineering Bootcamp; Asfaleia Cybersecurity Course.
+-Languages: Italian: native; English: B2 (CLIC Language Center B2.1; Wall Street English Level 11).
+-Availability: full-time | Remote-first environment | Eligible to work in Italy
++ESPERIENZE PRECEDENTI
++Formazione Full-Stack | Zero to Mastery | Dic 2023 - Mar 2024 | Roma
++Progetti formativi con React, Node.js, REST API, database e componenti responsivi riutilizzabili.
++Digital Marketing | Rational Tomato e Casa Rossa | 2022 - 2023 | Roma / Lisbona
++Esperienze in contenuti, campagne, reporting e coordinamento digitale in contesti italiani e internazionali.
++FORMAZIONE
++Laurea Magistrale con lode - Marketing & Digital Communication
++Università LUMSA | 2021 - 2023 | Roma
++Laurea Triennale - Scienze Politiche
++Università Roma Tre | 2016 - 2020 | Roma
++Diploma di Liceo Scientifico
++Istituto Lucio Anneo Seneca | 2012 - 2016 | Roma
++FORMAZIONE TECNICA E LINGUE
++Formazione tecnica: Complete Web Developer - Zero to Mastery; AI Prompt Engineering Bootcamp; Asfaleia Cybersecurity Course.
++Lingue: Italiano madrelingua; Inglese B2 (CLIC Language Center B2.1; Wall Street English Level 11).
++Disponibilità: full-time | Remoto e modalità ibrida | Autorizzato a lavorare in Italia

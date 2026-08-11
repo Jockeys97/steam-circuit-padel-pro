@@ -1,0 +1,114 @@
+{
+  "name": "ActiveFlow - Gemini Decision Narrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "activeflow-ai-explanation-v1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000001",
+      "name": "AI Explanation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-760, 80],
+      "webhookId": "activeflow-ai-explanation-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $input.first().json;\nconst raw = envelope.body ?? envelope;\nconst scenario = ['continuity', 'adaptation'].includes(raw.scenario) ? raw.scenario : 'continuity';\nconst proposal = raw.proposal && typeof raw.proposal === 'object' ? raw.proposal : {};\nconst action = proposal.proposedAction && typeof proposal.proposedAction === 'object' ? proposal.proposedAction : {};\nconst scorecard = Array.isArray(action.scorecard) ? action.scorecard.slice(0, 5).map(item => ({ professionalId: String(item.professionalId ?? '').slice(0, 40), score: Number(item.score ?? 0), reasons: Array.isArray(item.reasons) ? item.reasons.slice(0, 4).map(reason => String(reason).slice(0, 100)) : [] })) : [];\nconst selectedCandidateName = String(raw.selectedCandidateName ?? action.selectedCandidate ?? 'the recommended option').slice(0, 80);\nconst sessionsProtected = Array.isArray(action.sessionUpdates) ? action.sessionUpdates.length : 0;\nconst deterministicExplanation = String(proposal.explanation ?? 'The deterministic policy created a proposal for human review.').slice(0, 800);\nconst safeContext = { scenario, selectedCandidateName, sessionsProtected, scorecard, deterministicExplanation, businessRules: Array.isArray(proposal.businessRules) ? proposal.businessRules.slice(0, 6).map(rule => String(rule).slice(0, 100)) : [] };\nconst prompt = `You are the AI explanation layer of ActiveFlow, an operations automation portfolio demo. The operational decision has already been made by deterministic rules. Never change the decision, invent data, or claim that records were updated. Explain the result to a recruiter in clear business English. Return valid JSON only with these keys: executiveSummary (max 45 words), whyItIsSafe (max 35 words), recruiterTakeaway (max 30 words). Context: ${JSON.stringify(safeContext)}`;\nconst fallback = { executiveSummary: deterministicExplanation, whyItIsSafe: 'The proposal is version-checked and blocked until a human approves it.', recruiterTakeaway: 'ActiveFlow combines explainable automation, safe orchestration and human control.' };\nreturn [{ json: { scenario, prompt, fallback } }];"
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000002",
+      "name": "Build Safe Explanation Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-500, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 180, responseMimeType: 'application/json' } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000003",
+      "name": "Gemini Explains Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-220, 80],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SELECT_AFTER_IMPORT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst source = $('Build Safe Explanation Prompt').first().json;\nlet explanation = source.fallback;\nlet aiAvailable = false;\ntry {\n  const text = response.candidates?.[0]?.content?.parts?.[0]?.text;\n  if (!text) throw new Error('No Gemini content');\n  const parsed = JSON.parse(String(text).replace(/^```json\\s*|```$/g, '').trim());\n  if (!parsed.executiveSummary || !parsed.whyItIsSafe || !parsed.recruiterTakeaway) throw new Error('Incomplete Gemini response');\n  explanation = { executiveSummary: String(parsed.executiveSummary).slice(0, 500), whyItIsSafe: String(parsed.whyItIsSafe).slice(0, 400), recruiterTakeaway: String(parsed.recruiterTakeaway).slice(0, 350) };\n  aiAvailable = true;\n} catch {}\nreturn [{ json: { ok: true, aiAvailable, model: aiAvailable ? 'gemini-flash-lite-latest' : 'deterministic-fallback', explanation, guardrails: ['AI explains but does not decide', 'no credentials or personal data in prompts', 'human approval remains mandatory', 'fallback preserves demo availability'] } }];"
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000004",
+      "name": "Parse AI or Use Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000005",
+      "name": "Return AI Explanation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [340, 80]
+    },
+    {
+      "parameters": {
+        "content": "## AI with guardrails\nGemini translates an already-calculated deterministic proposal into recruiter-friendly business language. It cannot select candidates, modify plans or bypass human approval.",
+        "height": 190,
+        "width": 540,
+        "color": 5
+      },
+      "id": "c2a7f2b1-8acd-4e74-9ad2-000000000006",
+      "name": "AI Guardrail Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-500, -210]
+    }
+  ],
+  "connections": {
+    "AI Explanation Webhook": {
+      "main": [[{ "node": "Build Safe Explanation Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Safe Explanation Prompt": {
+      "main": [[{ "node": "Gemini Explains Decision", "type": "main", "index": 0 }]]
+    },
+    "Gemini Explains Decision": {
+      "main": [[{ "node": "Parse AI or Use Fallback", "type": "main", "index": 0 }]]
+    },
+    "Parse AI or Use Fallback": {
+      "main": [[{ "node": "Return AI Explanation", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "versionId": "c2a7f2b1-8acd-4e74-9ad2-000000000099",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CV su misura di Alessio"
+  short_description: "Crea CV mirati per aziende e offerte specifiche"
+  default_prompt: "Usa $alessio-tailored-cv per creare un CV mirato a questa offerta di lavoro."

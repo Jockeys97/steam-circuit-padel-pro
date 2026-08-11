@@ -1,0 +1,310 @@
+{
+  "name": "ActiveFlow - Portfolio Integration Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "activeflow-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1180, 120],
+      "id": "7efb5602-e0e7-47a4-b3f7-b8ddba33f6d9",
+      "name": "ActiveFlow Demo Webhook",
+      "webhookId": "activeflow-portfolio-demo-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $input.first().json;\nconst raw = envelope.body ?? envelope;\nconst allowedScenarios = ['onboarding', 'continuity', 'adaptation'];\nconst scenario = String(raw.scenario ?? 'onboarding').trim().toLowerCase();\nconst mode = 'dry-run';\n\nconst sensitivePattern = /(password|secret|token|authorization|api[_-]?key|cookie|credential)/i;\nconst sensitiveFields = [];\nfunction scan(value, path = 'body') {\n  if (!value || typeof value !== 'object') return;\n  for (const [key, nested] of Object.entries(value)) {\n    const fieldPath = `${path}.${key}`;\n    if (sensitivePattern.test(key)) sensitiveFields.push(fieldPath);\n    if (nested && typeof nested === 'object') scan(nested, fieldPath);\n  }\n}\nscan(raw);\n\nconst requestId = String(raw.requestId ?? `af-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);\nlet hash = 2166136261;\nfor (const char of `${scenario}:${requestId}`) {\n  hash ^= char.charCodeAt(0);\n  hash = Math.imul(hash, 16777619);\n}\nconst idempotencyKey = `af-${(hash >>> 0).toString(16)}`;\nconst errors = [];\nif (!allowedScenarios.includes(scenario)) errors.push(`scenario must be one of: ${allowedScenarios.join(', ')}`);\nif (sensitiveFields.length) errors.push('request contains fields that look like credentials or secrets');\n\nreturn [{ json: {\n  valid: errors.length === 0,\n  errors,\n  scenario,\n  mode,\n  requestId,\n  correlationId: `af_${scenario}_${requestId}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80),\n  idempotencyKey,\n  receivedAt: new Date().toISOString(),\n  approvalDecision: String(raw.approvalDecision ?? 'approve').toLowerCase(),\n  payload: raw.payload && typeof raw.payload === 'object' ? raw.payload : {},\n  safety: { syntheticOnly: true, companyApisUsed: false, secretsAccepted: false }\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-940, 120],
+      "id": "cf7c0319-160b-48a6-a701-98d1df65e588",
+      "name": "Validate and Normalize Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "93c0a482-9c3c-4bd2-9076-44db44ccde0a",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-700, 120],
+      "id": "694cdd5b-c5ca-457c-92cd-3aaac6907081",
+      "name": "Request Valid?"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "a56f649d-a378-4d26-9585-981296f55ce6",
+                    "leftValue": "={{ $json.scenario }}",
+                    "rightValue": "onboarding",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "onboarding"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "9b726f14-cbe2-4e07-8980-d465240f7fc4",
+                    "leftValue": "={{ $json.scenario }}",
+                    "rightValue": "continuity",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "continuity"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "e04792c0-5f2f-45e0-ad12-79f2ca88917a",
+                    "leftValue": "={{ $json.scenario }}",
+                    "rightValue": "adaptation",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "adaptation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-420, 40],
+      "id": "d0f88f4f-e931-413f-bade-72fb049db2c6",
+      "name": "Route Scenario"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst p = ctx.payload;\nconst goal = ['strength', 'mobility', 'wellbeing'].includes(p.goal) ? p.goal : 'wellbeing';\nconst availability = Array.isArray(p.availability) && p.availability.length ? p.availability.slice(0, 3) : ['weekday-evening'];\nconst locationZone = String(p.locationZone ?? 'remote').slice(0, 40);\nconst teamByGoal = {\n  strength: ['coach-strength-02', 'nutrition-01'],\n  mobility: ['coach-mobility-03', 'physio-02'],\n  wellbeing: ['coach-wellbeing-01', 'nutrition-02']\n};\nreturn [{ json: { ...ctx, proposal: {\n  scenario: 'onboarding',\n  contractVersion: '1.0',\n  canonicalModel: { memberRef: `demo-${ctx.requestId}`, goal, availability, locationZone, consent: { service: true, marketing: false } },\n  businessRules: ['canonical field mapping', 'eligible-role matching', 'explicit consent', 'single welcome notification'],\n  proposedAction: { assignedTeam: teamByGoal[goal], systems: ['operations-record', 'booking', 'member-portal'] },\n  simulatedIntegrations: ['REST CRM adapter', 'booking webhook', 'portal event'],\n  outcome: 'Validated member profile and coordinated service activation'\n} } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-120, -180],
+      "id": "78528aab-af71-49d9-98c8-a6751a98c79b",
+      "name": "Build Onboarding Proposal"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst p = ctx.payload;\nconst sessions = Math.max(1, Math.min(8, Number(p.affectedSessions ?? 3)));\nconst role = ['trainer', 'nutritionist', 'physio'].includes(p.role) ? p.role : 'trainer';\nconst candidatesByRole = {\n  trainer: ['demo-trainer-04', 'demo-trainer-07'],\n  nutritionist: ['demo-nutrition-02', 'demo-nutrition-05'],\n  physio: ['demo-physio-03', 'demo-physio-06']\n};\nreturn [{ json: { ...ctx, proposal: {\n  scenario: 'continuity',\n  contractVersion: '1.0',\n  canonicalModel: { professionalRef: `unavailable-${role}-demo`, role, affectedFutureSessions: sessions, timezone: 'Europe/Rome' },\n  businessRules: ['future sessions only', 'same-role replacement', 'availability conflict check', 'notify after all updates'],\n  proposedAction: { selectedCandidate: candidatesByRole[role][0], fallbackCandidate: candidatesByRole[role][1], sessionsToReassign: sessions },\n  simulatedIntegrations: ['schedule API adapter', 'calendar transaction', 'notification channel'],\n  outcome: `${sessions} future session${sessions === 1 ? '' : 's'} safely prepared for reassignment`\n} } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-120, 40],
+      "id": "651060a4-c51d-4ecb-9cb2-fbfaa2b26810",
+      "name": "Build Continuity Plan"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst p = ctx.payload;\nconst sleepMinutes = Math.max(0, Math.min(900, Number(p.sleepMinutes ?? 420)));\nconst rpe = Math.max(1, Math.min(10, Number(p.rpe ?? 7)));\nconst adherence = Math.max(0, Math.min(100, Number(p.adherence ?? 80)));\nlet decision = 'progress';\nlet adjustmentPercent = 5;\nif (sleepMinutes < 360 || rpe >= 9 || adherence < 60) { decision = 'deload'; adjustmentPercent = -15; }\nelse if (sleepMinutes < 420 || rpe >= 8 || adherence < 75) { decision = 'hold'; adjustmentPercent = 0; }\nconst explanation = decision === 'progress'\n  ? 'Signals are within the configured thresholds; a small progression can be reviewed.'\n  : decision === 'hold'\n    ? 'One or more recovery signals suggest maintaining the current plan.'\n    : 'Recovery or effort signals crossed a safety threshold; a temporary reduction is proposed.';\nreturn [{ json: { ...ctx, proposal: {\n  scenario: 'adaptation',\n  contractVersion: '1.0',\n  canonicalModel: { sleepMinutes, perceivedEffortRpe: rpe, adherencePercent: adherence, sampleSource: 'synthetic-demo' },\n  businessRules: ['bounded numeric inputs', 'deterministic decision', 'AI cannot change protected values', 'immutable version after approval'],\n  proposedAction: { decision, adjustmentPercent, explanationDraft: explanation },\n  simulatedIntegrations: ['signal adapters', 'constrained AI explanation', 'versioned program API'],\n  outcome: `A deterministic ${decision} proposal prepared for specialist review`\n} } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-120, 260],
+      "id": "20fedc7e-c671-45ef-8371-2804a2db2ad6",
+      "name": "Build Adaptation Proposal"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst decision = ['approve', 'reject', 'pending'].includes(ctx.approvalDecision) ? ctx.approvalDecision : 'pending';\nconst approved = decision === 'approve';\nconst rejected = decision === 'reject';\nconst status = approved ? 'completed' : rejected ? 'rejected_by_reviewer' : 'awaiting_human_approval';\nreturn [{ json: { ...ctx, result: {\n  status,\n  executed: approved,\n  approval: { required: true, decision, mode: 'simulated portfolio review', reviewer: 'demo-operations-specialist' },\n  action: approved ? ctx.proposal.proposedAction : null,\n  protectedBy: ['input validation', 'secret-field rejection', 'idempotency key', 'deterministic rules', 'human approval', 'dry-run only'],\n  audit: { correlationId: ctx.correlationId, idempotencyKey: ctx.idempotencyKey, timestamp: new Date().toISOString(), externalWrites: 0, companySystemsContacted: 0 }\n} } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [180, 40],
+      "id": "e159fe95-8d22-447d-b08a-f73adfc92cb4",
+      "name": "Human Approval and Guardrails"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  project: 'ActiveFlow',\n  mode: ctx.mode,\n  scenario: ctx.scenario,\n  status: ctx.result.status,\n  correlationId: ctx.correlationId,\n  contractVersion: ctx.proposal.contractVersion,\n  message: ctx.result.executed ? 'Dry-run completed: no external system was modified.' : 'No action executed without approval.',\n  proposal: ctx.proposal,\n  controls: ctx.result.protectedBy,\n  approval: ctx.result.approval,\n  audit: ctx.result.audit,\n  portfolioSafety: { syntheticData: true, proprietaryCode: false, companyEndpoints: false, credentials: false }\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 40],
+      "id": "214e1b41-f06c-4775-b7ed-ae22d883c952",
+      "name": "Build Safe Demo Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Cache-Control", "value": "no-store" }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [700, 40],
+      "id": "44491b03-b994-4811-981b-5454a29aa9d3",
+      "name": "Return Demo Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nreturn [{ json: {\n  ok: false,\n  statusCode: 400,\n  error: 'invalid_request',\n  message: 'The request was rejected before orchestration.',\n  details: ctx.errors,\n  correlationId: ctx.correlationId,\n  portfolioSafety: ctx.safety\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-420, 440],
+      "id": "ae1e41f2-972f-4778-b250-c036023d914c",
+      "name": "Build Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Cache-Control", "value": "no-store" }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-120, 440],
+      "id": "4aec2320-79e0-48c4-9918-814de6ec8310",
+      "name": "Return Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## 1 · Safe intake\nPublic portfolio webhook, schema normalization and rejection of secret-like fields. No company endpoint is called.",
+        "height": 310,
+        "width": 770,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1240, -40],
+      "id": "377332e1-14e2-4141-ab93-cdf4e05d1f19",
+      "name": "Safe Intake Note"
+    },
+    {
+      "parameters": {
+        "content": "## 2 · Three original orchestration exercises\nEach branch uses synthetic inputs and original deterministic logic to demonstrate mapping, policy decisions and system-integration thinking.",
+        "height": 670,
+        "width": 840,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-500, -300],
+      "id": "ac316c9b-3fbf-4528-aa56-6774dd163e4b",
+      "name": "Scenario Orchestration Note"
+    },
+    {
+      "parameters": {
+        "content": "## 3 · Human control and observable result\nThe workflow records a simulated approval, returns a structured audit trail and performs zero external writes in dry-run mode.",
+        "height": 310,
+        "width": 850,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [100, -40],
+      "id": "a0295290-2aac-4444-a595-278bf964085f",
+      "name": "Delivery and Audit Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "ActiveFlow Demo Webhook": {
+      "main": [[{ "node": "Validate and Normalize Request", "type": "main", "index": 0 }]]
+    },
+    "Validate and Normalize Request": {
+      "main": [[{ "node": "Request Valid?", "type": "main", "index": 0 }]]
+    },
+    "Request Valid?": {
+      "main": [
+        [{ "node": "Route Scenario", "type": "main", "index": 0 }],
+        [{ "node": "Build Validation Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route Scenario": {
+      "main": [
+        [{ "node": "Build Onboarding Proposal", "type": "main", "index": 0 }],
+        [{ "node": "Build Continuity Plan", "type": "main", "index": 0 }],
+        [{ "node": "Build Adaptation Proposal", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Onboarding Proposal": {
+      "main": [[{ "node": "Human Approval and Guardrails", "type": "main", "index": 0 }]]
+    },
+    "Build Continuity Plan": {
+      "main": [[{ "node": "Human Approval and Guardrails", "type": "main", "index": 0 }]]
+    },
+    "Build Adaptation Proposal": {
+      "main": [[{ "node": "Human Approval and Guardrails", "type": "main", "index": 0 }]]
+    },
+    "Human Approval and Guardrails": {
+      "main": [[{ "node": "Build Safe Demo Response", "type": "main", "index": 0 }]]
+    },
+    "Build Safe Demo Response": {
+      "main": [[{ "node": "Return Demo Result", "type": "main", "index": 0 }]]
+    },
+    "Build Validation Error": {
+      "main": [[{ "node": "Return Validation Error", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "versionId": "08803f93-0113-4d4d-ae8a-ebd23e66306b",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

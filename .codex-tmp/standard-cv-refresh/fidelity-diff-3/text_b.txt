@@ -1,0 +1,59 @@
+ALESSIO FANTINI
+AI AUTOMATION & FULL-STACK DEVELOPER
+Roma, Italia | Remoto / ibrido | +39 366 266 4944 | alessiofant@gmail.com
+LinkedIn  |  GitHub  |  Portfolio
+PROFILO
+AI Automation & Full-Stack Developer con esperienza pratica nello sviluppo e nella manutenzione di applicazioni web e mobile, chatbot conversazionali e workflow aziendali. Lavoro con Angular, Flutter, Node.js/PHP, Strapi, SQL, REST API, n8n e Botpress, integrando servizi e componenti AI in prodotti reali. Unisco analisi dei processi, troubleshooting e comunicazione con stakeholder tecnici e business.
+COMPETENZE CHIAVE
+AI Agents & Conversational
+Botpress, conversation flow, agent logic, variabili e tool, prompt design e knowledge base
+Automation & Integration
+n8n, REST API, webhook, JSON, Strapi, SQL, workflow AI, validazione e fallback
+Full-Stack & Mobile
+Angular, TypeScript, JavaScript, Node.js, PHP, React, Flutter, HTML e CSS
+Reliability & Delivery
+Testing, error handling, log e API response, Git/GitHub, Vercel e troubleshooting
+ESPERIENZA PROFESSIONALE
+Full-Stack & Automation Developer | Accademia Italiana Fitness
+Set 2025 - Presente  |  Roma
+Sviluppo e manutenzione di gestionali Angular e API PHP/Node.js con Strapi e SQL, dedicati a utenti, dati e processi aziendali.
+Progettazione di workflow n8n per orchestrare REST API, webhook, notifiche, documenti e passaggi AI, con validazione degli output e gestione dei fallback.
+Evoluzione di un assistente Botpress tramite flussi conversazionali, variabili, istruzioni agentiche e azioni integrate con Strapi e n8n.
+Supporto all'app Flutter pubblicata su iOS e Android, con test delle integrazioni, analisi di log e risposte API e troubleshooting cross-platform.
+CRM & Contract Operations Specialist | Team Service Soc. Cons. a r.l.
+Apr 2024 - Giu 2025  |  Roma
+Gestione dei processi CRM in ARXivar e Archibus per contratti, scadenze, documentazione assicurativa e accesso strutturato alle informazioni.
+Configurazione di percorsi approvativi, notifiche e dashboard per qualità, tracciabilità e monitoraggio operativo dei dati.
+Coordinamento con RUP, broker, clienti istituzionali e utenti interni, traducendo esigenze operative in processi strutturati.
+PROGETTI SELEZIONATI
+Green Active Mobile App - Prodotto professionale pubblicato su iOS e Android
+Contributo all'evoluzione dell'app tra onboarding, gestione trainer, allenamenti, progressi e integrazione con il backend Strapi.
+Sviluppo e validazione di flussi dati e automazioni collegate, con troubleshooting su un prodotto reale destinato agli utenti.
+Stack: Flutter, Strapi, REST API, SQL, n8n e workflow AI
+iOS: Apple App Store   |   Android: Google Play
+SIGNAL - AI Operational Intelligence
+Dashboard operativa per analizzare eventi e segnali aziendali, interpretare possibili cause e presentare azioni raccomandate.
+Architettura predisposta per integrazioni con n8n, webhook e knowledge base, timeline degli eventi e monitoraggio dei workflow.
+Stack: React 19, TypeScript, Express, SQLite, REST API e workflow AI
+Live demo: Open   |   Source: GitHub
+Steam Circuit Padel Pro - Browser game 2 contro 2 con gameplay AI
+Implementazione di servizi diagonali, rimbalzi su vetro e rete, caricamento dei colpi, mira, slice e cambio giocatore.
+Sviluppo di avversari e compagni controllati dall'AI, controlli responsivi e tre arene con modificatori distinti.
+Stack: HTML5 Canvas, JavaScript ES6+, CSS, fisica custom e gameplay AI
+Live demo: Open   |   Source: GitHub
+ESPERIENZE PRECEDENTI
+Formazione Full-Stack | Zero to Mastery | Dic 2023 - Mar 2024 | Roma
+Progetti formativi con React, Node.js, REST API, database e componenti responsivi riutilizzabili.
+Digital Marketing | Rational Tomato e Casa Rossa | 2022 - 2023 | Roma / Lisbona
+Esperienze in contenuti, campagne, reporting e coordinamento digitale in contesti italiani e internazionali.
+FORMAZIONE
+Laurea Magistrale con lode - Marketing & Digital Communication
+Università LUMSA | 2021 - 2023 | Roma
+Laurea Triennale - Scienze Politiche
+Università Roma Tre | 2016 - 2020 | Roma
+Diploma di Liceo Scientifico
+Istituto Lucio Anneo Seneca | 2012 - 2016 | Roma
+FORMAZIONE TECNICA E LINGUE
+Formazione tecnica: Complete Web Developer - Zero to Mastery; AI Prompt Engineering Bootcamp; Asfaleia Cybersecurity Course.
+Lingue: Italiano madrelingua; Inglese B2 (CLIC Language Center B2.1; Wall Street English Level 11).
+Disponibilità: full-time | Remoto e modalità ibrida | Autorizzato a lavorare in Italia
