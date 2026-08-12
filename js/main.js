@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-ball-height-v5";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-unlock-code-v6";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260812-ball-height-v5";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-ball-height-v5";
-import { setReduceMotion } from "./fx.js?v=20260812-ball-height-v5";
-import { createDrill, updateDrill } from "./drill.js?v=20260812-ball-height-v5";
-import { getLang, setLang, t } from "./i18n.js?v=20260812-ball-height-v5";
+} from "./game.js?v=20260812-unlock-code-v6";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-unlock-code-v6";
+import { setReduceMotion } from "./fx.js?v=20260812-unlock-code-v6";
+import { createDrill, updateDrill } from "./drill.js?v=20260812-unlock-code-v6";
+import { getLang, setLang, t } from "./i18n.js?v=20260812-unlock-code-v6";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260812-ball-height-v5";
+} from "./render.js?v=20260812-unlock-code-v6";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260812-ball-height-v5";
+} from "./ui.js?v=20260812-unlock-code-v6";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");

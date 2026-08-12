@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260812-ball-height-v5";
-import { t } from "./i18n.js?v=20260812-ball-height-v5";
+import { BALANCE, COURT } from "./data.js?v=20260812-unlock-code-v6";
+import { t } from "./i18n.js?v=20260812-unlock-code-v6";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

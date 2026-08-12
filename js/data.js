@@ -363,8 +363,12 @@ export const EVENT_LINES = [
  * Progressione carriera — sbloccabili.
  * `unlock` può richiedere `trophies` (trofei vinti) o `stars` (stelle guadagnate).
  */
+/** Codice di sblocco per demo e collaudo: si inserisce dalla selezione atleti. */
+export const UNLOCK_CODE = "GAPROVA";
+
 export function isUnlocked(item, career) {
   if (!item?.unlock) return true;
+  if (career?.unlockAll) return true;
   const { trophies = 0, stars = 0 } = item.unlock;
   return (career?.trophies ?? 0) >= trophies && (career?.stars ?? 0) >= stars;
 }

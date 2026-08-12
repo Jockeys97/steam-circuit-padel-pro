@@ -1,7 +1,7 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS } from "./data.js?v=20260812-ball-height-v5";
-import { getMatchInfo } from "./game.js?v=20260812-ball-height-v5";
-import { getVolume, isMuted } from "./audio.js?v=20260812-ball-height-v5";
-import { getLang, t } from "./i18n.js?v=20260812-ball-height-v5";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260812-unlock-code-v6";
+import { getMatchInfo } from "./game.js?v=20260812-unlock-code-v6";
+import { getVolume, isMuted } from "./audio.js?v=20260812-unlock-code-v6";
+import { getLang, t } from "./i18n.js?v=20260812-unlock-code-v6";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -16,6 +16,7 @@ const DEFAULT_CAREER = {
   seasonObjectives: [],
   seasonStars: 0,
   rivalStreak: 0,
+  unlockAll: false,
 };
 
 export function loadCareer() {
@@ -204,6 +205,35 @@ function lockLabel(unlock) {
   return parts.join(" · ");
 }
 
+const UNLOCK_TAPS = 3;
+const UNLOCK_TAP_WINDOW = 1400;
+let unlockTaps = 0;
+let unlockTapTime = 0;
+
+/**
+ * Tre tocchi su una card bloccata entro la finestra chiedono il codice di
+ * sblocco. Restituisce true solo se lo sblocco e' appena avvenuto, cosi' il
+ * chiamante sa se deve ridisegnare la griglia.
+ */
+function promptUnlockCode() {
+  if (ui.career.unlockAll) return false;
+  const now = Date.now();
+  unlockTaps = now - unlockTapTime > UNLOCK_TAP_WINDOW ? 1 : unlockTaps + 1;
+  unlockTapTime = now;
+  if (unlockTaps < UNLOCK_TAPS) return false;
+  unlockTaps = 0;
+  const risposta = window.prompt(t("unlockPrompt"));
+  if (risposta === null) return false;
+  if (risposta.trim().toUpperCase() !== UNLOCK_CODE) {
+    window.alert(t("unlockWrong"));
+    return false;
+  }
+  ui.career.unlockAll = true;
+  saveCareer(ui.career);
+  window.alert(t("unlockDone"));
+  return true;
+}
+
 export function renderAthletes(onSelect, selectedId = null) {
   const grid = document.getElementById("athleteGrid");
   grid.innerHTML = "";
@@ -231,7 +261,13 @@ export function renderAthletes(onSelect, selectedId = null) {
       });
       if (athlete.id === selectedId) selectAthleteCard(card, athlete);
     } else {
-      card.disabled = true;
+      // Niente `disabled`: un bottone disabilitato non emette click, quindi il
+      // triplo tocco non arriverebbe mai. Resta inselezionabile perche' l'unica
+      // cosa che fa e' contare i tocchi.
+      card.setAttribute("aria-disabled", "true");
+      card.addEventListener("click", () => {
+        if (promptUnlockCode()) renderAthletes(onSelect, selectedId);
+      });
     }
     grid.appendChild(card);
   });

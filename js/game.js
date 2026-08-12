@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-ball-height-v5";
-import { clamp } from "./render.js?v=20260812-ball-height-v5";
-import { sfx } from "./audio.js?v=20260812-ball-height-v5";
-import { t } from "./i18n.js?v=20260812-ball-height-v5";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-unlock-code-v6";
+import { clamp } from "./render.js?v=20260812-unlock-code-v6";
+import { sfx } from "./audio.js?v=20260812-unlock-code-v6";
+import { t } from "./i18n.js?v=20260812-unlock-code-v6";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260812-ball-height-v5";
+} from "./fx.js?v=20260812-unlock-code-v6";
 
 const SERVICE_LINE_OFFSET = 126;
 const SERVICE_TOP = COURT.netY - SERVICE_LINE_OFFSET;
