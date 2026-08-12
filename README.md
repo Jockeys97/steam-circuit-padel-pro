@@ -1,3 +1,5 @@
+*[**Italiano**](README.md) · [English](README.en.md)*
+
 # Steam Circuit Padel Pro
 
 Padel arcade steampunk in HTML5 Canvas. Giocabile nel browser, senza installazione.
