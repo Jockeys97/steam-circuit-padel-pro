@@ -76,9 +76,10 @@ export const BALANCE = {
   shotErrorWideShare: 0.45,
   // Angolo stretto su RT: portata della mira, margine dal vetro, taglio alla
   // dispersione e quota di errori laterali.
-  tightAngleReachGain: 0.032,
+  tightAngleReachGain: 0.065,
   tightAngleMargin: 10,
   tightAngleJitterCut: 0.45,
+  tightAngleMinSpread: 65,
   tightAngleWideShare: 0.85,
   shotErrorShort: 55,
   shotErrorDepth: 150,

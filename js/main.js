@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-shot-errors-v1";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-tight-angle-v2";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260812-shot-errors-v1";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-shot-errors-v1";
-import { setReduceMotion } from "./fx.js?v=20260812-shot-errors-v1";
-import { createDrill, updateDrill } from "./drill.js?v=20260812-shot-errors-v1";
-import { getLang, setLang, t } from "./i18n.js?v=20260812-shot-errors-v1";
+} from "./game.js?v=20260812-tight-angle-v2";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-tight-angle-v2";
+import { setReduceMotion } from "./fx.js?v=20260812-tight-angle-v2";
+import { createDrill, updateDrill } from "./drill.js?v=20260812-tight-angle-v2";
+import { getLang, setLang, t } from "./i18n.js?v=20260812-tight-angle-v2";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260812-shot-errors-v1";
+} from "./render.js?v=20260812-tight-angle-v2";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260812-shot-errors-v1";
+} from "./ui.js?v=20260812-tight-angle-v2";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -291,9 +291,61 @@ function updateGamepadIndicator(connected, id = "") {
   const el = document.getElementById("gamepadIndicator");
   if (!el) return;
   el.hidden = !connected;
-  const xbox = /xbox|xinput/i.test(id);
-  el.textContent = xbox ? "XBOX" : "🎮";
+  const layout = detectControllerLayout(id);
+  el.textContent = connected ? layout.badge : "🎮";
+  el.dataset.controller = layout.type;
   el.title = connected ? t("gamepadConnected") : t("gamepadDisconnected");
+}
+
+function detectControllerLayout(id = "") {
+  const value = String(id).toLowerCase();
+  if (/xbox|xinput|microsoft/.test(value)) {
+    return { type: "xbox", badge: "XBOX", image: "assets/ui/xbox-controller-steam.png", caption: t("xboxLayout"), keys: ["LS", "RS", "A", "X", "Y", "B", "LB", "LT", "RT", "RB", "D-PAD", "A+A", "☰"] };
+  }
+  if (/playstation|dualshock|dualsense|sony|ps[345]/.test(value)) {
+    return { type: "playstation", badge: "PS", image: "assets/ui/playstation-controller-steam.png", caption: t("playstationLayout"), keys: ["L3", "R3", "✕", "□", "△", "○", "L1", "L2", "R2", "R1", "D-PAD", "✕+✕", "OPTIONS"] };
+  }
+  return { type: "generic", badge: "🎮", image: "assets/ui/generic-controller-steam.png", caption: t("genericControllerLayout"), keys: ["LS", "RS", "1", "3", "4", "2", "LB", "LT", "RT", "RB", "D-PAD", "1+1", "MENU"] };
+}
+
+function applyControllerLayout(id = gamepad.id) {
+  const layout = detectControllerLayout(id);
+  const italian = getLang() === "it";
+  const faceHints = layout.type === "playstation"
+    ? (italian ? "✕ drive · □ slice · △ lob · ○ speciale" : "✕ drive · □ slice · △ lob · ○ special")
+    : layout.type === "generic"
+      ? (italian ? "1 drive · 3 slice · 4 lob · 2 speciale" : "1 drive · 3 slice · 4 lob · 2 special")
+      : (italian ? "A drive · X slice · Y lob · B speciale" : "A drive · X slice · Y lob · B special");
+  const technicalHints = layout.type === "playstation"
+    ? (italian ? "✕ chiquita, □ víbora, △ lob difensivo" : "✕ chiquita, □ vibora, △ defensive lob")
+    : layout.type === "generic"
+      ? (italian ? "1 chiquita, 3 víbora, 4 lob difensivo" : "1 chiquita, 3 vibora, 4 defensive lob")
+      : (italian ? "A chiquita, X víbora, Y lob difensivo" : "A chiquita, X vibora, Y defensive lob");
+  const smashHint = layout.type === "playstation"
+    ? (italian ? "Carica e rilascia, poi premi ✕ all'impatto" : "Charge and release, then press ✕ at contact")
+    : layout.type === "generic"
+      ? (italian ? "Carica e rilascia, poi premi 1 all'impatto" : "Charge and release, then press 1 at contact")
+      : (italian ? "Carica e rilascia, poi premi A all'impatto" : "Charge and release, then press A at contact");
+  document.querySelectorAll("[data-controller-image]").forEach((image) => {
+    image.src = layout.image;
+    image.alt = `${layout.caption} · ${t("controllerDetected")}`;
+  });
+  document.querySelectorAll("[data-controller-caption]").forEach((caption) => {
+    caption.textContent = layout.caption;
+  });
+  document.querySelectorAll('[data-i18n="padButtons"]').forEach((label) => { label.textContent = faceHints; });
+  document.querySelectorAll('[data-i18n="padTechnicalDesc"]').forEach((label) => { label.textContent = technicalHints; });
+  document.querySelectorAll('[data-i18n="padSmashDesc"]').forEach((label) => { label.textContent = smashHint; });
+  const keycaps = document.querySelectorAll(".controls-guide__legend > div > kbd:first-child, .controls-guide__legend > button > kbd:first-child");
+  keycaps.forEach((keycap, index) => {
+    if (layout.keys[index]) keycap.textContent = layout.keys[index];
+  });
+  document.querySelectorAll(".help-controller-legend kbd").forEach((keycap, index) => {
+    if (layout.keys[index]) keycap.textContent = layout.keys[index];
+  });
+  document.querySelectorAll("[data-controller-panel]").forEach((panel) => {
+    panel.dataset.controller = layout.type;
+  });
 }
 
 function updateStickMonitor(left = { x: 0, y: 0 }, right = { x: 0, y: 0 }) {
@@ -419,6 +471,7 @@ function pollGamepads() {
     gamepad.connected = true;
     gamepad.index = pad.index;
     gamepad.id = pad.id ?? "";
+    applyControllerLayout(gamepad.id);
     updateGamepadIndicator(true, gamepad.id);
     const previewDeadzone = ui.gamepadDeadzone ?? 0.15;
     updateStickMonitor(
@@ -440,6 +493,7 @@ function pollGamepads() {
     updateStickMonitor();
     setMenuFocus(null);
     updateGamepadIndicator(false);
+    applyControllerLayout("");
   }
 
   if (pad2) {
@@ -1412,6 +1466,7 @@ if (["it", "en"].includes(prefs.lang)) {
 }
 applyAccessibility();
 applyLanguage();
+applyControllerLayout(gamepad.connected ? gamepad.id : "xbox");
 updateMuteButton();
 
 const controlModeButtons = [...document.querySelectorAll("[data-control-mode]")];
@@ -1464,6 +1519,7 @@ helpInputTabs.forEach((button) => {
   button.addEventListener("click", () => setHelpInputView(button.dataset.helpInput));
 });
 setHelpInputView("keyboard");
+applyControllerLayout(gamepad.id);
 
 function applyAccessibility() {
   document.body.classList.toggle("reduce-motion", ui.reduceMotion);
@@ -1479,6 +1535,7 @@ function setLanguage(lang) {
   applyLanguage();
   updateMuteButton();
   updateGamepadIndicator(gamepad.connected, gamepad.id);
+  applyControllerLayout(gamepad.id);
   updateCareerTag();
   renderAthletes(() => {
     savePrefs(collectPrefs());
@@ -1731,6 +1788,7 @@ window.addEventListener("gamepadconnected", (event) => {
   gamepad.connected = true;
   gamepad.index = event.gamepad.index;
   gamepad.id = event.gamepad.id ?? "";
+  applyControllerLayout(gamepad.id);
   updateGamepadIndicator(true, gamepad.id);
 });
 
@@ -1738,6 +1796,7 @@ window.addEventListener("gamepaddisconnected", (event) => {
   if (gamepad.index === event.gamepad.index) {
     gamepad.connected = false;
     gamepad.index = null;
+    applyControllerLayout("");
     releaseGamepadKeys();
     updateGamepadIndicator(false);
   }

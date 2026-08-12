@@ -124,6 +124,25 @@ button {
   line-height: 1.65;
 }
 
+.hero-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  margin: -20px 0 28px;
+  padding: 7px 14px 7px 9px;
+  border: 1px solid rgba(126, 243, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(22, 190, 215, 0.08);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.hero-hint__icon {
+  font-size: 0.95rem;
+}
+
 .hero-poster {
   position: relative;
   overflow: hidden;

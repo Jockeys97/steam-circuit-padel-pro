@@ -1,7 +1,7 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS } from "./data.js?v=20260812-shot-errors-v1";
-import { getMatchInfo } from "./game.js?v=20260812-shot-errors-v1";
-import { getVolume, isMuted } from "./audio.js?v=20260812-shot-errors-v1";
-import { getLang, t } from "./i18n.js?v=20260812-shot-errors-v1";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS } from "./data.js?v=20260812-tight-angle-v2";
+import { getMatchInfo } from "./game.js?v=20260812-tight-angle-v2";
+import { getVolume, isMuted } from "./audio.js?v=20260812-tight-angle-v2";
+import { getLang, t } from "./i18n.js?v=20260812-tight-angle-v2";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";

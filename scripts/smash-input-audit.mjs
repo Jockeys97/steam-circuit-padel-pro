@@ -12,9 +12,12 @@ function smash({
   timingAge = 0,
   moveRatio = 0,
   passed = 0,
+  rallyHits = 2,
 } = {}) {
   const state = createMatchState("quick", ATHLETES[0], ARENAS[0], AI_OPPONENTS[1]);
-  Object.assign(state, { running: true, serving: false });
+  // rallyHits > 0: lo smash e' vietato sulla risposta al servizio, e qui si
+  // stanno verificando i colpi durante lo scambio.
+  Object.assign(state, { running: true, serving: false, rallyHits });
   Object.assign(state.player, { x: 480, y, hitCooldown: 0, moveRatio });
   Object.assign(state.ball, {
     x: 480,
@@ -54,6 +57,7 @@ function bufferedSmash() {
     serving: false,
     shotCharge: 0.76,
     activePlayerKey: "player",
+    rallyHits: 2,
   });
   Object.assign(state.player, {
     x: 480,
@@ -100,7 +104,7 @@ function bufferedSmash() {
 
 function missedDoubleTap() {
   const state = createMatchState("quick", ATHLETES[0], ARENAS[0], AI_OPPONENTS[1]);
-  Object.assign(state, { running: true, serving: false, shotCharge: 0.76 });
+  Object.assign(state, { running: true, serving: false, shotCharge: 0.76, rallyHits: 2 });
   Object.assign(state.player, {
     x: 480,
     y: COURT.netY + 170,
@@ -142,6 +146,13 @@ assert.deepEqual(
   missedDoubleTap(),
   { type: "drive", hitter: "player" },
   "Senza secondo tap il colpo preparato deve degradare a drive, non sparire",
+);
+
+const rispostaAlServizio = smash({ rallyHits: 0 });
+assert.equal(
+  rispostaAlServizio,
+  "bandeja",
+  `La risposta al servizio non puo' essere uno smash: ${rispostaAlServizio}`,
 );
 
 console.log(JSON.stringify({

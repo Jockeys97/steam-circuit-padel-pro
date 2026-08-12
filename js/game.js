@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-shot-errors-v1";
-import { clamp } from "./render.js?v=20260812-shot-errors-v1";
-import { sfx } from "./audio.js?v=20260812-shot-errors-v1";
-import { t } from "./i18n.js?v=20260812-shot-errors-v1";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-tight-angle-v2";
+import { clamp } from "./render.js?v=20260812-tight-angle-v2";
+import { sfx } from "./audio.js?v=20260812-tight-angle-v2";
+import { t } from "./i18n.js?v=20260812-tight-angle-v2";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260812-shot-errors-v1";
+} from "./fx.js?v=20260812-tight-angle-v2";
 
 const SERVICE_LINE_OFFSET = 126;
 const SERVICE_TOP = COURT.netY - SERVICE_LINE_OFFSET;
@@ -788,7 +788,26 @@ function updateShotRead(state, paddle) {
   const mate = state.playerMate;
   const overlap = Math.abs(paddle.x - mate.x) < (paddle.w + mate.w) * 0.52
     && Math.abs(paddle.y - mate.y) < 92;
-  state.shotRead = { active: incoming && eta !== null && eta > -0.16 && eta < 1.15, eta, perfectWindow, advice, profile, overlap };
+  // Anteprima dell'angolo stretto: stessa formula che usera' il colpo, cosi'
+  // l'indicatore non promette qualcosa di diverso da quello che accade.
+  const aimFreedom = profile === "control" ? 0.78 : profile === "attack" ? 0.96 : 1.1;
+  const previewOffset = clamp(
+    (state.shotAim ?? 0) * (state.athlete?.stats.control ?? 1) * aimFreedom,
+    -1,
+    1,
+  );
+  const precision = clamp(state.shotPrecision ?? 0, 0, 1);
+  const tight = precision * clamp((Math.abs(previewOffset) - 0.55) / 0.35, 0, 1);
+  state.shotRead = {
+    active: incoming && eta !== null && eta > -0.16 && eta < 1.15,
+    eta,
+    perfectWindow,
+    advice,
+    profile,
+    overlap,
+    precision,
+    tight,
+  };
 }
 
 function evaluateShotQuality(
@@ -993,7 +1012,7 @@ function chooseComputerShot(state, paddle, profile, contactHeight = 0) {
   const pressured = paddleUnderPressure(paddle) || state.ball.z < 38;
   const opponentsAreForward = opponentsNearNet(opponentSide, opponents);
   const choice = Math.random();
-  const overheadReady = atNet && contactHeight >= 58;
+  const overheadReady = atNet && contactHeight >= 58 && state.rallyHits > 0;
   // Su una palla attaccabile la frequenza dello smash sale, e sale di piu' con
   // la difficolta': e' li' che il Campione deve distinguersi dal Rivale.
   const attack = attackRead(state, paddle, contactHeight);
@@ -1255,8 +1274,14 @@ export function hitBall(
       ? BALANCE.smashNetWindow
       : BALANCE.viboraNetWindow);
     const explicitSmash = shotVariant === "smash";
+    // La risposta al servizio non puo' essere uno smash: `rallyHits` e' 0 solo
+    // sul primo colpo del punto, che e' sempre la risposta. Uno smash chiesto
+    // esplicitamente li' diventa una bandeja, come in ogni altro contesto
+    // in cui la finestra non e' aperta.
+    const serviceReturn = state.rallyHits === 0;
     const smashReady = !slice
       && (explicitSmash || shotVariant === "auto")
+      && !serviceReturn
       && nearNet
       && contactHeight >= BALANCE.smashMinHeight
       && shotPower >= BALANCE.smashMinPower;
@@ -1282,17 +1307,22 @@ export function hitBall(
     const overchargeRisk = Math.max(0, shotPower - safePower);
     const controlRisk = clamp(1.3 - control, 0.06, 0.46);
     const profileRisk = assessment.profile === "risk" ? 1.34 : assessment.profile === "attack" ? 1 : 0.62;
-    const executionRisk = assessment.risk * (0.72 + controlRisk * 0.7) * profileRisk;
-    const lateralJitter = (Math.random() - 0.5)
-      * (overchargeRisk * controlRisk * 300 + executionRisk * 170)
-      * (1 - clamp(precision, 0, 1) * BALANCE.tightAngleJitterCut);
-    const depthJitter = (Math.random() - 0.44)
-      * (overchargeRisk * controlRisk * 480 + executionRisk * 210);
     // Angolo stretto: RT allunga la portata della mira fin contro il vetro e
     // riduce la dispersione, perche' stai mirando di proposito. Non aggiunge
     // casualita' — sposta il bersaglio dentro il margine d'errore che gia' hai.
     const tight = clamp(precision, 0, 1) * clamp((Math.abs(aimedOffset) - 0.55) / 0.35, 0, 1);
     const aimReach = 0.42 + tight * BALANCE.tightAngleReachGain;
+    const executionRisk = assessment.risk * (0.72 + controlRisk * 0.7) * profileRisk;
+    // L'angolo stretto riduce la dispersione dovuta all'esecuzione, ma ne
+    // aggiunge una incomprimibile: mirare a ridosso del vetro resta un azzardo
+    // anche colpendo perfettamente. Il controllo dell'atleta la contiene.
+    const tightSpread = tight * BALANCE.tightAngleMinSpread / Math.max(0.6, control);
+    const lateralJitter = (Math.random() - 0.5)
+      * ((overchargeRisk * controlRisk * 300 + executionRisk * 170)
+        * (1 - clamp(precision, 0, 1) * BALANCE.tightAngleJitterCut)
+        + tightSpread);
+    const depthJitter = (Math.random() - 0.44)
+      * (overchargeRisk * controlRisk * 480 + executionRisk * 210);
     const targetMargin = seeksSideGlass || tight > 0.2
       ? Math.round(30 - tight * (30 - BALANCE.tightAngleMargin))
       : assessment.profile === "control" ? 108 : assessment.profile === "attack" ? 72 : 48;
@@ -2369,6 +2399,7 @@ function queuePaddleHit(state, paddle, input) {
     : paddle.y >= COURT.netY - BALANCE.smashNetWindow;
   const canPrimeSmash = paddle.queuedShot.variant === "drive"
     && !paddle.queuedShot.slice
+    && state.rallyHits > 0
     && nearNet
     && state.ball.z >= BALANCE.smashMinHeight - 8
     && hitPowerProfile(paddle, state, paddle.queuedShot.power) >= BALANCE.smashMinPower;
@@ -2612,6 +2643,7 @@ export function updateMatch(state, dt, input, input2 = null) {
       const queuedPower = state.queuedShotPower * state.athlete.stats.power;
       const canPrimeSmash = state.queuedShotVariant === "drive"
         && !state.queuedShotSlice
+        && state.rallyHits > 0
         && player.y <= COURT.netY + BALANCE.smashNetWindow
         && ball.z >= BALANCE.smashMinHeight - 8
         && queuedPower >= BALANCE.smashMinPower;

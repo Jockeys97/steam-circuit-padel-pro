@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260812-shot-errors-v1";
-import { t } from "./i18n.js?v=20260812-shot-errors-v1";
+import { BALANCE, COURT } from "./data.js?v=20260812-tight-angle-v2";
+import { t } from "./i18n.js?v=20260812-tight-angle-v2";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -1413,6 +1413,42 @@ export function drawTimingHud(ctx, state, time) {
       ctx.arc(0, 0, r + 5 * scale, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Corsa di RT durante la carica: dice quanto rischio stai impegnando, non
+  // dove andra' la palla. Il punto di caduta resta una lettura del giocatore.
+  const precision = read?.precision ?? 0;
+  if ((state.shotCharge ?? 0) > 0.05 && precision > 0.04) {
+    const tight = read?.tight ?? 0;
+    const w = 46 * scale;
+    const h = 5 * scale;
+    const x = p.x - w / 2;
+    const y = p.y - 64 * scale;
+    ctx.save();
+    ctx.fillStyle = "rgba(4,14,32,0.78)";
+    ctx.strokeStyle = "rgba(126,243,255,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x - 1, y - 1, w + 2, h + 2, 3);
+    ctx.fill();
+    ctx.stroke();
+    // Ciano finche' la soglia non scatta, ambra/rosso quando l'angolo e' armato.
+    const armed = tight > 0.02;
+    const pulse = armed ? 0.62 + 0.38 * Math.sin(time * 16) : 1;
+    ctx.fillStyle = armed
+      ? `rgba(${Math.round(255)},${Math.round(190 - tight * 120)},70,${pulse})`
+      : "rgba(126,243,255,0.75)";
+    ctx.beginPath();
+    ctx.roundRect(x, y, Math.max(2, w * clamp(precision, 0, 1)), h, 2);
+    ctx.fill();
+    if (armed) {
+      ctx.font = `800 ${9 * scale}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = `rgba(255,214,120,${pulse})`;
+      ctx.fillText(t("hudTightAngle"), p.x, y - 3 * scale);
     }
     ctx.restore();
   }
