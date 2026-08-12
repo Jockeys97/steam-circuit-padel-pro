@@ -5,6 +5,10 @@ export function setReduceMotion(enabled) {
   reducedMotion = Boolean(enabled);
 }
 
+export function isReduceMotion() {
+  return reducedMotion;
+}
+
 export function resetFx(state) {
   state.fx = { particles: [], shake: 0 };
 }

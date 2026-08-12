@@ -428,54 +428,71 @@ button {
 .scoreboard,
 .game-timer,
 .mini-map {
-  border: 3px solid #173b61;
+  border: 1px solid #1c507e;
   border-radius: 8px;
-  background: #10365f;
-  box-shadow: 0 5px 0 rgba(4, 22, 43, 0.48);
+  background: rgba(6, 24, 46, 0.82);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
 }
 
 .scoreboard {
   display: grid;
-  min-width: 244px;
+  min-width: 196px;
   overflow: hidden;
   text-align: center;
 }
 
 .scoreboard__title {
-  padding: 3px 10px;
-  background: #112b4d;
-  color: #bdeeff;
+  padding: 2px 10px;
+  background: linear-gradient(180deg, #16bed7, #0e88c8);
+  color: #061426;
   font-family: "Lilita One", cursive;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
 }
 
 .scoreboard__teams {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px 3px;
+  gap: 10px;
+  padding: 6px 12px 4px;
 }
 
 .scoreboard__teams div {
   display: grid;
-  gap: 1px;
+  gap: 2px;
+}
+
+.scoreboard__teams div::before {
+  content: "";
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
+}
+
+.scoreboard__teams div:last-child::before {
+  background: var(--coral);
+  box-shadow: 0 0 8px rgba(255, 109, 112, 0.7);
 }
 
 .game-hud__label {
   color: #dcefff;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .game-hud strong {
   font-family: "Lilita One", cursive;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1;
   color: var(--cyan);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 .scoreboard__teams div:last-child strong {
@@ -485,24 +502,34 @@ button {
 .scoreboard__versus {
   color: #fff;
   font-family: "Lilita One", cursive;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.scoreboard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  padding: 0 6px 6px;
 }
 
 .scoreboard__match {
-  padding: 4px 8px;
-  border-top: 2px solid #1c507e;
-  border-bottom: 2px solid #1c507e;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 243, 106, 0.25);
+  border-radius: 999px;
   background: #0b2545;
   color: #fff36a;
   font-family: "Lilita One", cursive;
-  font-size: 0.64rem;
+  font-size: 0.56rem;
 }
 
 .scoreboard__control {
-  padding: 3px 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
   background: #173b61;
   color: #fff36a;
-  font-size: 0.59rem;
+  font-size: 0.54rem;
   font-weight: 900;
   letter-spacing: 0.05em;
 }
@@ -510,15 +537,15 @@ button {
 .scoreboard__control.is-auto-switch {
   color: #08284b;
   background: #fff36a;
-  box-shadow: 0 0 14px rgba(255, 243, 106, 0.7);
+  box-shadow: 0 0 10px rgba(255, 243, 106, 0.7);
 }
 
 .scoreboard__tactic {
-  padding: 3px 8px;
-  border-top: 1px solid rgba(126, 243, 255, 0.14);
+  padding: 2px 8px;
+  border-radius: 999px;
   background: #102f50;
   color: #8fffd0;
-  font-size: 0.56rem;
+  font-size: 0.52rem;
   font-weight: 900;
   letter-spacing: 0.05em;
 }
@@ -529,9 +556,10 @@ button {
 }
 
 #comboDisplay {
-  padding: 3px 8px 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
   color: #7ef3ff;
-  font-size: 0.66rem;
+  font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.04em;
 }

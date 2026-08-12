@@ -24,3 +24,5 @@ scripts/update_cv_figma_framer.py
 signal-dashboard-preview.png
 signal-preview.svg
 signal-preview.svg.png
+.vercel
+.env*

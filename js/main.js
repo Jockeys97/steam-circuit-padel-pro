@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260811-opponent-scale-v6";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-shot-errors-v1";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260811-opponent-scale-v6";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260811-shot-physics-v1";
-import { setReduceMotion } from "./fx.js?v=20260811-shot-physics-v1";
-import { createDrill, updateDrill } from "./drill.js?v=20260811-opponent-scale-v6";
-import { getLang, setLang, t } from "./i18n.js?v=20260811-opponent-scale-v6";
+} from "./game.js?v=20260812-shot-errors-v1";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-shot-errors-v1";
+import { setReduceMotion } from "./fx.js?v=20260812-shot-errors-v1";
+import { createDrill, updateDrill } from "./drill.js?v=20260812-shot-errors-v1";
+import { getLang, setLang, t } from "./i18n.js?v=20260812-shot-errors-v1";
 import {
   drawArena,
   drawActiveIndicator,
@@ -19,7 +19,8 @@ import {
   drawServeBox,
   drawShotFeedback,
   drawTeamGeometry,
-} from "./render.js?v=20260811-opponent-scale-v6";
+  drawTimingHud,
+} from "./render.js?v=20260812-shot-errors-v1";
 import {
   applyLanguage,
   awardObjectives,
@@ -40,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260811-opponent-scale-v6";
+} from "./ui.js?v=20260812-shot-errors-v1";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -57,46 +58,35 @@ const trySmashTutorialButton = document.getElementById("trySmashTutorial");
 const eventLog = document.getElementById("eventLog");
 const eventLogToggle = document.getElementById("eventLogToggle");
 
-const athleteSprites = new Map(ATHLETES.map((athlete) => {
+function loadOptionalSprite(path) {
   const sprite = new Image();
   sprite.decoding = "async";
-  sprite.src = athlete.sprite;
-  return [athlete.id, sprite];
+  if (path) sprite.src = path;
+  return sprite;
+}
+
+const athleteSprites = new Map(ATHLETES.map((athlete) => {
+  return [athlete.id, loadOptionalSprite(athlete.sprite)];
 }));
 
 const athleteBackSprites = new Map(ATHLETES.map((athlete) => {
-  const sprite = new Image();
-  sprite.decoding = "async";
-  sprite.src = athlete.backSprite;
-  return [athlete.id, sprite];
+  return [athlete.id, loadOptionalSprite(athlete.backSprite)];
 }));
 
 const athleteActionSprites = new Map(ATHLETES.map((athlete) => {
-  const sprite = new Image();
-  sprite.decoding = "async";
-  sprite.src = athlete.actionSprite;
-  return [athlete.id, sprite];
+  return [athlete.id, loadOptionalSprite(athlete.actionSprite)];
 }));
 
 const athleteBackActionSprites = new Map(ATHLETES.map((athlete) => {
-  const sprite = new Image();
-  sprite.decoding = "async";
-  sprite.src = athlete.backActionSprite;
-  return [athlete.id, sprite];
+  return [athlete.id, loadOptionalSprite(athlete.backActionSprite)];
 }));
 
 const athleteRunSprites = new Map(ATHLETES.map((athlete) => {
-  const sprite = new Image();
-  sprite.decoding = "async";
-  sprite.src = athlete.runSprite;
-  return [athlete.id, sprite];
+  return [athlete.id, loadOptionalSprite(athlete.runSprite)];
 }));
 
 const athleteBackRunSprites = new Map(ATHLETES.map((athlete) => {
-  const sprite = new Image();
-  sprite.decoding = "async";
-  sprite.src = athlete.backRunSprite;
-  return [athlete.id, sprite];
+  return [athlete.id, loadOptionalSprite(athlete.backRunSprite)];
 }));
 
 const keys = new Set();
@@ -879,6 +869,7 @@ function gameLoop(now, generation) {
     matchState.rallyEnergy.player,
     smashStatus,
   );
+  drawTimingHud(ctx, matchState, now / 1000);
   drawShotFeedback(ctx, matchState);
   drawBall(ctx, matchState.ball, matchState.flash);
   drawFx(ctx, matchState);
@@ -903,8 +894,8 @@ function gameLoop(now, generation) {
 }
 
 const REPLAY_PAD_KEYS = ["player", "playerMate", "opponent", "opponentMate"];
-const REPLAY_PAD_FIELDS = ["x", "y", "swing", "swingSide", "motion", "charge", "runPhase", "actionPose", "moveRatio"];
-const REPLAY_BALL_FIELDS = ["x", "y", "z", "vx", "vy", "vz", "spin", "topspin", "backspin", "shotType", "serveInFlight", "serveTouchedNet", "bouncePulse", "landRing"];
+const REPLAY_PAD_FIELDS = ["x", "y", "swing", "swingSide", "motion", "charge", "runPhase", "actionPose", "actionIntent", "moveRatio"];
+const REPLAY_BALL_FIELDS = ["x", "y", "z", "vx", "vy", "vz", "spin", "topspin", "backspin", "shotType", "serveInFlight", "serveTouchedNet", "bouncePulse", "landRing", "hitFlash", "hitPulse", "trail"];
 
 function stepReplay(dt) {
   const frames = matchState.replayFrames;

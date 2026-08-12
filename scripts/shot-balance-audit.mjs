@@ -141,15 +141,24 @@ assert(mediumX3Winners > 120 && mediumX3Winners < 270,
   `Lo X3 contro IA media deve restare speciale ma non automatico: ${mediumX3Winners}`);
 
 Math.random = seededRandom(20260811);
+// Il repertorio va campionato da piu' situazioni: da quando l'IA legge una
+// palla attaccabile a rete non pallonetta piu' da li', quindi il lob va
+// cercato dove e' la scelta giusta, cioe' schiacciata sul fondo.
+const aiScenarios = [
+  { opponentY: 230, ballY: 250, ballZ: 70, ballVy: -80 },
+  { opponentY: 110, ballY: 130, ballZ: 34, ballVy: -80 },
+];
 const aiRepertoire = new Set();
-for (let sample = 0; sample < 2500; sample += 1) {
-  const state = createRallyState(ATHLETES[0], 2);
-  Object.assign(state.opponent, { x: 480, y: 230, hitCooldown: 0 });
-  Object.assign(state.player, { x: 330, y: 390 });
-  Object.assign(state.playerMate, { x: 650, y: 400 });
-  Object.assign(state.ball, { x: 480, y: 250, z: 70, vy: -80 });
-  hitBall(state, state.opponent, 1, false, true);
-  aiRepertoire.add(state.ball.shotType);
+for (const scenario of aiScenarios) {
+  for (let sample = 0; sample < 2500; sample += 1) {
+    const state = createRallyState(ATHLETES[0], 2);
+    Object.assign(state.opponent, { x: 480, y: scenario.opponentY, hitCooldown: 0 });
+    Object.assign(state.player, { x: 330, y: 390 });
+    Object.assign(state.playerMate, { x: 650, y: 400 });
+    Object.assign(state.ball, { x: 480, y: scenario.ballY, z: scenario.ballZ, vy: scenario.ballVy });
+    hitBall(state, state.opponent, 1, false, true);
+    aiRepertoire.add(state.ball.shotType);
+  }
 }
 for (const requiredShot of ["drive", "lob", "volley", "vibora", "smash-x2", "smash-x3", "error"]) {
   assert(aiRepertoire.has(requiredShot), `Repertorio IA incompleto: manca ${requiredShot}`);

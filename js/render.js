@@ -1,11 +1,37 @@
-import { BALANCE, COURT } from "./data.js?v=20260811-opponent-scale-v6";
-import { t } from "./i18n.js?v=20260811-opponent-scale-v6";
+import { BALANCE, COURT } from "./data.js?v=20260812-shot-errors-v1";
+import { t } from "./i18n.js?v=20260812-shot-errors-v1";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
 const SERV_LINE = 126;
+const radialTextureCache = new Map();
+
+function getRadialTexture(tint) {
+  if (radialTextureCache.has(tint)) return radialTextureCache.get(tint);
+  const size = 96;
+  let surface = null;
+  if (typeof OffscreenCanvas !== "undefined") {
+    surface = new OffscreenCanvas(size, size);
+  } else if (typeof document !== "undefined") {
+    surface = document.createElement("canvas");
+    surface.width = size;
+    surface.height = size;
+  }
+  if (!surface) return null;
+  const textureCtx = surface.getContext("2d");
+  if (!textureCtx) return null;
+  const center = size / 2;
+  const gradient = textureCtx.createRadialGradient(center, center, 0, center, center, center);
+  gradient.addColorStop(0, `rgba(${tint},1)`);
+  gradient.addColorStop(0.55, `rgba(${tint},0.42)`);
+  gradient.addColorStop(1, `rgba(${tint},0)`);
+  textureCtx.fillStyle = gradient;
+  textureCtx.fillRect(0, 0, size, size);
+  radialTextureCache.set(tint, surface);
+  return surface;
+}
 
 function reflectRange(value, min, max) {
   let v = value;
@@ -263,12 +289,165 @@ function drawClockworkFactoryBackdrop(ctx, canvas, time) {
   });
 }
 
+function steamLayerPuff(ctx, x, y, size, alpha, tint = "205,222,232") {
+  const texture = getRadialTexture(tint);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (texture) {
+    ctx.drawImage(texture, x - size, y - size, size * 2, size * 2);
+  } else {
+    ctx.fillStyle = `rgba(${tint},${alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawAmbientSteam(ctx, canvas, scene, time, accentTint) {
+  const tint = accentTint ?? "205,222,232";
+  const layers = [
+    { rows: 4, yBase: 118, yAmp: 44, size: [34, 62], alpha: 0.055, drift: 5, speed: 0.14 },
+    { rows: 5, yBase: 258, yAmp: 76, size: [52, 95], alpha: 0.038, drift: 9, speed: 0.09 },
+    { rows: 4, yBase: 470, yAmp: 118, size: [90, 168], alpha: 0.026, drift: 16, speed: 0.06 },
+  ];
+  const span = canvas.width + 260;
+  for (const layer of layers) {
+    for (let i = 0; i < layer.rows; i += 1) {
+      const phase = i * 1.31 + layer.speed * 13;
+      const raw = i * 263.7 + Math.sin(time * layer.speed + phase) * 90 + time * layer.drift * 30;
+      const x = ((raw % span) + span) % span - 130;
+      const y = layer.yBase + Math.sin(time * 0.22 + phase) * layer.yAmp * 0.5 + i * 26;
+      const size = layer.size[0] + (Math.sin(i * 2.9 + time) * 0.5 + 0.5) * (layer.size[1] - layer.size[0]);
+      steamLayerPuff(ctx, x, y, size, layer.alpha, tint);
+    }
+  }
+  // Braci luminose che salgono dagli ingranaggi (arena a orologeria).
+  if (scene === "clockwork") {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 6; i += 1) {
+      const x = ((i * 151.7 + Math.sin(time * 0.5 + i * 2) * 70 + time * 22) % 960 + 960) % 960;
+      const y = 150 + (i % 3) * 110 + Math.sin(time * 0.9 + i) * 30;
+      const glow = 0.5 + 0.5 * Math.sin(time * (1.5 + i * 0.4) + i);
+      ctx.globalAlpha = 0.05 + glow * 0.09;
+      ctx.fillStyle = i % 2 ? "#ffd166" : "#ff8f5c";
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawCrowdBehind(ctx, time, scene) {
+  // Pubblico animato dietro il vetro per le arene indoor.
+  if (scene === "officina") return;
+  const colors = ["#ffcf46", "#ff6d70", "#5ee9ff", "#8de06a", "#ffffff", "#ff9ad5"];
+  ctx.save();
+  for (let row = 0; row < 2; row += 1) {
+    for (let x = 205; x < 755; x += 16) {
+      const bob = Math.sin(time * 2.1 + x * 0.085 + row * 1.9) * 2.6;
+      const color = colors[Math.floor(x / 16 + row * 3) % colors.length];
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = "#0f2740";
+      ctx.fillRect(x - 5, 46 + row * 15 + bob, 10, 11);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, 42 + row * 15 + bob, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawGlassSheen(ctx, time) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const offset = Math.sin(time * 0.5) * 70;
+  const sheen = ctx.createLinearGradient(240 + offset, 40, 470 + offset, 210);
+  sheen.addColorStop(0, "rgba(255,255,255,0)");
+  sheen.addColorStop(0.5, "rgba(255,255,255,0.1)");
+  sheen.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(170, 34, 630, 180);
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i += 1) {
+    const yy = 55 + i * 26 + Math.sin(time * 0.9 + i * 1.3) * 4;
+    ctx.beginPath();
+    ctx.moveTo(205 + (i % 2) * 30, yy);
+    ctx.lineTo(752 - (i % 2) * 22, yy + 26);
+    ctx.stroke();
+  }
+  for (const sx of [40, 848]) {
+    const grad = ctx.createLinearGradient(sx, 160, sx + 34, 380);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.5, `rgba(255,255,255,${0.05 + 0.04 * Math.sin(time * 0.7 + sx)})`);
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx, 160, 34, 240);
+  }
+  ctx.restore();
+}
+
+function lightCone(ctx, sx, sy, tx, ty, halfWidth, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(tx - halfWidth, ty);
+  ctx.lineTo(tx + halfWidth, ty);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawVolumetricLights(ctx, canvas, scene, time) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const pulse = 0.7 + 0.3 * Math.sin(time * 1.4);
+  if (scene === "officina") {
+    lightCone(ctx, 196, 116, 190, 620, 34, `rgba(255,246,190,${0.045 * pulse})`);
+    lightCone(ctx, 196, 116, 340, 480, 46, `rgba(255,246,190,${0.03 * pulse})`);
+    lightCone(ctx, 764, 119, 770, 620, 34, `rgba(255,246,190,${0.045 * pulse})`);
+    lightCone(ctx, 764, 119, 620, 480, 46, `rgba(255,246,190,${0.03 * pulse})`);
+  } else {
+    lightCone(ctx, 400, -10, 190, 560, 120, `rgba(190,235,255,${0.032 * pulse})`);
+    lightCone(ctx, 560, -10, 770, 560, 120, `rgba(190,235,255,${0.032 * pulse})`);
+    lightCone(ctx, 480, -10, 480, 420, 90, `rgba(255,235,190,${0.04 * pulse})`);
+  }
+  ctx.restore();
+}
+
+function drawCourtDepth(ctx, topLeft, topRight, bottomLeft, bottomRight) {
+  const gloss = ctx.createLinearGradient(480, 100, 480, 700);
+  gloss.addColorStop(0, "rgba(255,255,255,0.1)");
+  gloss.addColorStop(0.35, "rgba(255,255,255,0.02)");
+  gloss.addColorStop(1, "rgba(0,0,0,0.14)");
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(topLeft.x, topLeft.y);
+  ctx.lineTo(topRight.x, topRight.y);
+  ctx.lineTo(bottomRight.x, bottomRight.y);
+  ctx.lineTo(bottomLeft.x, bottomLeft.y);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = gloss;
+  ctx.fillRect(0, 0, 960, 700);
+  ctx.restore();
+}
+
 export function drawArena(ctx, canvas, arena, time) {
   const { palette } = arena;
   const scene = arena.id ?? "officina";
-  if (scene === "locomotive") {
+  const sceneFamily = scene === "cattedrale"
+    ? "locomotive"
+    : scene === "forgia"
+      ? "clockwork"
+      : scene;
+  if (sceneFamily === "locomotive") {
     drawLocomotiveDepotBackdrop(ctx, canvas, time);
-  } else if (scene === "clockwork") {
+  } else if (sceneFamily === "clockwork") {
     drawClockworkFactoryBackdrop(ctx, canvas, time);
   } else {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -322,13 +501,24 @@ export function drawArena(ctx, canvas, arena, time) {
   };
 
   // The exterior floor and cage first; the court remains the bright focal plane.
-  const exteriorFloor = scene === "locomotive" ? "#4f5552" : scene === "clockwork" ? "#4c344d" : "#e78c68";
-  const courtFloor = scene === "locomotive" ? "#1579a8" : scene === "clockwork" ? "#314d9b" : "#138fd7";
-  const courtStroke = scene === "clockwork" ? "#181c55" : "#184d79";
+  const exteriorFloor = scene === "cattedrale" ? "#312b4f"
+    : scene === "forgia" ? "#42272b"
+      : sceneFamily === "locomotive" ? "#4f5552"
+        : sceneFamily === "clockwork" ? "#4c344d" : "#e78c68";
+  const courtFloor = scene === "cattedrale" ? "#254c98"
+    : scene === "forgia" ? "#49333e"
+      : sceneFamily === "locomotive" ? "#1579a8"
+        : sceneFamily === "clockwork" ? "#314d9b" : "#138fd7";
+  const courtStroke = scene === "cattedrale" ? "#574d8e"
+    : scene === "forgia" ? "#7d3d43"
+      : sceneFamily === "clockwork" ? "#181c55" : "#184d79";
   polygon([{ x: 0, y: 282 }, { x: 960, y: 282 }, { x: 960, y: canvas.height }, { x: 0, y: canvas.height }], exteriorFloor);
   polygon([topLeft, topRight, bottomRight, bottomLeft], courtFloor, courtStroke, 8);
+  drawCourtDepth(ctx, topLeft, topRight, bottomLeft, bottomRight);
   polygon([{ x: 100, y: 123 }, topLeft, bottomLeft, { x: 0, y: 537 }], "rgba(173,235,255,0.35)", "#173f63", 6);
   polygon([topRight, { x: 860, y: 123 }, { x: 960, y: 537 }, bottomRight], "rgba(173,235,255,0.35)", "#173f63", 6);
+
+  drawCrowdBehind(ctx, time, scene);
 
   // Rear glass wall rises behind the far baseline instead of reading as flat court paint.
   const backWallTopY = 35;
@@ -368,6 +558,13 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.moveTo(midTop.x, midTop.y); ctx.lineTo(midBottom.x, midBottom.y);
   ctx.stroke();
 
+  const steamTint = scene === "clockwork" ? "196,150,216"
+    : scene === "locomotive" ? "186,200,210"
+      : scene === "cattedrale" ? "200,190,255"
+        : scene === "forgia" ? "255,165,120" : "205,222,232";
+  drawAmbientSteam(ctx, canvas, scene, time, steamTint);
+  drawVolumetricLights(ctx, canvas, scene, time);
+
   // Tall transparent walls and lateral mesh: recognisable padel enclosure.
   ctx.strokeStyle = "rgba(20,56,84,0.9)";
   ctx.lineWidth = 3;
@@ -387,18 +584,31 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(topLeft.x, topLeft.y); ctx.lineTo(topRight.x, topRight.y); ctx.stroke();
+  drawGlassSheen(ctx, time);
   const signLabels = scene === "locomotive"
     ? [[95, 290, 102, 29, "RAIL"], [762, 292, 103, 29, "DEPOT"], [122, 412, 84, 27, "TRACK"], [756, 417, 83, 27, "STEAM"]]
-    : scene === "clockwork"
+    : scene === "cattedrale"
+      ? [[95, 290, 102, 29, "NAVE"], [762, 292, 103, 29, "VAPOR"], [122, 412, 84, 27, "ARCH"], [756, 417, 83, 27, "CROWN"]]
+    : scene === "clockwork" || scene === "forgia"
       ? []
       : [[95, 290, 102, 29, "PADEL"], [762, 292, 103, 29, "FLOW"], [122, 412, 84, 27, "PRO"], [756, 417, 83, 27, "PLAY"]];
   ctx.fillStyle = "#16486f";
-  signLabels.forEach(([x, y, w, h, label]) => {
+  signLabels.forEach(([x, y, w, h, label], index) => {
     roundedRect(ctx, x, y, w, h, 3); ctx.fill();
+    ctx.save();
+    ctx.shadowColor = "rgba(247,225,101,0.85)";
+    ctx.shadowBlur = 5 + 5 * Math.sin(time * 2.4 + index);
     ctx.fillStyle = "#f7e165";
     ctx.font = "800 12px Nunito, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(label, x + w / 2, y + 19);
+    ctx.restore();
+    ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(time * (1.8 + index * 0.6) + index));
+    ctx.fillStyle = "#ff5c3a";
+    ctx.beginPath();
+    ctx.arc(x - 5, y + h / 2, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "#16486f";
   });
 
@@ -444,7 +654,13 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.fillStyle = palette.accent;
   ctx.font = "900 13px Nunito, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(scene === "locomotive" ? t("arena_locomotive_name").toUpperCase() : scene === "clockwork" ? t("arena_clockwork_name").toUpperCase() : t("arena_officina_name").toUpperCase(), 480, 139);
+  const arenaNameKey = {
+    locomotive: "arena_locomotive_name",
+    clockwork: "arena_clockwork_name",
+    cattedrale: "arena_cattedrale_name",
+    forgia: "arena_forgia_name",
+  }[scene] ?? "arena_officina_name";
+  ctx.fillText(t(arenaNameKey).toUpperCase(), 480, 139);
 
   // Store projection for the sprites drawn after the court.
   ctx.__padelProject = point;
@@ -661,13 +877,16 @@ function actionFrameForIntent(intent) {
   return null;
 }
 
-function spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame) {
-  // Back-facing human-team sheets were already authored at the correct visual scale.
-  if (isPlayer) return useActionSprite ? 118 : useRunSprite ? 114 : 112;
+function spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame, appearance) {
+  if (useRunSprite) {
+    const calibrated = isPlayer ? appearance?.runDisplay?.back : appearance?.runDisplay?.front;
+    return calibrated ?? (isPlayer ? 114 : 144);
+  }
+  // Back-facing human-team action sheets were already authored at the correct visual scale.
+  if (isPlayer) return useActionSprite ? 118 : 112;
 
   // Front-facing run/action sheets leave more transparent space around the opponent.
   // Compensate only that artwork so advancing toward the net keeps a stable body size.
-  if (useRunSprite) return 144;
   if (useActionSprite) return [112, 122, 108, 128][actionFrame] ?? 112;
   return 112;
 }
@@ -685,16 +904,17 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
   const activeSprite = useActionSprite ? actionSprite : useRunSprite ? runSprite : sprite;
 
   if (activeSprite?.complete && activeSprite.naturalWidth > 0) {
-    const frameWidth = activeSprite.naturalWidth / 4;
+    const frameCount = useRunSprite ? appearance?.runFrames ?? 4 : 4;
+    const frameWidth = activeSprite.naturalWidth / frameCount;
     const frame = useActionSprite
       ? actionFrame
       : useRunSprite
-        ? Math.floor(paddle.runPhase ?? 0) % 4
+        ? Math.floor(paddle.runPhase ?? 0) % frameCount
       : charge > 0.08 ? 2 : swing > 0.08 ? 3 : paddle.motion > 0.12 ? 1 : 0;
-    const destWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame) * projected.scale;
+    const destWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame, appearance) * projected.scale;
     const destHeight = destWidth * (activeSprite.naturalHeight / frameWidth);
     const feetY = projected.y + 46 * projected.scale;
-    const transparentFootMargin = destHeight * 0.085;
+    const transparentFootMargin = destHeight * (useRunSprite ? 0.04 : 0.085);
 
     ctx.save();
     ctx.fillStyle = "rgba(5, 28, 55, 0.18)";
@@ -704,6 +924,10 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
     ctx.fillStyle = "rgba(3, 20, 39, 0.42)";
     ctx.beginPath();
     ctx.ellipse(projected.x, feetY, 17 * projected.scale, 3 * projected.scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(3, 18, 36, 0.16)";
+    ctx.beginPath();
+    ctx.ellipse(projected.x - 9 * projected.scale, feetY + 4 * projected.scale, 24 * projected.scale, 4.5 * projected.scale, 0.18, 0, Math.PI * 2);
     ctx.fill();
     const drawFrame = (frameIndex) => {
       ctx.drawImage(
@@ -752,6 +976,10 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
   ctx.fillStyle = "rgba(5, 28, 55, 0.28)";
   ctx.beginPath();
   ctx.ellipse(0, 42, 39, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(3, 16, 34, 0.15)";
+  ctx.beginPath();
+  ctx.ellipse(-10, 47, 30, 6.5, 0.18, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.strokeStyle = shorts;
@@ -890,13 +1118,18 @@ export function drawBall(ctx, ball, flash = 0) {
   const projected = project ? project(ball.x, ball.y) : { ...ball, scale: 1 };
   // Keep the collision radius generous for playability, but render a padel-sized ball.
   const visualRadius = Math.max(5.4, ball.r * 0.56);
-  ctx.save();
-  const lift = (ball.z ?? 0) * projected.scale;
+  const hitFlash = ball.hitFlash ?? 0;
+  const hitPulse = ball.hitPulse ?? 0;
+  const speed = Math.hypot(ball.vx ?? 0, ball.vy ?? 0);
+  const fast = speed > 620;
+  const spin = (ball.topspin ?? 0) > 0.5 || (ball.backspin ?? 0) > 0.5;
+  const airborneY = projected.y - (ball.z ?? 0) * projected.scale;
 
   const ring = ball.landRing ?? 0;
   if (ring > 0) {
     const life = clamp(ring / 0.5, 0, 1);
     const r = (0.5 - ring) * 150 * projected.scale + visualRadius;
+    ctx.save();
     ctx.globalAlpha = life * 0.5;
     ctx.strokeStyle = "#eaffff";
     ctx.lineWidth = 2.5;
@@ -908,41 +1141,119 @@ export function drawBall(ctx, ball, flash = 0) {
     ctx.beginPath();
     ctx.ellipse(projected.x, projected.y, r * 0.7, r * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
+  // Flash di contatto: anello che si espande + alone, composito "lighter".
+  if (hitFlash > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const life = clamp(hitFlash, 0, 1);
+    const ringR = visualRadius * (1 + (1 - life) * 2.8) * projected.scale + 16;
+    ctx.globalAlpha = Math.min(1, life * 0.9);
+    ctx.strokeStyle = "#fff3a0";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(projected.x, airborneY, ringR, ringR * 0.55, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    const glowR = ringR * 2;
+    const g = ctx.createRadialGradient(projected.x, airborneY, 0, projected.x, airborneY, glowR);
+    g.addColorStop(0, `rgba(255,246,180,${0.42 * life})`);
+    g.addColorStop(0.5, `rgba(255,222,130,${0.18 * life})`);
+    g.addColorStop(1, "rgba(255,222,130,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(projected.x - glowR, airborneY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+  }
+
+  // Trail credibile: coda soffice/elastica calibrata su velocità, smash e spin.
   if (ball.trail?.length) {
-    for (const point of ball.trail) {
+    const n = ball.trail.length;
+    const dirX = speed > 1 ? (ball.vx ?? 0) / speed : 0;
+    const dirY = speed > 1 ? (ball.vy ?? 0) / speed : 0;
+    for (let i = 0; i < n; i += 1) {
+      const point = ball.trail[i];
       const t = project ? project(point.x, point.y) : { ...point, scale: 1 };
-      const echoLift = (point.z ?? 0) * t.scale;
-      ctx.globalAlpha = Math.max(0, point.life / 0.3) * 0.34;
-      ctx.fillStyle = flash > 0 ? "#fff6a0" : "#c9f06a";
-      ctx.beginPath();
-      ctx.arc(t.x, t.y - echoLift, visualRadius * 0.54, 0, Math.PI * 2);
-      ctx.fill();
+      const idx = Math.max(0, Math.min(1, i / Math.max(1, n - 1)));
+      const life = clamp((point.life ?? 0) / 0.3, 0, 1);
+      const lift = (point.z ?? 0) * t.scale;
+      const alpha = life * (fast ? 0.5 : 0.32);
+      let color = "198,240,106";
+      if (spin) color = "94,233,255";
+      if (fast && spin) color = "255,224,102";
+      if (fast && flash > 0) color = "255,246,160";
+      const r = visualRadius * (0.32 + 0.42 * idx) * (fast ? 1.22 : 1);
+      const stretch = fast ? 1.5 + idx * 1.6 : 1;
+      const texture = getRadialTexture(color);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = alpha;
+      ctx.translate(t.x, t.y - lift);
+      if (fast) ctx.rotate(Math.atan2(dirY, dirX));
+      ctx.scale(stretch, 1);
+      if (texture) {
+        ctx.drawImage(texture, -r, -r, r * 2, r * 2);
+      } else {
+        ctx.fillStyle = `rgba(${color},${alpha})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
-    ctx.globalAlpha = 1;
   }
 
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
-  ctx.beginPath();
-  ctx.ellipse(projected.x + 2, projected.y + 5, 5.5 * projected.scale, 2.6 * projected.scale, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Ombra proiettiva: si sposta e cresce con l'altezza di volo.
+  {
+    const z = Math.max(0, ball.z ?? 0);
+    const spread = z * projected.scale;
+    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    ctx.beginPath();
+    ctx.ellipse(
+      projected.x + spread * 0.16,
+      projected.y + 6 + spread * 0.04,
+      8 * projected.scale * (1 + spread * 0.003),
+      3.4 * projected.scale * (1 + spread * 0.002),
+      0, 0, Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(
+      projected.x + spread * 0.22,
+      projected.y + 5 + spread * 0.06,
+      5.5 * projected.scale * (1 + spread * 0.003),
+      2.6 * projected.scale * (1 + spread * 0.002),
+      0, 0, Math.PI * 2,
+    );
+    ctx.fill();
+  }
 
-  ctx.translate(projected.x, projected.y - lift);
   const bouncePulse = clamp(ball.bouncePulse ?? 0, 0, 1);
-  const speed = Math.hypot(ball.vx ?? 0, ball.vy ?? 0);
   const motionStretch = clamp(speed / 620, 0, 1) * 0.16;
+  const squash = clamp(hitPulse, 0, 1);
   const motionAngle = Math.atan2(ball.vy ?? 0, ball.vx ?? 0);
+
+  ctx.save();
+  ctx.translate(projected.x, projected.y - (ball.z ?? 0) * projected.scale);
   ctx.rotate(motionAngle);
   ctx.scale(
-    projected.scale * (1 + bouncePulse * 0.08) * (1 + motionStretch),
-    projected.scale * (1 - bouncePulse * 0.07) * (1 - motionStretch * 0.5),
+    projected.scale * (1 + bouncePulse * 0.08) * (1 + motionStretch + squash * 0.24),
+    projected.scale * (1 - bouncePulse * 0.07) * (1 - motionStretch * 0.45 - squash * 0.14),
   );
   ctx.rotate(-motionAngle);
 
-  const ballColor = (ball.netCord ?? 0) > 0 ? "#ffffff" : flash > 0 ? "#fff6a0" : "#d8ff5f";
-  ctx.fillStyle = ballColor;
+  const ballColor = (ball.netCord ?? 0) > 0 ? "#ffffff" : (flash > 0 || hitFlash > 0) ? "#fff6a0" : "#d8ff5f";
+  const bodyG = ctx.createRadialGradient(
+    -visualRadius * 0.35,
+    -visualRadius * 0.4,
+    visualRadius * 0.15,
+    0, 0, visualRadius * 1.12,
+  );
+  bodyG.addColorStop(0, "#ffffff");
+  bodyG.addColorStop(0.35, ballColor);
+  bodyG.addColorStop(1, "rgba(150,200,90,0.95)");
+  ctx.fillStyle = bodyG;
   ctx.beginPath();
   ctx.arc(0, 0, visualRadius, 0, Math.PI * 2);
   ctx.fill();
@@ -967,6 +1278,7 @@ export function drawBall(ctx, ball, flash = 0) {
     ctx.beginPath();
     ctx.arc(0, 0, visualRadius + 3, 0.25, Math.PI * 1.75);
     ctx.stroke();
+    ctx.setLineDash([]);
   }
   ctx.restore();
 }
@@ -1057,4 +1369,75 @@ export function drawMenuPreview(ctx, canvas, time) {
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.fillText("STEAM CIRCUIT", cx, canvas.height - 28);
+}
+
+export function drawTimingHud(ctx, state, time) {
+  const project = ctx.__padelProject;
+  if (!project) return;
+  const active = state[state.activePlayerKey];
+  if (!active) return;
+  const p = project(active.x, active.y);
+  const scale = p.scale ?? 1;
+  const read = state.shotRead;
+
+  // Anello di timing attorno al cursore mentre si carica il colpo.
+  if ((state.shotCharge ?? 0) > 0.05 && read?.active) {
+    const cy = p.y - 96 * scale;
+    const r = 20 * scale;
+    const frac = clamp(1 - read.eta / 0.55, 0, 1);
+    const inWindow = Math.abs(read.eta) <= (read.perfectWindow ?? 0.055);
+    ctx.save();
+    ctx.translate(p.x, cy);
+    ctx.rotate(-Math.PI / 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = 3 * scale;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 1.85);
+    ctx.stroke();
+    const grad = ctx.createLinearGradient(0, 0, r, 0);
+    grad.addColorStop(0, "#28d7e8");
+    grad.addColorStop(0.72, "#9ef05b");
+    grad.addColorStop(0.86, "#fff36a");
+    grad.addColorStop(1, "#ff7048");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 3.4 * scale;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 1.6 * clamp(frac, 0, 1));
+    ctx.stroke();
+    if (inWindow) {
+      const blink = 0.5 + 0.5 * Math.sin(time * 18);
+      ctx.fillStyle = `rgba(120,255,190,${0.12 + 0.1 * blink})`;
+      ctx.strokeStyle = `rgba(140,255,200,${0.55 + 0.4 * blink})`;
+      ctx.lineWidth = 2 * scale;
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Consiglio tattico a bordo campo, sopra il giocatore attivo.
+  if (!state.serving && !(state.pointPause > 0)) {
+    const label = t(`shotAdvice_${state.shotRead?.advice ?? "read"}`).toUpperCase();
+    const x = p.x;
+    const y = p.y - 132 * scale;
+    ctx.save();
+    ctx.font = `800 ${11 * scale}px system-ui, sans-serif`;
+    const tw = ctx.measureText(label).width;
+    const w = tw + 22;
+    const h = 20;
+    ctx.fillStyle = "rgba(4,14,32,0.82)";
+    ctx.strokeStyle = "rgba(126,243,255,0.5)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h / 2, w, h, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = state.shotRead?.profile === "aggressive" ? "#ffd46a" : "#8fffd0";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x, y + 0.5);
+    ctx.restore();
+  }
 }
