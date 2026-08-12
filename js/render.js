@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260812-tight-angle-v2";
-import { t } from "./i18n.js?v=20260812-tight-angle-v2";
+import { BALANCE, COURT } from "./data.js?v=20260812-ball-height-v5";
+import { t } from "./i18n.js?v=20260812-ball-height-v5";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -1203,30 +1203,58 @@ export function drawBall(ctx, ball, flash = 0) {
     }
   }
 
-  // Ombra proiettiva: si sposta e cresce con l'altezza di volo.
+  // Ombra proiettiva. Cresceva del 30% su tutta l'escursione e non cambiava
+  // mai opacita': l'altezza si leggeva a fatica proprio ora che decide quali
+  // colpi hai disponibili. Palla bassa = ombra piccola e nera sotto i piedi,
+  // palla alta = ombra larga, sbiadita e spostata.
   {
     const z = Math.max(0, ball.z ?? 0);
+    const lift = clamp(z / BALANCE.playableHitHeight, 0, 1.8);
     const spread = z * projected.scale;
-    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    const grow = 1 + lift * 0.95;
+    const fade = 1 - clamp(lift, 0, 1) * 0.58;
+    ctx.fillStyle = `rgba(0,0,0,${(0.18 * fade).toFixed(3)})`;
     ctx.beginPath();
     ctx.ellipse(
       projected.x + spread * 0.16,
       projected.y + 6 + spread * 0.04,
-      8 * projected.scale * (1 + spread * 0.003),
-      3.4 * projected.scale * (1 + spread * 0.002),
+      8 * projected.scale * grow,
+      3.4 * projected.scale * grow,
       0, 0, Math.PI * 2,
     );
     ctx.fill();
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillStyle = `rgba(0,0,0,${(0.34 * fade).toFixed(3)})`;
     ctx.beginPath();
     ctx.ellipse(
       projected.x + spread * 0.22,
       projected.y + 5 + spread * 0.06,
-      5.5 * projected.scale * (1 + spread * 0.003),
-      2.6 * projected.scale * (1 + spread * 0.002),
+      5.5 * projected.scale * grow,
+      2.6 * projected.scale * grow,
       0, 0, Math.PI * 2,
     );
     ctx.fill();
+  }
+
+  // Fascia di altezza sulla palla in arrivo: dice a colpo d'occhio quale colpo
+  // e' disponibile, senza che il giocatore debba stimare la quota.
+  if ((ball.vy ?? 0) > 40) {
+    const z = ball.z ?? 0;
+    const banda = z > BALANCE.playableHitHeight
+      ? "rgba(150,166,186,0.85)"
+      : z >= BALANCE.smashMinHeight
+        ? "rgba(255,193,84,0.9)"
+        : z >= 42
+          ? "rgba(126,243,255,0.85)"
+          : null;
+    if (banda) {
+      ctx.save();
+      ctx.strokeStyle = banda;
+      ctx.lineWidth = 1.6 * projected.scale;
+      ctx.beginPath();
+      ctx.arc(projected.x, airborneY, visualRadius * projected.scale + 4.5 * projected.scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   const bouncePulse = clamp(ball.bouncePulse ?? 0, 0, 1);

@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-tight-angle-v2";
-import { clamp } from "./render.js?v=20260812-tight-angle-v2";
-import { sfx } from "./audio.js?v=20260812-tight-angle-v2";
-import { t } from "./i18n.js?v=20260812-tight-angle-v2";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-ball-height-v5";
+import { clamp } from "./render.js?v=20260812-ball-height-v5";
+import { sfx } from "./audio.js?v=20260812-ball-height-v5";
+import { t } from "./i18n.js?v=20260812-ball-height-v5";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260812-tight-angle-v2";
+} from "./fx.js?v=20260812-ball-height-v5";
 
 const SERVICE_LINE_OFFSET = 126;
 const SERVICE_TOP = COURT.netY - SERVICE_LINE_OFFSET;
@@ -195,6 +195,7 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     playerTeamTactic: "balanced",
     tacticFlash: 0,
     aiX3Recovery: 0,
+    playerX3Recovery: 0,
     playerSwingBuffer: 0,
     queuedShotPower: 1,
     queuedShotAim: 0,
@@ -834,8 +835,12 @@ function evaluateShotQuality(
   const windowRatio = perfectWindow / BALANCE.perfectTimingWindow;
   const earlyMiss = Math.max(0, timingAge - perfectWindow)
     / Math.max(0.01, BALANCE.goodTimingWindow * 1.7 * windowRatio);
-  const lateMiss = passedDistance / 60;
+  const lateMiss = passedDistance / (paddle.reach * BALANCE.lateGraceFactor * 4.6);
   const timing = aiTiming ?? clamp(1 - earlyMiss - lateMiss, 0.18, 1);
+  // Lo scarto oltre il corpo era una costante di 12 px: circa un decimo della
+  // racchetta, abbastanza da mancare il perfetto anche con un rilascio pulito.
+  // Legarlo all'allungo lo rende coerente con la statistica dell'atleta.
+  const lateGrace = paddle.reach * BALANCE.lateGraceFactor;
   // Direzione dell'errore, non solo entita': colpire in ritardo allunga il
   // colpo, anticiparlo lo accorcia. Serve a dare un verso alla dispersione.
   const timingBias = aiTiming === null || aiTiming === undefined
@@ -878,7 +883,7 @@ function evaluateShotQuality(
   const profile = shotProfile(charge, aim, quality);
   const grade = timing >= 0.9
     ? "perfect"
-    : passedDistance > 12
+    : passedDistance > lateGrace
       ? "late"
       : timing >= 0.7
         ? "good"
@@ -997,7 +1002,7 @@ function attackRead(state, paddle, contactHeight) {
   );
 }
 
-function chooseComputerShot(state, paddle, profile, contactHeight = 0) {
+function chooseComputerShot(state, paddle, profile, contactHeight = 0, aiTiming = 1) {
   const opponentSide = paddle.isPlayer ? "ai" : "player";
   const opponents = opponentSide === "ai"
     ? [state.opponent, state.opponentMate]
@@ -1023,6 +1028,17 @@ function chooseComputerShot(state, paddle, profile, contactHeight = 0) {
     BALANCE.attackReadSmashCap,
   );
 
+  // Rispondendo a uno smash: se l'ha letto bene puo' controbattere e restare
+  // in attacco, altrimenti e' costretta a rimetterla alta e ricominciare.
+  const returningSmash = isSmashShot(state.incomingShot);
+  if (returningSmash && aiTiming < BALANCE.smashReturnCounterTiming) {
+    return {
+      kind: "lob",
+      x: clamp(centerX + (Math.random() - 0.5) * 180, COURT.left + 120, COURT.right - 120),
+      y: targetYForSide(opponentSide, 196),
+      flightTime: 1.34,
+    };
+  }
   let kind = "drive";
   if (overheadReady && choice < smashChance) {
     const x3Chance = clamp((profile.skill - 0.48) * 0.55, 0.02, 0.16);
@@ -1062,12 +1078,21 @@ function aiShotError(state, profile, assessment, kind = "drive") {
   // Gli errori derivano da pressione, energia e qualità del contatto, come per il giocatore.
   const rally = Math.min(1, Math.max(0, (state.rallyHits - 2) / 10));
   const aggressive = kind === "smash-x2" || kind === "smash-x3" || kind === "vibora";
+  // Il dado sulla difficolta' pesava sette volte l'esecuzione: gli errori
+  // dell'IA non corrispondevano a nulla di visibile. Ora la quota maggiore
+  // viene da quanto ha eseguito male, con la stessa soglia del giocatore.
+  const executionMiss = clamp(
+    (BALANCE.shotErrorThreshold - assessment.quality) / BALANCE.shotErrorSpan,
+    0,
+    1,
+  );
   const chance = clamp(
-    ((1 - profile.skill) ** 2) * 0.82
+    ((1 - profile.skill) ** 2) * BALANCE.aiErrorSkillWeight
+      + executionMiss ** BALANCE.shotErrorCurve * BALANCE.aiErrorExecutionWeight
       + assessment.risk * (1 - profile.skill) * 0.1
       + rally * (1 - assessment.energy) * 0.12
       + (aggressive ? 0.025 : 0),
-    0.025,
+    0.02,
     0.38,
   );
   const roll = Math.random();
@@ -1081,7 +1106,7 @@ function aiShotError(state, profile, assessment, kind = "drive") {
  * fotogramma. Il tipo segue la causa, cosi' l'errore resta leggibile: in
  * ritardo si allunga, in anticipo si affossa, con la mira estrema si esce.
  */
-function rollShotError(state, assessment, aimedOffset, tight = 0) {
+function rollShotError(state, assessment, aimedOffset, tight = 0, tightDepth = 0) {
   const miss = clamp(
     (BALANCE.shotErrorThreshold - assessment.quality) / BALANCE.shotErrorSpan,
     0,
@@ -1094,6 +1119,10 @@ function rollShotError(state, assessment, aimedOffset, tight = 0) {
   // quello che stavi tentando, non una deviazione qualsiasi.
   const wideShare = BALANCE.shotErrorWideShare
     + clamp(tight, 0, 1) * (BALANCE.tightAngleWideShare - BALANCE.shotErrorWideShare);
+  // Cercando la profondita' estrema l'errore esce lungo, non di lato.
+  if (tightDepth > 0.02 && Math.random() < clamp(tightDepth, 0, 1) * BALANCE.tightDepthLongShare) {
+    return { type: "long" };
+  }
   if (Math.abs(aimedOffset) >= BALANCE.shotErrorWideAim && Math.random() < wideShare) {
     return { type: "wide" };
   }
@@ -1107,6 +1136,26 @@ function reportShotError(state, paddle, shotError) {
       : shotError.type === "wide" ? "evShotWide"
         : "evShotNet",
   ));
+}
+
+/** Il colpo in arrivo era uno smash? Va letto prima che hitBall lo sovrascriva. */
+/**
+ * Distanza dalla rete misurata dal lato giusto. Il ramo del giocatore usava una
+ * formula scritta per il campo basso: in pvp il secondo umano controlla un
+ * paddle del lato opposto, dove risultava sempre "vicino a rete" — quindi aveva
+ * smash e vibora disponibili anche incollato al vetro di fondo.
+ */
+function withinNetRange(paddle, window) {
+  return paddle.isPlayer
+    ? paddle.y <= COURT.netY + window
+    : paddle.y >= COURT.netY - window;
+}
+
+function isSmashShot(shotType) {
+  return shotType === "smash"
+    || shotType === "smash-x2"
+    || shotType === "smash-x3"
+    || shotType === "smash-flat";
 }
 
 function setComputerTrajectory(ball, targetX, targetY, flightTime) {
@@ -1126,13 +1175,25 @@ function applyComputerShot(state, paddle, contactHeight = 0) {
   const opponentSide = paddle.isPlayer ? "ai" : "player";
   const centerX = (COURT.left + COURT.right) / 2;
   const profile = computerProfile(state, paddle);
-  const target = chooseComputerShot(state, paddle, profile, contactHeight);
+  // Il timing viene estratto PRIMA della scelta: rispondendo a uno smash l'IA
+  // deve sapere quanto bene lo sta leggendo, altrimenti non puo' decidere se
+  // difendersi o controbattere.
+  const pressure = paddle.isPlayer ? 0 : state.aiShotPressure;
+  // La difficolta' agisce sull'esecuzione: un avversario debole non tira un
+  // dado d'errore, colpisce peggio e piu' irregolarmente. Distribuzioni che si
+  // sovrapponevano quasi del tutto strozzavano errori, controbattuta e lettura.
+  const timingVariance = (Math.random() - 0.5)
+    * Math.max(0.05, BALANCE.aiTimingSpread - profile.skill * BALANCE.aiTimingSpreadSkill);
+  const aiTiming = clamp(
+    BALANCE.aiTimingBase + profile.skill * BALANCE.aiTimingSkill
+      - pressure * 0.25 + timingVariance,
+    0.25,
+    1,
+  );
+  const target = chooseComputerShot(state, paddle, profile, contactHeight, aiTiming);
   const aiCharge = target.kind === "lob" || target.kind === "drive"
     ? 0.38 + profile.skill * 0.34
     : 0.62 + profile.skill * 0.28;
-  const pressure = paddle.isPlayer ? 0 : state.aiShotPressure;
-  const timingVariance = (Math.random() - 0.5) * (0.42 - profile.skill * 0.3);
-  const aiTiming = clamp(0.72 + profile.skill * 0.3 - pressure * 0.25 + timingVariance, 0.25, 1);
   const targetAim = clamp(
     (target.x - centerX) / ((COURT.right - COURT.left) * 0.42),
     -1,
@@ -1251,6 +1312,10 @@ export function hitBall(
   ball.y = paddle.y + direction * (ball.r + 6);
   ball.z = Math.max(22, Math.min(ball.z, 74));
   ball.topspin = 0;
+  // Va letto prima di sovrascriverlo: serve sia al giocatore sia all'IA per
+  // sapere che stanno rispondendo a uno smash.
+  state.incomingShot = ball.shotType;
+  const returningSmash = isSmashShot(state.incomingShot);
   ball.shotType = "drive";
   ball.smashStage = 0;
   ball.smashTargetSide = null;
@@ -1258,19 +1323,32 @@ export function hitBall(
   ball.wallAngleResolved = false;
   if (paddle.controlled) {
     const shotPower = clamp(powerMul, 0.34, 1.5);
-    const aimFreedom = assessment.profile === "control"
+    // Risposta a uno smash: solo un contatto perfetto lascia controbattere.
+    // Un contatto buono obbliga a difendere, uno sbagliato regala la palla.
+    // Controbattere uno smash non deve chiedere la stessa precisione dell'hit
+    // stop: rispondendo si e' sempre in corsa, e li' il perfetto vale due
+    // fotogrammi. Lo split-step allarga la finestra a cinque, quindi diventa
+    // lui la chiave — leggi lo smash, piantati, e puoi rientrare in attacco.
+    const readSmash = assessment.grade === "perfect"
+      || (assessment.grade === "good"
+        && (paddle.splitStep ?? 0) >= BALANCE.smashCounterSplitStep);
+    const smashDefence = returningSmash && !readSmash;
+    const scrambled = returningSmash
+      && assessment.grade !== "perfect"
+      && assessment.grade !== "good";
+    const aimFreedom = (assessment.profile === "control"
       ? 0.78
       : assessment.profile === "attack"
         ? 0.96
-        : 1.1;
+        : 1.1) * (scrambled ? BALANCE.smashReturnScrambleAim : smashDefence ? BALANCE.smashReturnDefenceAim : 1);
     const aimedOffset = clamp(aim * control * aimFreedom + offset * 0.24, -1, 1);
     const aimedDepth = clamp(aimY, -1, 1);
     const centerX = (COURT.left + COURT.right) / 2;
-    const nearNet = paddle.y <= COURT.netY + BALANCE.smashNetWindow;
+    const nearNet = withinNetRange(paddle, BALANCE.smashNetWindow);
     // Una vibora chiesta con il modificatore tecnico resta una scelta del
     // giocatore e mantiene il raggio ampio; e' la conversione automatica dello
     // slice che va tenuta stretta, altrimenti lo slice puro non esiste.
-    const viboraRange = paddle.y <= COURT.netY + (shotVariant === "vibora"
+    const viboraRange = withinNetRange(paddle, shotVariant === "vibora"
       ? BALANCE.smashNetWindow
       : BALANCE.viboraNetWindow);
     const explicitSmash = shotVariant === "smash";
@@ -1310,7 +1388,19 @@ export function hitBall(
     // Angolo stretto: RT allunga la portata della mira fin contro il vetro e
     // riduce la dispersione, perche' stai mirando di proposito. Non aggiunge
     // casualita' — sposta il bersaglio dentro il margine d'errore che gia' hai.
-    const tight = clamp(precision, 0, 1) * clamp((Math.abs(aimedOffset) - 0.55) / 0.35, 0, 1);
+    // Asse dominante: la diagonale non somma i due rischi, vale solo la
+    // direzione su cui hai spinto di piu'. Cosi' l'angolo del campo non e' ne'
+    // il colpo migliore del gioco ne' una perdita garantita.
+    const rtTravel = clamp(precision, 0, 1);
+    const lateralDominant = Math.abs(aimedOffset) >= Math.abs(aimedDepth);
+    const tight = lateralDominant
+      ? rtTravel * clamp((Math.abs(aimedOffset) - 0.55) / 0.35, 0, 1)
+      : 0;
+    // Solo la levetta in avanti allunga: tirare indietro accorcia e non puo'
+    // finire sul vetro di fondo, quindi non deve portare rischio.
+    const tightDepth = lateralDominant
+      ? 0
+      : rtTravel * clamp((-aimedDepth - 0.55) / 0.35, 0, 1);
     const aimReach = 0.42 + tight * BALANCE.tightAngleReachGain;
     const executionRisk = assessment.risk * (0.72 + controlRisk * 0.7) * profileRisk;
     // L'angolo stretto riduce la dispersione dovuta all'esecuzione, ma ne
@@ -1335,7 +1425,7 @@ export function hitBall(
     );
     // L'errore vero e' una decisione presa una volta per colpo, non una somma
     // di perturbazioni che sperano di superare una soglia geometrica.
-    const shotError = rollShotError(state, assessment, aimedOffset, tight);
+    const shotError = rollShotError(state, assessment, aimedOffset, tight, tightDepth);
     const rawTargetX = centerX + aimedOffset * (COURT.right - COURT.left) * aimReach
       + lateralJitter;
     const targetX = shotError?.type === "wide"
@@ -1352,7 +1442,14 @@ export function hitBall(
         + overchargeRisk * 70
         + depthJitter
         - executionMiss * BALANCE.shotErrorShort
-        + executionMiss * assessment.timingBias * BALANCE.shotErrorDepth,
+        + executionMiss * assessment.timingBias * BALANCE.shotErrorDepth
+        - (scrambled ? BALANCE.smashReturnScrambleDepth
+          : smashDefence ? BALANCE.smashReturnDefenceDepth : 0)
+        // Angolo stretto in profondita': stesso patto di quello laterale, con
+        // il vetro di fondo al posto di quello laterale.
+        + tightDepth * BALANCE.tightDepthReachGain
+        + (Math.random() - 0.5) * tightDepth
+          * BALANCE.tightDepthMinSpread / Math.max(0.6, control),
       62,
       BALANCE.shotErrorMaxDepth,
     );
@@ -1365,9 +1462,13 @@ export function hitBall(
     // per forza piu' alto: il taglio non puo' comprare tempo restando basso.
     // La sua moneta e' un'altra: rimbalzo schiacciato e poca spesa, in cambio
     // di meno profondita' e meno spinta. Il piatto resta il colpo di pressione.
-    const flightTime = (slice
+    // Difendendo si alza l'arco: piu' tempo per rientrare, ma palla leggibile.
+    const defenceArc = scrambled
+      ? BALANCE.smashReturnScrambleArc
+      : smashDefence ? BALANCE.smashReturnDefenceArc : 0;
+    const flightTime = ((slice
       ? 1.14 - shotPower * 0.20
-      : 1.12 - shotPower * 0.26) / qualityPace;
+      : 1.12 - shotPower * 0.26) + defenceArc) / qualityPace;
     if (shotError?.type === "net") {
       // Colpo affossato: il bersaglio cade sulla rete, che diventa il contatto.
       setComputerTrajectory(ball, targetX, COURT.netY, flightTime * 0.66);
@@ -1531,6 +1632,10 @@ export function hitBall(
     } else if (ball.shotType === "lob") {
       state.aiReactionDelay = Math.max(0.04, state.aiReactionDelay - state.ai.skill * 0.08);
     }
+  } else if (ball.shotType === "smash-x3") {
+    // Simmetrico: uno x3 avversario apre una finestra di recupero anche per il
+    // giocatore, cosi' il punto si perde per posizione e non per regola.
+    state.playerX3Recovery = BALANCE.playerX3RecoveryWindow;
   }
   ball.serveInFlight = false;
   ball.serveTouchedNet = false;
@@ -1582,6 +1687,9 @@ function applySpecial(state, offset, paddle) {
     ball.vx = offset * 480;
     ball.vy = -470;
     ball.vz = 325;
+    // La sua scheda promette "palla difficile da leggere" e non c'era nulla.
+    // Meta' del ritardo dell'Oracolo, che di lettura fa il proprio mestiere.
+    state.specialReadPenalty = 0.13;
     addEvent(state, t("evPrecision"));
   } else if (athlete.id === "pantera") {
     paddle.dashTimer = 0.26;
@@ -1589,9 +1697,15 @@ function applySpecial(state, offset, paddle) {
     ball.vz = 300;
     addEvent(state, t("evLightningDash"));
   } else if (athlete.id === "steamer") {
-    ball.vx = offset * 250;
+    // "Potenza massima con effetto wall": la parte wall non esisteva. Ora la
+    // palla cerca il vetro laterale e riparte verso il centro, che e' proprio
+    // il colpo descritto dalla sua scheda.
+    const wallSide = Math.sign(offset) || (paddle.x < (COURT.left + COURT.right) / 2 ? 1 : -1);
+    ball.vx = wallSide * 470;
     ball.vy = -520;
     ball.vz = 410;
+    ball.spin = wallSide * 74;
+    ball.shotType = "wall-angle";
     addEvent(state, t("evSteamSmash"));
   } else if (athlete.id === "fiamma") {
     state.shieldTimer = 2.2;
@@ -1601,8 +1715,10 @@ function applySpecial(state, offset, paddle) {
   } else if (athlete.id === "oracolo") {
     // "Visione Perfetta": angolo calcolato al millimetro e traiettoria difficile
     // da leggere, che ritarda la reazione avversaria invece di aggiungere forza.
+    // Aveva piu' angolo, un effetto in piu' e un cooldown piu' corto del
+    // Maestro: lo dominava su ogni asse. Ora paga l'angolo in velocita'.
     ball.vx = offset * 505;
-    ball.vy = -455;
+    ball.vy = -412;
     ball.vz = 315;
     ball.spin = offset * 92;
     // Applicato dopo il lock del ricevitore, che altrimenti lo sovrascrive.
@@ -1842,9 +1958,14 @@ function handleWalls(state) {
     const recovery = defenders
       .map((paddle) => ({ paddle, distance: Math.hypot(paddle.x - ball.x, paddle.y - ball.y) }))
       .sort((a, b) => a.distance - b.distance)[0];
-    const aiRead = side === "ai" && state.aiX3Recovery > 0;
-    const recovered = aiRead && recovery.distance <= recovery.paddle.reach * 2.05
-      && recovery.paddle.y < COURT.top + 158;
+    // La finestra esisteva solo per il lato IA: uno x3 avversario era un punto
+    // automatico per costruzione, non perche' fossi fuori posizione.
+    const read = (side === "ai" ? state.aiX3Recovery : state.playerX3Recovery) > 0;
+    const backLimit = side === "ai" ? COURT.top + 158 : COURT.bottom - 158;
+    const inBack = side === "ai"
+      ? recovery.paddle.y < backLimit
+      : recovery.paddle.y > backLimit;
+    const recovered = read && recovery.distance <= recovery.paddle.reach * 2.05 && inBack;
     if (!recovered) {
       scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"));
       return true;
@@ -1857,6 +1978,7 @@ function handleWalls(state) {
     ball.shotType = "x3-recovered";
     ball.smashStage = 0;
     state.aiX3Recovery = 0;
+    state.playerX3Recovery = 0;
     addEvent(state, t("evX3Recovered"));
     return false;
   }
@@ -1883,13 +2005,38 @@ function handleWalls(state) {
       ball.smashStage = 2;
       addEvent(state, t("evSmashX3Grid"));
     } else if (hasBounced && ball.shotType === "smash-x2" && side === ball.smashTargetSide) {
-      // Rimbalzo di ritorno dello x2: e' questa velocita' a decidere se la
-      // coppia avversaria fa in tempo a intercettare prima della rete.
-      ball.vy = (side === "ai" ? 1 : -1)
-        * Math.max(BALANCE.smashX2ReturnVy, Math.abs(ball.vy) * 1.08);
-      ball.vz = Math.max(BALANCE.smashX2ReturnVz, ball.vz);
+      // L'esito dello x2 era una corsa geometrica: o il difensore arrivava o
+      // no, e pochi punti di velocita' ribaltavano tutto (a 520 il livello
+      // facile passava dal 18% al 100%). Ora e' una lettura decisa una volta
+      // sola all'uscita dal vetro, come gli altri errori del gioco.
+      const defenders = side === "ai"
+        ? [state.opponent, state.opponentMate]
+        : [state.player, state.playerMate];
+      const nearest = defenders
+        .map((pad) => ({ pad, distance: Math.hypot(pad.x - ball.x, pad.y - ball.y) }))
+        .sort((a, b) => a.distance - b.distance)[0];
+      const readSkill = side === "ai"
+        ? state.ai.skill
+        : computerProfile(state, state.player).skill;
+      const proximity = clamp(1 - nearest.distance / BALANCE.smashX2ReadRange, 0, 1);
+      const chance = clamp(
+        BALANCE.smashX2ReadBase
+          + readSkill * BALANCE.smashX2ReadSkill
+          + proximity * BALANCE.smashX2ReadProximity,
+        0,
+        BALANCE.smashX2ReadCap,
+      );
+      const read = Math.random() < chance;
+      // La lettura non teletrasporta nessuno: smorza l'uscita quel tanto che
+      // basta perche' la rincorsa sia possibile, e la resta da giocare.
+      // Il ramo letto e' una frenata vera, non un massimo con la velocita' in
+      // arrivo: altrimenti i due esiti si somigliavano e la lettura non decideva.
+      ball.vy = (side === "ai" ? 1 : -1) * (read
+        ? BALANCE.smashX2ReadVy
+        : Math.max(BALANCE.smashX2ReturnVy, Math.abs(ball.vy) * 1.08));
+      ball.vz = read ? BALANCE.smashX2ReadVz : Math.max(BALANCE.smashX2ReturnVz, ball.vz);
       ball.smashStage = 2;
-      addEvent(state, t("evSmashX2"));
+      addEvent(state, t(read ? "evSmashX2Read" : "evSmashX2"));
     }
   }
   if (hasBounced) {
@@ -2394,9 +2541,7 @@ function queuePaddleHit(state, paddle, input) {
     precision: clamp(input.sprint ?? 0, 0, 1),
     age: 0,
   };
-  const nearNet = paddle.isPlayer
-    ? paddle.y <= COURT.netY + BALANCE.smashNetWindow
-    : paddle.y >= COURT.netY - BALANCE.smashNetWindow;
+  const nearNet = withinNetRange(paddle, BALANCE.smashNetWindow);
   const canPrimeSmash = paddle.queuedShot.variant === "drive"
     && !paddle.queuedShot.slice
     && state.rallyHits > 0
@@ -2514,6 +2659,7 @@ export function updateMatch(state, dt, input, input2 = null) {
   state.pvpSwitchFlash = Math.max(0, state.pvpSwitchFlash - dt);
   state.tacticFlash = Math.max(0, state.tacticFlash - dt);
   state.aiX3Recovery = Math.max(0, state.aiX3Recovery - dt);
+  state.playerX3Recovery = Math.max(0, (state.playerX3Recovery ?? 0) - dt);
   setPlayerTeamTactic(state, input.teamTactic);
   if (state.shotFeedback) {
     state.shotFeedback.life = Math.max(0, state.shotFeedback.life - dt);
@@ -2644,7 +2790,7 @@ export function updateMatch(state, dt, input, input2 = null) {
       const canPrimeSmash = state.queuedShotVariant === "drive"
         && !state.queuedShotSlice
         && state.rallyHits > 0
-        && player.y <= COURT.netY + BALANCE.smashNetWindow
+        && withinNetRange(player, BALANCE.smashNetWindow)
         && ball.z >= BALANCE.smashMinHeight - 8
         && queuedPower >= BALANCE.smashMinPower;
       state.smashPrimed = canPrimeSmash;
