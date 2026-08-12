@@ -3,11 +3,11 @@ import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260812-cut-volley-v7";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-cut-volley-v7";
-import { setReduceMotion } from "./fx.js?v=20260812-cut-volley-v7";
-import { createDrill, updateDrill } from "./drill.js?v=20260812-cut-volley-v7";
-import { getLang, setLang, t } from "./i18n.js?v=20260812-cut-volley-v7";
+} from "./game.js?v=20260812-deterministic-v8";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-deterministic-v8";
+import { setReduceMotion } from "./fx.js?v=20260812-deterministic-v8";
+import { createDrill, updateDrill } from "./drill.js?v=20260812-deterministic-v8";
+import { getLang, setLang, t } from "./i18n.js?v=20260812-deterministic-v8";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260812-cut-volley-v7";
+} from "./render.js?v=20260812-deterministic-v8";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260812-cut-volley-v7";
+} from "./ui.js?v=20260812-deterministic-v8";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -830,6 +830,7 @@ function startMatch() {
   replayIndex = 0;
   replayAccum = 0;
   matchState.lastTime = performance.now();
+  simAccumulator = 0;
   pauseOverlay.hidden = true;
 
   showScreen("game");
@@ -840,10 +841,29 @@ function startMatch() {
   requestAnimationFrame((now) => gameLoop(now, generation));
 }
 
+const FIXED_STEP = 1 / 120;
+const MAX_SIM_STEPS = 8;
+let simAccumulator = 0;
+
+/** Azzera i comandi che devono valere una volta sola per fotogramma. */
+function consumeOneShot(input) {
+  if (!input) return input;
+  return {
+    ...input,
+    hit: false,
+    special: false,
+    switchPlayer: false,
+    switchDirection: null,
+    smashUpgrade: false,
+    cutVolley: false,
+    teamTactic: null,
+  };
+}
+
 function gameLoop(now, generation) {
   if (generation !== gameLoopGeneration || !matchState?.running) return;
 
-  const dt = Math.min((now - matchState.lastTime) / 1000, 0.033);
+  const dt = Math.min((now - matchState.lastTime) / 1000, 0.25);
   matchState.lastTime = now;
 
   let result = null;
@@ -851,7 +871,24 @@ function gameLoop(now, generation) {
     stepReplay(dt);
     result = null;
   } else {
-    result = updateMatch(matchState, dt, getInput(), getInput2());
+    // Passo fisso con accumulatore: prima la fisica dipendeva dal frame rate,
+    // quindi a 144 Hz si giocava una partita leggermente diversa che a 60.
+    simAccumulator = Math.min(simAccumulator + dt, FIXED_STEP * MAX_SIM_STEPS);
+    let input = getInput();
+    let input2 = getInput2();
+    let steps = 0;
+    while (simAccumulator >= FIXED_STEP && steps < MAX_SIM_STEPS) {
+      result = updateMatch(matchState, FIXED_STEP, input, input2);
+      simAccumulator -= FIXED_STEP;
+      steps += 1;
+      if (result) break;
+      // Gli input a colpo singolo valgono per un passo solo: ripetendoli si
+      // accoderebbe lo stesso colpo piu' volte nello stesso fotogramma.
+      if (steps === 1) {
+        input = consumeOneShot(input);
+        input2 = consumeOneShot(input2);
+      }
+    }
   }
   if (matchState.hapticPulse) {
     const { duration, strong, weak } = matchState.hapticPulse;
@@ -1210,6 +1247,7 @@ function resumeGame() {
   resetTransientInput({ awaitRelease: true });
   matchState.paused = false;
   matchState.lastTime = performance.now();
+  simAccumulator = 0;
   pauseOverlay.hidden = true;
 }
 

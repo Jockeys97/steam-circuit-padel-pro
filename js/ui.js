@@ -1,7 +1,7 @@
 import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260812-character-sprites-v8";
-import { getMatchInfo } from "./game.js?v=20260812-cut-volley-v7";
-import { getVolume, isMuted } from "./audio.js?v=20260812-cut-volley-v7";
-import { getLang, t } from "./i18n.js?v=20260812-cut-volley-v7";
+import { getMatchInfo } from "./game.js?v=20260812-deterministic-v8";
+import { getVolume, isMuted } from "./audio.js?v=20260812-deterministic-v8";
+import { getLang, t } from "./i18n.js?v=20260812-deterministic-v8";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
