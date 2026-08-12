@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-unlock-code-v6";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-cut-volley-v7";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260812-unlock-code-v6";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-unlock-code-v6";
-import { setReduceMotion } from "./fx.js?v=20260812-unlock-code-v6";
-import { createDrill, updateDrill } from "./drill.js?v=20260812-unlock-code-v6";
-import { getLang, setLang, t } from "./i18n.js?v=20260812-unlock-code-v6";
+} from "./game.js?v=20260812-cut-volley-v7";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-cut-volley-v7";
+import { setReduceMotion } from "./fx.js?v=20260812-cut-volley-v7";
+import { createDrill, updateDrill } from "./drill.js?v=20260812-cut-volley-v7";
+import { getLang, setLang, t } from "./i18n.js?v=20260812-cut-volley-v7";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260812-unlock-code-v6";
+} from "./render.js?v=20260812-cut-volley-v7";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260812-unlock-code-v6";
+} from "./ui.js?v=20260812-cut-volley-v7";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -116,6 +116,7 @@ const gamepad = {
   chargeAction: null,
   smashTapConsumed: false,
   smashUpgradeQueued: false,
+  cutVolleyQueued: false,
   switchStickLatched: false,
   splitStep: 0,
   sprint: 0,
@@ -135,6 +136,7 @@ const gamepad2 = {
   chargeAction: null,
   smashTapConsumed: false,
   smashUpgradeQueued: false,
+  cutVolleyQueued: false,
   switchStickLatched: false,
   splitStep: 0,
   sprint: 0,
@@ -243,6 +245,7 @@ function releaseGamepadKeys() {
   gamepad.chargeAction = null;
   gamepad.smashTapConsumed = false;
   gamepad.smashUpgradeQueued = false;
+  gamepad.cutVolleyQueued = false;
   gamepad.switchStickLatched = false;
   gamepad.splitStep = 0;
   gamepad.sprint = 0;
@@ -256,6 +259,7 @@ function releaseGamepadKeys2() {
   gamepad2.chargeAction = null;
   gamepad2.smashTapConsumed = false;
   gamepad2.smashUpgradeQueued = false;
+  gamepad2.cutVolleyQueued = false;
   gamepad2.switchStickLatched = false;
   gamepad2.splitStep = 0;
   gamepad2.sprint = 0;
@@ -566,7 +570,20 @@ function pollGamepadGameplay(g, pad, b, isSecond = false) {
     g.move = { x: 0, y: 0 };
     if (!isSecond) pulseGamepad(95, 0.72, 0.5);
   }
-  const shotButton = b(2)
+  // Secondo tocco su X: stessa grammatica del doppio tap su A per lo smash.
+  const cutVolleyPrimed = isSecond
+    ? secondPaddle?.cutVolleyPrimed
+    : matchState?.cutVolleyPrimed;
+  const xJustPressed = b(2) && !g.prevButtons[2];
+  if (!b(2)) g.cutVolleyTapConsumed = false;
+  if (xJustPressed && cutVolleyPrimed) {
+    g.cutVolleyQueued = true;
+    g.cutVolleyTapConsumed = true;
+    if (!isSecond) pulseGamepad(80, 0.6, 0.42);
+  }
+  g.prevButtons[2] = b(2);
+
+  const shotButton = b(2) && !g.cutVolleyTapConsumed
     ? (g.technicalModifier ? "vibora" : "slice")
     : b(3)
       ? (g.technicalModifier ? "defensive-lob" : "lob")
@@ -713,6 +730,7 @@ function getInput() {
     aimY: controllerAim?.y ?? 0,
     analogAim: Boolean(controllerAim),
     smashUpgrade: gamepad.smashUpgradeQueued,
+    cutVolley: gamepad.cutVolleyQueued,
     splitStep: gamepad.splitStep,
     sprint: gamepad.sprint,
     technicalModifier: gamepad.technicalModifier,
@@ -726,6 +744,7 @@ function getInput() {
   switchQueued = false;
   switchDirectionQueued = null;
   gamepad.smashUpgradeQueued = false;
+  gamepad.cutVolleyQueued = false;
   gamepad.tacticQueued = null;
   return input;
 }
@@ -750,6 +769,7 @@ function getInput2() {
     aimY: controllerAim2?.y ?? 0,
     analogAim: Boolean(controllerAim2?.x || controllerAim2?.y),
     smashUpgrade: gamepad2.smashUpgradeQueued,
+    cutVolley: gamepad2.cutVolleyQueued,
     splitStep: gamepad2.splitStep,
     sprint: gamepad2.sprint,
     technicalModifier: gamepad2.technicalModifier,
@@ -763,6 +783,7 @@ function getInput2() {
   gamepad2.switchQueued = false;
   gamepad2.switchDirectionQueued = null;
   gamepad2.smashUpgradeQueued = false;
+  gamepad2.cutVolleyQueued = false;
   gamepad2.tacticQueued = null;
   return input2;
 }

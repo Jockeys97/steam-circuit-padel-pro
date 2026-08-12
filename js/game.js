@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-unlock-code-v6";
-import { clamp } from "./render.js?v=20260812-unlock-code-v6";
-import { sfx } from "./audio.js?v=20260812-unlock-code-v6";
-import { t } from "./i18n.js?v=20260812-unlock-code-v6";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-cut-volley-v7";
+import { clamp } from "./render.js?v=20260812-cut-volley-v7";
+import { sfx } from "./audio.js?v=20260812-cut-volley-v7";
+import { t } from "./i18n.js?v=20260812-cut-volley-v7";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260812-unlock-code-v6";
+} from "./fx.js?v=20260812-cut-volley-v7";
 
 const SERVICE_LINE_OFFSET = 126;
 const SERVICE_TOP = COURT.netY - SERVICE_LINE_OFFSET;
@@ -205,6 +205,8 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     queuedShotAge: 0,
     queuedShotCharge: 0,
     smashPrimed: false,
+    cutVolleyPrimed: false,
+    cutVolleyTapWindow: 0,
     smashTapWindow: 0,
     smashContactGrace: 0,
     smashContactFallback: false,
@@ -575,6 +577,8 @@ export function prepareServe(state) {
   state.aiRecoveryMode = false;
   state.smashPrimed = false;
   state.smashTapWindow = 0;
+  state.cutVolleyPrimed = false;
+  state.cutVolleyTapWindow = 0;
   state.smashContactGrace = 0;
   state.smashContactFallback = false;
   state.playerSwingBuffer = 0;
@@ -1315,6 +1319,7 @@ export function hitBall(
   // Va letto prima di sovrascriverlo: serve sia al giocatore sia all'IA per
   // sapere che stanno rispondendo a uno smash.
   state.incomingShot = ball.shotType;
+  ball.wallKill = 0;
   const returningSmash = isSmashShot(state.incomingShot);
   ball.shotType = "drive";
   ball.smashStage = 0;
@@ -1570,6 +1575,23 @@ export function hitBall(
       ball.shotType = "wall-angle";
       ball.spin = aimedOffset * 68 * control;
       addEvent(state, t("evAngleWall"));
+    } else if (shotVariant === "cut-volley" && assessment.quality >= BALANCE.cutVolleyMinQuality) {
+      // Volee profonda e molto tagliata: rimbalza e va a morire sul vetro di
+      // fondo. `wallKill` porta la forza dell'effetto fino al contatto con la
+      // parete, dove diventa una spinta verso il basso.
+      const cutSide = Math.sign(aimedOffset) || 1;
+      setComputerTrajectory(
+        ball,
+        clamp(centerX + aimedOffset * (COURT.right - COURT.left) * 0.3,
+          COURT.left + 70, COURT.right - 70),
+        targetYForSide(paddle.isPlayer ? "ai" : "player", BALANCE.cutVolleyDepth),
+        BALANCE.cutVolleyFlightTime,
+      );
+      ball.backspin = BALANCE.cutVolleyBackspin;
+      ball.spin = cutSide * 52 * control;
+      ball.shotType = "cut-volley";
+      ball.wallKill = clamp(assessment.quality, 0, 1);
+      addEvent(state, t("evCutVolley"));
     } else if (slice) {
       if (viboraRange && contactHeight >= (shotVariant === "vibora" ? 42 : 48)) {
         const viboraSide = Math.sign(aimedOffset) || 1;
@@ -1997,6 +2019,24 @@ function handleWalls(state) {
     ball.y = clamp(ball.y, COURT.top + ball.r, COURT.bottom - ball.r);
     ball.vy *= -state.arena.wallBounce;
     ball.vx *= BALANCE.wallTangentialDamping;
+    // Volee tagliata: il vetro di fondo non restituisce piu' la palla, la
+    // schiaccia a terra. E' l'unico punto del gioco in cui una parete tocca
+    // `vz` fuori dagli smash, ed e' cio' che toglie il tempo di recupero.
+    if (hasBounced && (ball.wallKill ?? 0) > 0) {
+      const readSkill = side === "ai" ? state.ai.skill : 0.6;
+      const letta = Math.random()
+        < clamp(BALANCE.cutVolleyReadBase + readSkill * BALANCE.cutVolleyReadSkill, 0, 0.85)
+          * (1 - ball.wallKill * BALANCE.cutVolleyReadSuppress);
+      if (!letta) {
+        ball.vz = BALANCE.cutVolleyKillVz * ball.wallKill;
+        ball.vy *= BALANCE.cutVolleyKillDamp;
+        ball.vx *= BALANCE.cutVolleyKillDamp;
+        addEvent(state, t("evCutVolleyKill"));
+      } else {
+        addEvent(state, t("evCutVolleyRead"));
+      }
+      ball.wallKill = 0;
+    }
     if (hasBounced && ball.shotType === "smash-x3" && side === ball.smashTargetSide) {
       const outward = Math.sign(ball.vx || ball.spin) || 1;
       ball.vx = outward * Math.max(275, Math.abs(ball.vx));
@@ -2415,6 +2455,7 @@ const EMPTY_INPUT = {
   sprint: 0,
   technicalModifier: false,
   teamTactic: null,
+  cutVolley: false,
 };
 
 function moveHumanPaddle(state, paddle, input, dt) {
@@ -2784,6 +2825,10 @@ export function updateMatch(state, dt, input, input2 = null) {
         addEvent(state, t("evSmashTapExpired"));
       }
     }
+    if (state.cutVolleyPrimed) {
+      state.cutVolleyTapWindow = Math.max(0, state.cutVolleyTapWindow - dt);
+      if (state.cutVolleyTapWindow === 0) state.cutVolleyPrimed = false;
+    }
     if (input.hit) {
       queueChargedShot(state, input.slice, input.shotVariant ?? (input.slice ? "slice" : "auto"));
       const queuedPower = state.queuedShotPower * state.athlete.stats.power;
@@ -2793,10 +2838,35 @@ export function updateMatch(state, dt, input, input2 = null) {
         && withinNetRange(player, BALANCE.smashNetWindow)
         && ball.z >= BALANCE.smashMinHeight - 8
         && queuedPower >= BALANCE.smashMinPower;
+      // Volee tagliata: stessa grammatica dello smash ma su X. Richiede una
+      // volee vera, cioe' che la palla non abbia ancora rimbalzato dalla mia
+      // parte, e la stessa vicinanza a rete della vibora.
+      const canPrimeCutVolley = !canPrimeSmash
+        && state.queuedShotSlice
+        && state.rallyHits > 0
+        && ball.bounces.player === 0
+        && withinNetRange(player, BALANCE.viboraNetWindow)
+        && ball.z >= BALANCE.cutVolleyMinHeight;
       state.smashPrimed = canPrimeSmash;
       state.smashTapWindow = canPrimeSmash ? BALANCE.smashDoubleTapWindow : 0;
-      state.playerSwingBuffer = canPrimeSmash ? BALANCE.smashBufferWindow : BALANCE.shotBufferWindow;
+      state.cutVolleyPrimed = canPrimeCutVolley;
+      state.cutVolleyTapWindow = canPrimeCutVolley ? BALANCE.cutVolleyTapWindow : 0;
+      state.playerSwingBuffer = canPrimeSmash
+        ? BALANCE.smashBufferWindow
+        : canPrimeCutVolley
+          ? BALANCE.cutVolleyBufferWindow
+          : BALANCE.shotBufferWindow;
       if (canPrimeSmash) addEvent(state, t("evSmashPrimed"));
+      else if (canPrimeCutVolley) addEvent(state, t("evCutVolleyPrimed"));
+    }
+    if (input.cutVolley && state.cutVolleyPrimed && state.playerSwingBuffer > 0) {
+      state.queuedShotVariant = "cut-volley";
+      state.queuedShotAim = clamp(input.aim ?? state.queuedShotAim, -1, 1);
+      state.queuedShotAge = 0;
+      state.shotIntent = "cut-volley";
+      state.cutVolleyPrimed = false;
+      state.cutVolleyTapWindow = 0;
+      addEvent(state, t("evCutVolleyConfirmed"));
     }
     if (input.smashUpgrade && state.smashPrimed && state.playerSwingBuffer > 0) {
       state.queuedShotVariant = "smash";

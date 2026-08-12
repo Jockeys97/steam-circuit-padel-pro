@@ -140,6 +140,22 @@ export const BALANCE = {
   smashX2ReadRange: 420,
   smashX2ReturnVy: 580,
   smashX2ReturnVz: 290,
+  // Volee tagliata: secondo tocco su X, muore alla base del vetro di FONDO.
+  // Il laterale ha gia' due significati (wall-angle e uscita x3) e un terzo lo
+  // renderebbe illeggibile; il fondo e' la parete del recupero, ed e' quella
+  // che il colpo deve negare.
+  cutVolleyTapWindow: 0.7,
+  cutVolleyBufferWindow: 0.85,
+  cutVolleyMinHeight: 34,
+  cutVolleyDepth: 214,
+  cutVolleyFlightTime: 0.86,
+  cutVolleyBackspin: 1.15,
+  cutVolleyMinQuality: 0.52,
+  cutVolleyKillVz: -270,
+  cutVolleyKillDamp: 0.42,
+  cutVolleyReadBase: 0.2,
+  cutVolleyReadSkill: 0.62,
+  cutVolleyReadSuppress: 0.4,
   smashX2MinQuality: 0.6,
   smashX3MinQuality: 0.7,
   smashFlatMinQuality: 0.48,
