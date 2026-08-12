@@ -912,7 +912,10 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
         ? Math.floor(paddle.runPhase ?? 0) % frameCount
       : charge > 0.08 ? 2 : swing > 0.08 ? 3 : paddle.motion > 0.12 ? 1 : 0;
     const destWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame, appearance) * projected.scale;
-    const destHeight = destWidth * (activeSprite.naturalHeight / frameWidth);
+    const viewKey = isPlayer ? "back" : "front";
+    const stateKey = useActionSprite ? "action" : useRunSprite ? "run" : "idle";
+    const calibratedHeight = appearance?.spriteHeights?.[viewKey]?.[stateKey];
+    const destHeight = (calibratedHeight ?? (destWidth / projected.scale) * (activeSprite.naturalHeight / frameWidth)) * projected.scale;
     const feetY = projected.y + 46 * projected.scale;
     const transparentFootMargin = destHeight * (useRunSprite ? 0.04 : 0.085);
 

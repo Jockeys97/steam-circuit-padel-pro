@@ -1,4 +1,4 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-cut-volley-v7";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-character-sprites-v8";
 import {
   createMatchState,
   resetReplayBuffer,
