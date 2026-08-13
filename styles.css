@@ -2734,3 +2734,51 @@ body.mode-colorblind .hero-preview {
 .team-slot--rival .stat-bar {
   color: #ffb08c;
 }
+
+/* Le caselle della squadra hanno due comandi distinti — chi gioca e come e'
+   vestito — quindi la card e' un contenitore, non un bottone. */
+.team-slot {
+  cursor: default;
+}
+
+.team-slot .athlete-card__special {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.slot-action {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 200, 255, 0.4);
+  background: rgba(10, 24, 60, 0.7);
+  color: #9ef8ff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.slot-action:hover,
+.slot-action:focus-visible {
+  background: rgba(20, 60, 120, 0.85);
+  border-color: rgba(160, 230, 255, 0.75);
+}
+
+.slot-action--outfit {
+  border-color: rgba(255, 210, 120, 0.42);
+  color: #ffd98a;
+}
+
+.slot-action--outfit:hover,
+.slot-action--outfit:focus-visible {
+  background: rgba(80, 55, 10, 0.7);
+  border-color: rgba(255, 225, 160, 0.8);
+}
+
+.team-slot--rival .slot-action {
+  border-color: rgba(255, 150, 110, 0.42);
+  color: #ffc09a;
+}

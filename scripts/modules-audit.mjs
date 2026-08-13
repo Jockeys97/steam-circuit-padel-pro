@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
-// Ogni `import { X } from "./y.js"` deve trovare davvero `X` in `y.js`.
-//
-// Sembra una verifica che non serve — un import rotto si vede subito. Non e'
-// vero: i moduli si caricano nell'ordine delle dipendenze, e il primo che manca
-// interrompe la catena. Il gioco non mostra un errore, mostra la pagina con
-// nessun bottone che risponde, perche' nessun listener e' mai stato agganciato.
-// E' esattamente com'e' andata: ripristinando `data.js` da un commit sono
-// spariti cinque export che un'altra sessione aveva aggiunto senza committarli,
-// e nessuno dei dieci audit se n'e' accorto, perche' nessuno di loro carica
-// `ui.js` — che ha bisogno del DOM.
-//
-// Qui il DOM viene finto quanto basta a far valutare i moduli. Non si prova a
-// far girare il gioco: si verifica solo che tutto si carichi e che ogni nome
-// importato esista.
+/**
+ * Ogni modulo deve potersi valutare senza esplodere.
+ *
+ * Complementare a `module-contract-audit`, che verifica staticamente che ogni
+ * nome importato esista e che la query di versione sia allineata. Quello legge
+ * il testo; questo esegue. Sono guasti diversi: un modulo puo' avere tutti gli
+ * import a posto e lanciare comunque al caricamento — una costante letta prima
+ * della propria dichiarazione, una chiamata al DOM fuori da una funzione, un
+ * `JSON.parse` su un valore assente. Il sintomo e' lo stesso e non degrada: la
+ * pagina si apre, il campo si disegna, e nessun bottone risponde perche' la
+ * catena dei moduli si e' interrotta prima che i listener venissero agganciati.
+ *
+ * Nessun altro audit ci arriva: `ui.js` e `main.js` chiedono il DOM, quindi
+ * nessuno li importa e nessuno scopre se si rompono. Qui il DOM viene finto
+ * quanto basta a far valutare i moduli — non si prova a far girare il gioco.
+ */
 
 const root = new URL("../", import.meta.url);
 
@@ -64,9 +66,6 @@ function stubDom() {
 
 stubDom();
 
-const files = (await readdir(new URL("js/", root))).filter((name) => name.endsWith(".js"));
-assert.ok(files.length >= 8, `Attesi almeno otto moduli, trovati ${files.length}`);
-
 // La stringa di versione va letta dal codice, non scritta qui: `data.js` e
 // `data.js?v=...` sono due moduli distinti per Node, ed e' una trappola in cui
 // questo progetto e' gia' caduto tre volte.
@@ -74,48 +73,17 @@ const mainSource = await readFile(new URL("js/main.js", root), "utf8");
 const versione = mainSource.match(/from "\.\/data\.js(\?v=[^"]*)"/)?.[1] ?? "";
 assert.ok(versione, "Impossibile leggere la stringa di versione da main.js");
 
-const caricati = new Map();
+const files = (await readdir(new URL("js/", root))).filter((name) => name.endsWith(".js"));
+assert.ok(files.length >= 8, `Attesi almeno otto moduli, trovati ${files.length}`);
+
 const errori = [];
 for (const file of files) {
   try {
-    caricati.set(file, await import(new URL(`js/${file}${versione}`, root)));
+    await import(new URL(`js/${file}${versione}`, root));
   } catch (error) {
     errori.push(`${file}: ${error.message}`);
   }
 }
-assert.deepEqual(errori, [], `Moduli che non si caricano:\n  ${errori.join("\n  ")}`);
+assert.deepEqual(errori, [], `Moduli che non si valutano:\n  ${errori.join("\n  ")}`);
 
-// Ogni nome importato deve esistere nel modulo di destinazione. Il caricamento
-// da solo non basta a garantirlo in ogni caso, e il messaggio d'errore di Node
-// nomina un simbolo alla volta: qui si vede subito l'elenco completo.
-const mancanti = [];
-for (const [file, ] of caricati) {
-  const source = await readFile(new URL(`js/${file}`, root), "utf8");
-  for (const match of source.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/([a-z-]+\.js)[^"]*"/g)) {
-    const target = caricati.get(match[2]);
-    if (!target) continue;
-    for (const raw of match[1].split(",")) {
-      const nome = raw.trim().split(/\s+as\s+/)[0].trim();
-      if (!nome) continue;
-      if (!(nome in target)) mancanti.push(`${file} importa ${nome} da ${match[2]}, che non lo esporta`);
-    }
-  }
-}
-assert.deepEqual(mancanti, [], `Import che non trovano il proprio export:\n  ${mancanti.join("\n  ")}`);
-
-// Tutti i moduli devono usare la stessa stringa di versione. Due versioni
-// diverse non rompono nulla in modo visibile: creano semplicemente due istanze
-// dello stesso modulo, con due `BALANCE` distinti che si tarano a vicenda.
-const versioniViste = new Set();
-for (const file of files) {
-  const source = await readFile(new URL(`js/${file}`, root), "utf8");
-  for (const match of source.matchAll(/from "\.\/[a-z-]+\.js\?v=([^"]+)"/g)) versioniViste.add(match[1]);
-}
-assert.equal(versioniViste.size, 1,
-  `I moduli devono condividere una sola stringa di versione, trovate: ${[...versioniViste].join(", ")}`);
-
-console.log(JSON.stringify({
-  moduli: files.length,
-  versione: [...versioniViste][0],
-  importVerificati: mancanti.length === 0,
-}, null, 2));
+console.log(JSON.stringify({ moduli: files.length, versione: versione.replace("?v=", "") }, null, 2));

@@ -310,6 +310,13 @@ export function resolveLineup(athlete) {
   for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
     if (!lineup[ruolo]) lineup[ruolo] = libero();
   }
+  // Il completo e' una proprieta' dell'atleta, non della casella: e' salvato in
+  // `equippedOutfits[id]`. Applicarlo qui, in un punto solo, e' cio' che fa
+  // combaciare quello che si vede nel pannello con quello che scende in campo —
+  // prima il completo lo riceveva soltanto l'atleta del giocatore.
+  for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
+    lineup[ruolo] = athleteWithOutfit(lineup[ruolo]);
+  }
   return lineup;
 }
 
@@ -473,19 +480,31 @@ export function renderAthletes(onSelect, selectedId = null) {
   const grid = document.getElementById("athleteGrid");
   const header = document.getElementById("athleteGridHead");
 
-  const showOutfits = (athlete) => {
+  /**
+   * Il guardaroba. `giocatore` e' l'atleta con cui si scende in campo: quando e'
+   * diverso da `athlete` si sta vestendo un'altra casella della squadra, quindi
+   * non si tocca `ui.selectedAthlete` e si torna al pannello invece che alla
+   * griglia degli atleti. I completi restano legati all'atleta, non alla
+   * posizione: vestire La Pantera da avversaria la veste anche da compagna.
+   */
+  const showOutfits = (athlete, giocatore = athlete) => {
+    const altraCasella = athlete.id !== giocatore.id;
     const outfits = outfitsForAthlete(athlete.id);
     if (!outfits.length) {
-      showTeam(athlete);
+      showTeam(giocatore);
       return;
     }
-    ui.selectedAthlete = athlete;
+    if (!altraCasella) ui.selectedAthlete = athlete;
     grid.innerHTML = "";
     if (header) {
-      header.innerHTML = `<button class="btn btn--ghost" type="button" data-outfit-back>${t("outfitBack")}</button>
-        <span class="athlete-grid__hint">${t("outfitSub")}</span>`;
+      const indietro = altraCasella ? t("teamPickBack") : t("outfitBack");
+      header.innerHTML = `<button class="btn btn--ghost" type="button" data-outfit-back>${indietro}</button>
+        <span class="athlete-grid__hint">${t(`athlete_${athlete.id}_name`)} — ${t("outfitSub")}</span>`;
       header.hidden = false;
-      header.querySelector("[data-outfit-back]")?.addEventListener("click", () => showAthletes());
+      header.querySelector("[data-outfit-back]")?.addEventListener("click", () => {
+        if (altraCasella) showTeam(giocatore);
+        else showAthletes();
+      });
     }
     const equipped = selectedOutfit(athlete);
     outfits.forEach((outfit) => {
@@ -511,7 +530,7 @@ export function renderAthletes(onSelect, selectedId = null) {
         card.addEventListener("click", () => {
           ui.career.equippedOutfits = { ...(ui.career.equippedOutfits ?? {}), [athlete.id]: outfit.id };
           saveCareer(ui.career);
-          showTeam(athlete);
+          showTeam(giocatore);
         });
       } else {
         card.setAttribute("aria-disabled", "true");
@@ -539,7 +558,7 @@ export function renderAthletes(onSelect, selectedId = null) {
     grid.innerHTML = "";
     if (header) {
       header.innerHTML = `<button class="btn btn--ghost" type="button" data-team-back>${t("teamBack")}</button>
-        <span class="athlete-grid__hint">${t("teamSub")}</span>
+        <span class="athlete-grid__hint">${t("teamSubSolo")}</span>
         <button class="btn btn--primary" type="button" data-team-confirm>${t("teamConfirm")}</button>`;
       header.hidden = false;
       header.querySelector("[data-team-back]")?.addEventListener("click", () => showOutfits(athlete));
@@ -556,26 +575,32 @@ export function renderAthletes(onSelect, selectedId = null) {
     ];
 
     caselle.forEach(({ ruolo, atleta, etichetta }) => {
-      const card = document.createElement("button");
-      card.type = "button";
+      // La casella non e' piu' un bottone solo: atleta e completo sono due
+      // scelte diverse, e prima il completo si poteva cambiare unicamente al
+      // giocatore. Serve quindi un contenitore con due comandi propri.
+      const card = document.createElement("div");
       card.className = "athlete-card team-slot";
       if (!ruolo) card.classList.add("team-slot--fixed");
       if (ruolo === "opponent" || ruolo === "opponentMate") card.classList.add("team-slot--rival");
       const completo = selectedOutfit(atleta);
+      const haCompleti = outfitsForAthlete(atleta.id).length > 1;
+      const azioni = [
+        ruolo ? `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>` : "",
+        haCompleti ? `<button class="slot-action slot-action--outfit" type="button" data-azione="completo">${t("slotChangeOutfit")}</button>` : "",
+      ].filter(Boolean).join("");
       card.innerHTML = `<span class="team-slot__tag">${etichetta}</span>` + athleteCardMarkup(
         completo?.preview ?? atleta.image,
         atleta.color,
         t(`athlete_${atleta.id}_name`),
-        t(`athlete_${atleta.id}_role`),
+        completo && completo.id !== "base" ? t(completo.nameKey) : t(`athlete_${atleta.id}_role`),
         statLine(atleta),
-        ruolo ? t("slotChange") : t("slotFixed"),
+        azioni,
         false,
       );
-      if (ruolo) {
-        card.addEventListener("click", () => showPicker(athlete, ruolo));
-      } else {
-        card.setAttribute("aria-disabled", "true");
-      }
+      card.querySelector('[data-azione="atleta"]')
+        ?.addEventListener("click", () => showPicker(athlete, ruolo));
+      card.querySelector('[data-azione="completo"]')
+        ?.addEventListener("click", () => showOutfits(atleta, athlete));
       grid.appendChild(card);
     });
   };
