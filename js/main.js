@@ -1,4 +1,4 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-standard-sprites-v29";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-standard-sprites-v29";
 import {
   createMatchState,
   resetReplayBuffer,
@@ -28,6 +28,7 @@ import {
   athleteWithOutfit,
   bindNavigation,
   collectPrefs,
+  currentFixture,
   ensureSeasonObjectives,
   getAiForMatch,
   loadPrefs,
@@ -839,8 +840,6 @@ function getInput2() {
   return input2;
 }
 
-const CAREER_MATCHES = 3;
-
 function startMatch() {
   gameLoopGeneration += 1;
   resetTransientInput({ awaitRelease: true, resetButtons: true });
@@ -875,9 +874,10 @@ function startMatch() {
     matchState.pointsToWin = ui.matchLength === "points21" ? 21 : 11;
   } else if (ui.selectedMode === "career") {
     matchState.scoring = "points";
-    matchState.pointsToWin = 11;
+    matchState.pointsToWin = CAREER_POINTS_TO_WIN;
     matchState.careerSeason = ui.career.season;
     matchState.careerMatch = ui.career.matchIndex + 1;
+    matchState.careerRival = fixture.rival;
     matchState.matchObjective = matchObjective(ui.career.season, ui.career.matchIndex);
     ensureSeasonObjectives();
     ui.careerSeasonWon = false;
@@ -1248,13 +1248,18 @@ function endMatch(winner) {
     ui.careerSeasonOutcome = null;
     if (ui.career.matchIndex >= CAREER_MATCHES) {
       const vinte = ui.career.seasonWins ?? 0;
+      // Il trofeo dell'ultima stagione chiude il circuito: e' il finale, e si
+      // vede una volta sola. Prima la carriera non aveva un traguardo — dalla
+      // quinta stagione era la stessa Leggenda a ripetizione, per sempre.
+      const finale = vinte >= CAREER_MATCHES && ui.career.season >= CAREER_FINAL_SEASON;
       if (vinte >= CAREER_MATCHES) {
         // Stagione perfetta: trofeo e promozione.
         ui.career.trophies += 1;
         ui.career.season += 1;
         ui.careerSeasonWon = true;
-        ui.careerSeasonOutcome = "trophy";
-      } else if (vinte >= CAREER_MATCHES - 1) {
+        ui.careerSeasonOutcome = finale && !ui.career.finaleSeen ? "finale" : "trophy";
+        if (finale) ui.career.finaleSeen = true;
+      } else if (vinte >= CAREER_PROMOTION_WINS) {
         // Stagione positiva: si avanza, ma senza trofeo.
         ui.career.season += 1;
         ui.careerSeasonOutcome = "promoted";
@@ -1263,6 +1268,7 @@ function endMatch(winner) {
         // obiettivi gia' conquistati restano: si perde tempo, non progressi.
         ui.careerSeasonOutcome = "repeat";
       }
+      ui.career.bestSeason = Math.max(ui.career.bestSeason ?? 1, ui.career.season);
       ui.career.matchIndex = 0;
       ui.career.seasonWins = 0;
       resetSeasonObjectives();
@@ -1295,7 +1301,22 @@ function endMatch(winner) {
 function updateCareerTag() {
   const el = document.getElementById("careerTag");
   if (!el) return;
-  el.textContent = t("careerTag", { season: ui.career.season, match: ui.career.matchIndex });
+  el.textContent = t("careerTag", {
+    season: ui.career.season,
+    match: ui.career.matchIndex,
+    total: CAREER_MATCHES,
+  });
+  // Il turno di calendario: dove si gioca e contro chi. Senza questo la carriera
+  // annunciava solo un contatore, e l'arena imposta dal circuito arrivava senza
+  // preavviso a partita iniziata.
+  const fixtureEl = document.getElementById("careerFixture");
+  if (!fixtureEl) return;
+  const fixture = currentFixture();
+  fixtureEl.textContent = `${t("careerFixture", {
+    match: ui.career.matchIndex + 1,
+    total: CAREER_MATCHES,
+    arena: t(`arena_${fixture.arena.id}_name`),
+  })} · ${t("careerRivalLabel", { rival: t(`ai_${fixture.rival.id}_name`) })}`;
 }
 
 function rematch() {

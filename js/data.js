@@ -535,23 +535,28 @@ export function emptySeasonProgress() {
 }
 
 export const OBJECTIVE_DEFS = {
-  smashWins: { metric: "smashWinners", unit: "count" },
-  noDoubleFault: { metric: "doubleFaults", unit: "max" },
-  winPoints: { metric: "pointsWon", unit: "count" },
-  winRally: { metric: "longestRally", unit: "count" },
-  winners: { metric: "winners", unit: "count" },
-  fewErrors: { metric: "errors", unit: "max" },
+  smashWins: { metric: "smashWinners", unit: "count", agg: "sum" },
+  noDoubleFault: { metric: "doubleFaults", unit: "max", agg: "sum" },
+  winPoints: { metric: "pointsWon", unit: "count", agg: "sum" },
+  winRally: { metric: "longestRally", unit: "count", agg: "max" },
+  winners: { metric: "winners", unit: "count", agg: "sum" },
+  fewErrors: { metric: "errors", unit: "max", agg: "sum" },
 };
 
 /** Obiettivi di stagione: tre per stagione, scelti deterministicamente. */
-export function seasonObjectives(season) {
+export function seasonObjectives(season, { pointsToWin = CAREER_POINTS_TO_WIN, matches = CAREER_MATCHES } = {}) {
+  // Punti conquistabili in una stagione, e quelli di una stagione da promozione.
+  const cap = pointsToWin * matches;
+  const promotionPoints = pointsToWin * CAREER_PROMOTION_WINS;
+  // La richiesta cresce con le stagioni ma satura: oltre, tornerebbe impossibile.
+  const step = Math.min(Math.max(season - 1, 0), 6);
   const pool = [
-    { id: "smashWins", target: 3 + Math.floor(season / 2) },
-    { id: "winners", target: 6 + season },
-    { id: "winRally", target: 8 + season },
-    { id: "noDoubleFault", target: 0 },
-    { id: "winPoints", target: 20 + season * 2 },
-    { id: "fewErrors", target: Math.max(4, 8 - season) },
+    { id: "smashWins", target: 4 + step },
+    { id: "winners", target: Math.min(cap - 6, 10 + step) },
+    { id: "winRally", target: 10 + step },
+    { id: "noDoubleFault", target: Math.max(0, 2 - Math.floor(step / 3)) },
+    { id: "winPoints", target: Math.min(cap - 3, promotionPoints + step) },
+    { id: "fewErrors", target: Math.max(6, 18 - step * 2) },
   ];
   const offset = (season - 1) % pool.length;
   return [0, 1, 2].map((i) => pool[(offset + i) % pool.length]);

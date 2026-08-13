@@ -416,7 +416,9 @@ export function applyDemoLimits() {
  */
 function careerOutcomeText(state, won) {
   const stagione = state.careerSeason;
+  const rivale = state.careerRival ? t(`ai_${state.careerRival.id}_name`) : "";
   switch (ui.careerSeasonOutcome) {
+    case "finale": return t("careerFinale", { season: stagione, rival: rivale });
     case "trophy": return t("careerSeasonWin", { season: stagione });
     case "promoted": return t("careerSeasonPromoted", { season: stagione });
     case "repeat": return t("careerSeasonRepeat", { season: stagione });
@@ -825,11 +827,16 @@ export function renderMatchStats(state) {
   `;
 }
 
-/** Testo narrativo del rivale basato sullo streak corrente. */
-function rivalNarrative(won) {
+/**
+ * Testo narrativo del rivale. Ora il rivale ha un nome — quello del gradino di
+ * calendario — perche' lo streak raccontava un antagonista che nel codice non
+ * esisteva come entita'.
+ */
+function rivalNarrative(won, rival) {
   const streak = ui.career.rivalStreak ?? 0;
-  if (won && streak >= 2) return t("rivalStreakWin", { n: streak });
-  if (!won && streak <= -2) return t("rivalStreakLoss", { n: -streak });
+  const nome = rival ? t(`ai_${rival.id}_name`) : t("rivalGeneric");
+  if (won && streak >= 2) return t("rivalStreakWin", { n: streak, rival: nome });
+  if (!won && streak <= -2) return t("rivalStreakLoss", { n: -streak, rival: nome });
   return "";
 }
 
@@ -846,18 +853,24 @@ export function renderObjectives(state) {
     return;
   }
   const career = ui.career;
-  const stats = state.stats;
   const rows = [];
 
+  // L'obiettivo bonus si misura sul match, quelli di stagione sul totale.
   const mo = state.matchObjective;
   if (mo) {
-    const st = objectiveStatus(mo, stats);
-    rows.push({ label: objectiveLabel(mo.id, mo.target), done: st.done, title: t("objMatchTitle") });
+    const st = objectiveStatus(mo, matchProgress(state.stats));
+    rows.push({ label: objectiveLabel(mo.id, mo.target), done: st.done, title: t("objMatchTitle"), st });
   }
   const earnedStars = ui.objectiveResult?.stars ?? 0;
+  const totals = seasonProgress();
   (career.seasonObjectives ?? []).forEach((o) => {
-    const st = objectiveStatus(o, stats);
-    rows.push({ label: objectiveLabel(o.id, o.target), done: st.done, title: t("objSeasonTitle") });
+    const st = objectiveStatus(o, totals);
+    rows.push({
+      label: objectiveLabel(o.id, o.target),
+      done: st.done,
+      title: o.claimed && st.done ? t("objAlreadyClaimed") : t("objSeasonTitle"),
+      st,
+    });
   });
 
   if (!rows.length && !earnedStars) {
@@ -870,6 +883,7 @@ export function renderObjectives(state) {
       <div class="result-objectives__row${r.done ? " is-done" : ""}">
         <span class="result-objectives__check">${r.done ? "✓" : "○"}</span>
         <span class="result-objectives__label">${r.label}</span>
+        <span class="result-objectives__progress">${r.st.progress}/${r.st.target}</span>
         <span class="result-objectives__cat">${r.title}</span>
       </div>`).join("")}
   `;
@@ -889,7 +903,7 @@ export function showResult(state, winner) {
   if (winner === "player") {
     title.textContent = t("victory");
     if (state.mode === "career") {
-      const rival = rivalNarrative(true);
+      const rival = rivalNarrative(true, state.careerRival);
       message.textContent = careerOutcomeText(state, true) + (rival ? ` ${rival}` : "");
     } else if (state.mode === "tournament" && ui.tournamentRound < 2) {
       message.textContent = t("tourneyNext", { n: ui.tournamentRound + 1 });
@@ -900,7 +914,7 @@ export function showResult(state, winner) {
     }
   } else {
     title.textContent = t("defeat");
-    const rival = state.mode === "career" ? rivalNarrative(false) : "";
+    const rival = state.mode === "career" ? rivalNarrative(false, state.careerRival) : "";
     message.textContent = (state.mode === "career"
       ? careerOutcomeText(state, false)
       : t("defeatMsg")) + (rival ? ` ${rival}` : "");
@@ -1002,13 +1016,21 @@ export function renderProfile() {
 
   if (objEl) {
     const objectives = ensureSeasonObjectives();
+    // Il progresso e' il totale della stagione: senza mostrarlo, un obiettivo
+    // cumulativo e' indistinguibile da uno da centrare in una partita sola.
+    const totals = seasonProgress();
     objEl.innerHTML = objectives.length
-      ? objectives.map((o) => `
-        <div class="result-objectives__row${o.done ? " is-done" : ""}">
-          <span class="result-objectives__check">${o.done ? "✓" : "○"}</span>
+      ? objectives.map((o) => {
+        const st = objectiveStatus(o, totals);
+        const cat = st.done ? t("objDone") : o.claimed ? t("objAlreadyClaimed") : "";
+        return `
+        <div class="result-objectives__row${st.done ? " is-done" : ""}">
+          <span class="result-objectives__check">${st.done ? "✓" : "○"}</span>
           <span class="result-objectives__label">${t(`obj_${o.id}`, { n: o.target })}</span>
-          <span class="result-objectives__cat">${o.done ? t("objDone") : ""}</span>
-        </div>`).join("")
+          <span class="result-objectives__progress">${st.progress}/${st.target}</span>
+          <span class="result-objectives__cat">${cat}</span>
+        </div>`;
+      }).join("")
       : `<p class="profile-empty">${t("profileNoObjectives")}</p>`;
   }
 

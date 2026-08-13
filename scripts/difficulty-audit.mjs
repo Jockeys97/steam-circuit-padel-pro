@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, hitBall, performServe, updateMatch } from "../js/game.js?v=20260813-mythic-outfits-v25";
-import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260813-mythic-outfits-v25";
+import { createMatchState, hitBall, performServe, updateMatch } from "../js/game.js?v=20260813-standard-sprites-v29";
+import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260813-standard-sprites-v29";
 
 const EMPTY_INPUT = {
   moveX: 0,

@@ -457,6 +457,19 @@ button {
   color: var(--green);
 }
 
+.mode-card__fixture {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.mode-card__fixture:empty {
+  display: none;
+}
+
 .mode-card--locked {
   opacity: 0.55;
   cursor: not-allowed;
@@ -1181,12 +1194,25 @@ kbd {
 
 .result-objectives__row {
   display: grid;
-  grid-template-columns: 1.2em 1fr auto;
+  /* Quattro colonne: segno, testo, progresso, categoria. Le righe a tre celle
+     del profilo restano allineate perche' l'ultima colonna collassa a zero. */
+  grid-template-columns: 1.2em 1fr auto auto;
   align-items: center;
   gap: 8px;
   padding: 4px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 0.82rem;
+}
+
+.result-objectives__progress {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.result-objectives__row.is-done .result-objectives__progress {
+  color: var(--green);
 }
 
 .result-objectives__check {
