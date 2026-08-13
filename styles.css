@@ -2848,10 +2848,12 @@ body.mode-colorblind .hero-preview {
   align-items: center;
   gap: 18px;
   margin-bottom: 6px;
-  padding: 14px 64px;
-  border-bottom: 1px solid rgba(0, 229, 255, 0.16);
-  background: linear-gradient(180deg, rgba(7, 7, 42, 0.97), rgba(7, 7, 42, 0.74));
-  backdrop-filter: blur(8px);
+  padding: 11px 64px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.14);
+  /* Vetro, non una striscia: opaca com'era prima tagliava in due lo sfondo
+     della schermata. La sfocatura fa il lavoro di coprire cio' che scorre. */
+  background: linear-gradient(180deg, rgba(7, 7, 42, 0.82), rgba(7, 7, 42, 0.52));
+  backdrop-filter: blur(12px);
 }
 
 /* La conferma va all'estremita' opposta ai comandi di ritorno: e' l'uscita in
@@ -2898,29 +2900,48 @@ body.mode-colorblind .hero-preview {
   position: relative;
 }
 
+/* Casella della squadra: etichetta di posizione sopra, card sotto.
+   L'etichetta stava dentro la card, appoggiata sull'immagine, e sull'avversario
+   a rete — dove il testo va a capo — copriva la faccia dell'atleta: cioe' la
+   cosa che si sta scegliendo. */
+.team-slot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* La card prende tutta l'altezza che resta, cosi' le quattro caselle chiudono
+   alla stessa quota anche con etichette di lunghezza diversa. */
+.team-slot-wrap > .athlete-card {
+  flex: 1;
+}
+
 .team-slot__tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-  padding: 4px 10px;
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  /* Due righe di spazio per tutte: in carriera i due rivali portano il suffisso
+     "dal calendario" e vanno a capo, gli altri due no. Senza quota riservata le
+     card partirebbero a quote diverse dentro la stessa griglia. */
+  min-height: 38px;
+  padding: 5px 12px;
+  border-radius: 12px;
   font-size: 0.66rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   font-weight: 700;
   background: rgba(4, 10, 35, 0.82);
   border: 1px solid rgba(120, 200, 255, 0.45);
   color: #9ef8ff;
 }
 
-.team-slot--rival .team-slot__tag {
+.team-slot-wrap--rival .team-slot__tag {
   border-color: rgba(255, 150, 110, 0.5);
   color: #ffc09a;
 }
 
 /* La casella del giocatore: non e' piu' bloccata — anche l'atleta con cui si
    scende in campo si sceglie da qui — ma resta distinta dalle altre. */
-.team-slot--you .team-slot__tag {
+.team-slot-wrap--you .team-slot__tag {
   background: rgba(20, 60, 40, 0.86);
   border-color: rgba(120, 255, 190, 0.5);
   color: #9dffcf;
@@ -3033,4 +3054,35 @@ body.mode-colorblind .hero-preview {
   font-style: normal;
   font-weight: 500;
   opacity: 0.75;
+}
+
+/* Arena della giornata in carriera: quella in programma si accende, le altre
+   restano visibili e spente — si vede dove si andra' nelle prossime giornate. */
+.arena-card--in-programma {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan), 0 12px 40px rgba(0, 229, 255, 0.18);
+}
+
+.arena-card--fuori-giornata {
+  opacity: 0.4;
+  filter: saturate(0.5);
+  cursor: default;
+}
+
+.arena-card__badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: rgba(4, 10, 35, 0.85);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}
+
+.arena-card__preview {
+  position: relative;
 }

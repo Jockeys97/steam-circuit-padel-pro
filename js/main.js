@@ -1384,6 +1384,20 @@ function handleQuitMatch() {
   quitMatch();
 }
 
+/**
+ * Ricostruisce la griglia delle arene.
+ *
+ * Va rifatta ogni volta che si entra nella schermata, non solo all'avvio: in
+ * carriera segna l'arena della giornata, e la giornata cambia a ogni partita.
+ * Costruendola una volta sola si sarebbe vista per sempre la prima.
+ */
+function refreshArenas() {
+  renderArenas(() => {
+    savePrefs(collectPrefs());
+    startMatch();
+  });
+}
+
 function syncMatchSetup() {
   const setup = document.getElementById("matchSetup");
   if (!setup) return;
@@ -1739,12 +1753,10 @@ function setLanguage(lang) {
   updateCareerTag();
   renderAthletes(() => {
     savePrefs(collectPrefs());
+    refreshArenas();
     showScreen("arena");
   }, ui.selectedAthlete?.id ?? prefs.athleteId);
-  renderArenas(() => {
-    savePrefs(collectPrefs());
-    startMatch();
-  });
+  refreshArenas();
   syncAllSettings();
   savePrefs(collectPrefs());
 }
@@ -1875,12 +1887,10 @@ updateCareerTag();
 
 renderAthletes(() => {
   savePrefs(collectPrefs());
+  refreshArenas();
   showScreen("arena");
 }, prefs.athleteId);
-renderArenas(() => {
-  savePrefs(collectPrefs());
-  startMatch();
-});
+refreshArenas();
 
 window.addEventListener("pointerdown", initAudio, { passive: true });
 

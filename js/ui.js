@@ -654,7 +654,7 @@ export function renderAthletes(onSelect, selectedId = null) {
       const tag = dettata
         ? `${etichetta} <em>${ui.selectedMode === "career" ? t("slotByCalendar") : t("slotByBracket")}</em>`
         : etichetta;
-      card.innerHTML = `<span class="team-slot__tag">${tag}</span>` + athleteCardMarkup(
+      card.innerHTML = athleteCardMarkup(
         completo?.preview ?? atleta.image,
         atleta.color,
         t(`athlete_${atleta.id}_name`),
@@ -670,6 +670,17 @@ export function renderAthletes(onSelect, selectedId = null) {
       // due bottoni piccoli rispondono e' la stessa card che si comporta in due
       // modi diversi. I due comandi restano, e fermano la propagazione perche'
       // "Completo" deve aprire il guardaroba e non il selettore.
+      // L'etichetta di posizione vive FUORI dalla card. Dentro era sovrapposta
+      // all'immagine, e sulla casella dell'avversario a rete — dove il testo
+      // va a capo su due righe — copriva la faccia dell'atleta, che e'
+      // esattamente quello che si sta scegliendo.
+      const casella = document.createElement("div");
+      casella.className = "team-slot-wrap";
+      if (ruolo === "player") casella.classList.add("team-slot-wrap--you");
+      if (ruolo === "opponent" || ruolo === "opponentMate") casella.classList.add("team-slot-wrap--rival");
+      casella.innerHTML = `<span class="team-slot__tag">${tag}</span>`;
+      casella.appendChild(card);
+
       if (!dettata) card.addEventListener("click", () => showPicker(athlete, ruolo));
       card.querySelector('[data-azione="atleta"]')
         ?.addEventListener("click", (evento) => {
@@ -681,7 +692,7 @@ export function renderAthletes(onSelect, selectedId = null) {
           evento.stopPropagation();
           showOutfits(atleta, athlete);
         });
-      grid.appendChild(card);
+      grid.appendChild(casella);
     });
   };
 
@@ -771,23 +782,36 @@ export function renderArenas(onSelect) {
   const grid = document.getElementById("arenaGrid");
   grid.innerHTML = "";
 
+  // In carriera il campo lo dice il calendario: `startMatch` usa l'arena del
+  // fixture e scarta `ui.selectedArena`. La griglia lo lasciava scegliere lo
+  // stesso, quindi era una scelta che il gioco buttava via — lo stesso difetto
+  // degli avversari. Le altre arene restano visibili, spente: si vede dove si
+  // andra' a giocare nelle prossime giornate.
+  const dettata = ui.selectedMode === "career" ? currentFixture().arena : null;
+
   demoFilter(ARENAS, DEMO_CONTENT.arenas).forEach((arena) => {
     const locked = !isUnlocked(arena, ui.career);
+    const fuoriGiornata = Boolean(dettata) && arena.id !== dettata.id;
     const card = document.createElement("button");
     card.type = "button";
     card.className = "arena-card";
     if (locked) card.classList.add("arena-card--locked");
+    if (fuoriGiornata) card.classList.add("arena-card--fuori-giornata");
+    if (dettata && !fuoriGiornata) card.classList.add("arena-card--in-programma");
     card.innerHTML = `
       <div class="arena-card__preview" style="--accent:${arena.palette.accent};background-image:linear-gradient(180deg, transparent 45%, rgba(5, 9, 29, 0.7) 100%),url('${arena.image}')" aria-hidden="true">
         <span>${t(`arena_${arena.id}_name`)}</span>
         ${locked ? `<span class="lock-badge">🔒</span>` : ""}
+        ${dettata && !fuoriGiornata ? `<span class="arena-card__badge">${t("arenaByCalendar")}</span>` : ""}
       </div>
       <div class="arena-card__body">
         <h3>${t(`arena_${arena.id}_name`)}</h3>
-        <p>${locked ? lockLabel(arena.unlock) : t(`arena_${arena.id}_desc`)}</p>
+        <p>${locked ? lockLabel(arena.unlock) : fuoriGiornata ? t("arenaOtherMatchday") : t(`arena_${arena.id}_desc`)}</p>
       </div>
     `;
-    if (!locked) {
+    if (fuoriGiornata) {
+      card.disabled = true;
+    } else if (!locked) {
       card.addEventListener("click", () => {
         ui.selectedArena = arena;
         onSelect?.(arena);
