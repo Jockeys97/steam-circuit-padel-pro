@@ -339,29 +339,41 @@ export const ATHLETES = [
 
 /**
  * Completi estetici: non toccano mai statistiche, hitbox o abilita'.
- * `spriteFilter` viene applicato a base, corsa e azioni, quindi una livrea
- * resta riconoscibile in ogni stato dell'atleta senza duplicare i fogli sprite.
+ * Ogni variante punta a sei fogli dedicati, cosi' pelle, volto, capelli e
+ * racchetta restano invariati in base, corsa e azioni.
  */
+function outfitSpritePaths(athleteId, outfitId) {
+  const root = `assets/outfits/${athleteId}/${outfitId}`;
+  return {
+    sprite: `${root}/idle.webp`,
+    backSprite: `${root}/back-idle.webp`,
+    actionSprite: `${root}/action.webp`,
+    backActionSprite: `${root}/back-action.webp`,
+    runSprite: `${root}/run.webp`,
+    backRunSprite: `${root}/back-run.webp`,
+  };
+}
+
 export const ATHLETE_OUTFITS = {
   maestro: [
-    { id: "base", nameKey: "outfitBase", colors: ["#08bfe8", "#f4fbff"], spriteFilter: "none" },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#7d63ff", "#9ef8ff"], spriteFilter: "hue-rotate(116deg) saturate(1.2) contrast(1.04)" },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#d5a62a", "#fff0a3"], spriteFilter: "hue-rotate(332deg) saturate(1.35) sepia(0.12) contrast(1.07)" },
+    { id: "base", nameKey: "outfitBase", colors: ["#08bfe8", "#f4fbff"] },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#315cff", "#9ef8ff"], preview: "assets/outfits/maestro/circuit-preview.webp", sprites: outfitSpritePaths("maestro", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#d5a62a", "#fff0a3"], preview: "assets/outfits/maestro/legend-preview.webp", sprites: outfitSpritePaths("maestro", "legend") },
   ],
   pantera: [
-    { id: "base", nameKey: "outfitBase", colors: ["#ed3e5d", "#ff7690"], spriteFilter: "none" },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#2cc5ff", "#caefff"], spriteFilter: "hue-rotate(150deg) saturate(1.18) contrast(1.04)" },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#ffb626", "#fff0a0"], spriteFilter: "hue-rotate(43deg) saturate(1.3) sepia(0.1) contrast(1.07)" },
+    { id: "base", nameKey: "outfitBase", colors: ["#ed3e5d", "#ff7690"] },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#2c6fff", "#caefff"], preview: "assets/outfits/pantera/circuit-preview.webp", sprites: outfitSpritePaths("pantera", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#ffb626", "#fff0a0"], preview: "assets/outfits/pantera/legend-preview.webp", sprites: outfitSpritePaths("pantera", "legend") },
   ],
   steamer: [
-    { id: "base", nameKey: "outfitBase", colors: ["#f47713", "#ff9a35"], spriteFilter: "none" },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#43d7c4", "#c8fff5"], spriteFilter: "hue-rotate(104deg) saturate(1.15) contrast(1.04)" },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#e3c232", "#fff3af"], spriteFilter: "hue-rotate(16deg) saturate(1.26) sepia(0.12) contrast(1.08)" },
+    { id: "base", nameKey: "outfitBase", colors: ["#f47713", "#ff9a35"] },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#087b86", "#c8fff5"], preview: "assets/outfits/steamer/circuit-preview.webp", sprites: outfitSpritePaths("steamer", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#e3c232", "#fff3af"], preview: "assets/outfits/steamer/legend-preview.webp", sprites: outfitSpritePaths("steamer", "legend") },
   ],
   fiamma: [
-    { id: "base", nameKey: "outfitBase", colors: ["#a9e71d", "#d7ff4b"], spriteFilter: "none" },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#42a9ff", "#c8ecff"], spriteFilter: "hue-rotate(118deg) saturate(1.18) contrast(1.04)" },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#f2a72b", "#fff0a7"], spriteFilter: "hue-rotate(44deg) saturate(1.3) sepia(0.1) contrast(1.07)" },
+    { id: "base", nameKey: "outfitBase", colors: ["#a9e71d", "#d7ff4b"] },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#326dff", "#c8ecff"], preview: "assets/outfits/fiamma/circuit-preview.webp", sprites: outfitSpritePaths("fiamma", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#f2a72b", "#fff0a7"], preview: "assets/outfits/fiamma/legend-preview.webp", sprites: outfitSpritePaths("fiamma", "legend") },
   ],
 };
 

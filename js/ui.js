@@ -1,4 +1,4 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-intercept-v18";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-outfit-assets-v19";
 import { getMatchInfo } from "./game.js?v=20260813-intercept-v18";
 import { getVolume, isMuted } from "./audio.js?v=20260813-intercept-v18";
 import { getLang, t } from "./i18n.js?v=20260813-intercept-v18";
@@ -217,9 +217,9 @@ export function athleteWithOutfit(athlete, career = ui.career) {
   if (!outfit) return athlete;
   return {
     ...athlete,
+    ...(outfit.sprites ?? {}),
     outfit,
     outfitId: outfit.id,
-    spriteFilter: outfit.spriteFilter,
     color: outfit.colors?.[0] ?? athlete.color,
   };
 }
@@ -310,7 +310,7 @@ export function renderAthletes(onSelect, selectedId = null) {
             const unlocked = isUnlocked(outfit, ui.career);
             const active = equipped?.id === outfit.id;
             return `<button class="wardrobe-kit${active ? " is-selected" : ""}${unlocked ? "" : " is-locked"}" type="button" data-outfit="${outfit.id}" ${unlocked ? "" : 'aria-disabled="true"'}>
-              <span class="wardrobe-kit__swatch" style="--kit-primary:${outfit.colors[0]};--kit-secondary:${outfit.colors[1]}"></span>
+              <span class="wardrobe-kit__swatch" style="--kit-primary:${outfit.colors[0]};--kit-secondary:${outfit.colors[1]};${outfit.preview ? `background-image:url('${outfit.preview}')` : ""}"></span>
               <strong>${t(outfit.nameKey)}</strong>
               <small>${unlocked ? (active ? t("outfitEquipped") : t("outfitAvailable")) : lockLabel(outfit.unlock)}</small>
             </button>`;

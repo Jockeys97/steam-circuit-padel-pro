@@ -1,4 +1,4 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-intercept-v18";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-outfit-assets-v19";
 import {
   createMatchState,
   resetReplayBuffer,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-intercept-v18";
+} from "./render.js?v=20260813-outfit-assets-v19";
 import {
   applyLanguage,
   awardObjectives,
@@ -43,7 +43,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-intercept-v18";
+} from "./ui.js?v=20260813-outfit-assets-v19";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -67,28 +67,39 @@ function loadOptionalSprite(path) {
   return sprite;
 }
 
-const athleteSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.sprite)];
+const athleteAppearances = ATHLETES.flatMap((athlete) => [
+  { ...athlete, outfitId: "base" },
+  ...outfitsForAthlete(athlete.id)
+    .filter((outfit) => outfit.id !== "base" && outfit.sprites)
+    .map((outfit) => ({ ...athlete, ...outfit.sprites, outfitId: outfit.id })),
+]);
+
+function athleteSpriteKey(athlete) {
+  return `${athlete.id}:${athlete.outfitId ?? "base"}`;
+}
+
+const athleteSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.sprite)];
 }));
 
-const athleteBackSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.backSprite)];
+const athleteBackSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backSprite)];
 }));
 
-const athleteActionSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.actionSprite)];
+const athleteActionSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.actionSprite)];
 }));
 
-const athleteBackActionSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.backActionSprite)];
+const athleteBackActionSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backActionSprite)];
 }));
 
-const athleteRunSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.runSprite)];
+const athleteRunSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.runSprite)];
 }));
 
-const athleteBackRunSprites = new Map(ATHLETES.map((athlete) => {
-  return [athlete.id, loadOptionalSprite(athlete.backRunSprite)];
+const athleteBackRunSprites = new Map(athleteAppearances.map((athlete) => {
+  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backRunSprite)];
 }));
 
 const keys = new Set();
@@ -936,29 +947,29 @@ function gameLoop(now, generation) {
   drawHitZone(ctx, matchState[matchState.activePlayerKey], "#fff36a");
   drawPaddle(ctx, matchState.opponent, matchState.opponentAthlete.color, false, matchState.opponent.swing,
     matchState.humanMode === "pvp" && matchState.pvpActiveKey === "opponent" ? matchState.opponent.charge : 0,
-    matchState.opponentAthlete, athleteSprites.get(matchState.opponentAthlete.id),
-    athleteActionSprites.get(matchState.opponentAthlete.id),
-    athleteRunSprites.get(matchState.opponentAthlete.id), now / 1000);
+    matchState.opponentAthlete, athleteSprites.get(athleteSpriteKey(matchState.opponentAthlete)),
+    athleteActionSprites.get(athleteSpriteKey(matchState.opponentAthlete)),
+    athleteRunSprites.get(athleteSpriteKey(matchState.opponentAthlete)), now / 1000);
   drawPaddle(ctx, matchState.opponentMate, matchState.opponentMateAthlete.color, false, matchState.opponentMate.swing,
     matchState.humanMode === "pvp" && matchState.pvpActiveKey === "opponentMate" ? matchState.opponentMate.charge : 0,
-    matchState.opponentMateAthlete, athleteSprites.get(matchState.opponentMateAthlete.id),
-    athleteActionSprites.get(matchState.opponentMateAthlete.id),
-    athleteRunSprites.get(matchState.opponentMateAthlete.id), now / 1000);
+    matchState.opponentMateAthlete, athleteSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)),
+    athleteActionSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)),
+    athleteRunSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)), now / 1000);
   drawPaddle(ctx, matchState.playerMate, matchState.playerMateAthlete.color, true, matchState.playerMate.swing,
     matchState.humanMode === "coop" ? matchState.playerMate.charge
       : matchState.activePlayerKey === "playerMate" ? matchState.shotCharge : 0,
-    matchState.playerMateAthlete, athleteBackSprites.get(matchState.playerMateAthlete.id),
-    athleteBackActionSprites.get(matchState.playerMateAthlete.id),
-    athleteBackRunSprites.get(matchState.playerMateAthlete.id), now / 1000);
+    matchState.playerMateAthlete, athleteBackSprites.get(athleteSpriteKey(matchState.playerMateAthlete)),
+    athleteBackActionSprites.get(athleteSpriteKey(matchState.playerMateAthlete)),
+    athleteBackRunSprites.get(athleteSpriteKey(matchState.playerMateAthlete)), now / 1000);
   drawPaddle(ctx, matchState.player, matchState.athlete.color, true, matchState.player.swing,
     matchState.humanMode === "coop" ? matchState.player.charge
       : matchState.activePlayerKey === "player" ? matchState.shotCharge : 0, matchState.athlete,
-    athleteBackSprites.get(matchState.athlete.id),
-    athleteBackActionSprites.get(matchState.athlete.id),
-    athleteBackRunSprites.get(matchState.athlete.id), now / 1000);
+    athleteBackSprites.get(athleteSpriteKey(matchState.athlete)),
+    athleteBackActionSprites.get(athleteSpriteKey(matchState.athlete)),
+    athleteBackRunSprites.get(athleteSpriteKey(matchState.athlete)), now / 1000);
   const activeSprite = matchState.activePlayerKey === "player"
-    ? athleteBackSprites.get(matchState.athlete.id)
-    : athleteBackSprites.get(matchState.playerMateAthlete.id);
+    ? athleteBackSprites.get(athleteSpriteKey(matchState.athlete))
+    : athleteBackSprites.get(athleteSpriteKey(matchState.playerMateAthlete));
   const smashChargeThreshold = Math.max(
     0,
     Math.min(1, (BALANCE.smashMinPower / matchState.athlete.stats.power - 0.4) / 0.95),

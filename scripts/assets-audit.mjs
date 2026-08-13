@@ -21,6 +21,16 @@ for (const file of sources) {
 const referenced = [...new Set(text.match(/assets\/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp)/g) ?? [])];
 assert.ok(referenced.length > 0, "Il codice deve referenziare delle immagini");
 
+// Alcuni percorsi sono composti a runtime, per esempio gli outfit:
+//   `assets/outfits/${athleteId}/${outfitId}/idle.webp`
+// Un controllo che cerca solo stringhe letterali li dichiarerebbe orfani. Le
+// radici dinamiche vengono raccolte a parte e tutto cio' che sta sotto di esse
+// e' considerato referenziato.
+const dynamicRoots = [...new Set(
+  (text.match(/assets\/[A-Za-z0-9._/-]*(?=\$\{)/g) ?? []).map((r) => r.replace(/\/$/, "")),
+)];
+const coveredByRoot = (path) => dynamicRoots.some((root) => path.startsWith(`${root}/`));
+
 const missing = [];
 for (const path of referenced) {
   try {
@@ -52,7 +62,7 @@ async function walk(dir, acc = []) {
 }
 
 const onDisk = await walk("assets/");
-const orphans = onDisk.filter((p) => !referenced.includes(p));
+const orphans = onDisk.filter((p) => !referenced.includes(p) && !coveredByRoot(p));
 assert.deepEqual(orphans, [],
   `Immagini attive mai referenziate: vanno in assets/_archivio/ ${orphans.join(", ")}`);
 
