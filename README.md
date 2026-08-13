@@ -194,12 +194,12 @@ python3 -m http.server 8000
 ```
 
 I moduli usano una query di versione (`?v=…`) come cache busting. **Cambiandone uno,
-vanno aggiornate tutte e 21 le occorrenze** in `index.html` e `js/*.js`: se restano
+vanno aggiornate tutte e 23 le occorrenze** in `index.html` e `js/*.js`: se restano
 disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un import
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-fullbleed-v11" index.html js/*.js styles.css   # deve dare 21 in totale
+grep -c "20260813-demo-v12" index.html js/*.js styles.css   # deve dare 23 in totale
 ```
 
 ---

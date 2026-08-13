@@ -2545,3 +2545,32 @@ body.mode-colorblind .hero-preview {
   background: var(--cyan);
   color: #04203a;
 }
+
+
+/* --- Demo ------------------------------------------------------------------- */
+.mode-card--demo {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.demo-cta {
+  margin: 18px 0 4px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(126, 243, 255, 0.35);
+  background: rgba(6, 20, 44, 0.72);
+  text-align: center;
+}
+
+.demo-cta h3 {
+  margin: 0 0 6px;
+  font-family: "Lilita One", cursive;
+  color: var(--cyan);
+}
+
+.demo-cta p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

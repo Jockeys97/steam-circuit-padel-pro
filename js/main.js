@@ -1,13 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-fullbleed-v11";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-demo-v12";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-fullbleed-v11";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-fullbleed-v11";
-import { setReduceMotion } from "./fx.js?v=20260813-fullbleed-v11";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-fullbleed-v11";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-fullbleed-v11";
+} from "./game.js?v=20260813-demo-v12";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-demo-v12";
+import { setReduceMotion } from "./fx.js?v=20260813-demo-v12";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-demo-v12";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-demo-v12";
+import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-demo-v12";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-fullbleed-v11";
+} from "./render.js?v=20260813-demo-v12";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +42,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-fullbleed-v11";
+} from "./ui.js?v=20260813-demo-v12";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1613,6 +1614,14 @@ function applyMatchPanel() {
   const button = document.getElementById("panelBtn");
   if (screen) screen.classList.toggle("immersive", !ui.matchPanel);
   if (button) button.setAttribute("aria-pressed", String(ui.matchPanel));
+}
+
+// La demo esiste per generare wishlist: un solo invito, un solo bottone.
+if (IS_DEMO) {
+  const cta = document.getElementById("demoCta");
+  const link = document.getElementById("demoWishlist");
+  if (cta) cta.hidden = false;
+  if (link) link.href = DEMO_CONTENT.wishlistUrl;
 }
 
 const panelBtn = document.getElementById("panelBtn");

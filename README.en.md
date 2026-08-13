@@ -191,13 +191,13 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Modules carry a version query (`?v=…`) for cache busting. **If you change one, all 21
+Modules carry a version query (`?v=…`) for cache busting. **If you change one, all 23
 occurrences** in `index.html` and `js/*.js` must be updated: leave them out of sync and the
 browser can serve an old module alongside a new one — and an import that can't find its
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-fullbleed-v11" index.html js/*.js styles.css   # must total 21
+grep -c "20260813-demo-v12" index.html js/*.js styles.css   # must total 23
 ```
 
 ---

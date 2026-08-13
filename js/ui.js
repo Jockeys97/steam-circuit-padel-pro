@@ -1,7 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-fullbleed-v11";
-import { getMatchInfo } from "./game.js?v=20260813-fullbleed-v11";
-import { getVolume, isMuted } from "./audio.js?v=20260813-fullbleed-v11";
-import { getLang, t } from "./i18n.js?v=20260813-fullbleed-v11";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-demo-v12";
+import { getMatchInfo } from "./game.js?v=20260813-demo-v12";
+import { getVolume, isMuted } from "./audio.js?v=20260813-demo-v12";
+import { getLang, t } from "./i18n.js?v=20260813-demo-v12";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-demo-v12";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -237,11 +238,37 @@ function promptUnlockCode() {
   return true;
 }
 
+/**
+ * Limiti della demo applicati all'interfaccia. Le modalita' escluse restano
+ * visibili ma bloccate: vedere cosa manca vende piu' che nasconderlo. Riusa
+ * `mode-card--locked`, che la navigazione da controller gia' salta.
+ */
+export function applyDemoLimits() {
+  if (!IS_DEMO) return;
+  document.body.classList.add("is-demo");
+  document.querySelectorAll(".mode-card").forEach((card) => {
+    if (DEMO_CONTENT.modes.includes(card.dataset.mode)) return;
+    card.classList.add("mode-card--locked", "mode-card--demo");
+    const tag = card.querySelector(".mode-card__tag");
+    if (tag) {
+      tag.textContent = t("demoLockedMode");
+      tag.classList.remove("mode-card__tag--ready");
+    }
+  });
+  // La demo gira su una sola difficolta': il facile fa sembrare il gioco banale,
+  // il difficile respinge chi ha in mano il controller da tre minuti.
+  ui.aiDifficulty = DEMO_CONTENT.difficulty;
+  ui.selectedMode = DEMO_CONTENT.modes[0];
+  document.querySelectorAll("#difficultySeg button").forEach((button) => {
+    if (button.dataset.value !== DEMO_CONTENT.difficulty) button.disabled = true;
+  });
+}
+
 export function renderAthletes(onSelect, selectedId = null) {
   const grid = document.getElementById("athleteGrid");
   grid.innerHTML = "";
 
-  ATHLETES.forEach((athlete) => {
+  demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
     const locked = !isUnlocked(athlete, ui.career);
     const card = document.createElement("button");
     card.type = "button";
@@ -280,7 +307,7 @@ export function renderArenas(onSelect) {
   const grid = document.getElementById("arenaGrid");
   grid.innerHTML = "";
 
-  ARENAS.forEach((arena) => {
+  demoFilter(ARENAS, DEMO_CONTENT.arenas).forEach((arena) => {
     const locked = !isUnlocked(arena, ui.career);
     const card = document.createElement("button");
     card.type = "button";
@@ -689,6 +716,8 @@ export function bindNavigation(handlers) {
       handlers[action]?.();
     });
   });
+
+  applyDemoLimits();
 
   document.querySelectorAll(".mode-card:not(.mode-card--locked)").forEach((card) => {
     card.addEventListener("click", () => {
