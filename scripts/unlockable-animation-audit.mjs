@@ -14,6 +14,31 @@ function spritePath(athlete, view, state) {
   return state === "idle" ? athlete.sprite : state === "action" ? athlete.actionSprite : athlete.runSprite;
 }
 
+async function frameMetrics(file, frames) {
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const metrics = [];
+  for (let frame = 0; frame < frames; frame += 1) {
+    const left = frame * info.width / frames;
+    const right = (frame + 1) * info.width / frames;
+    let minY = info.height;
+    let maxY = -1;
+    let alphaTotal = 0;
+    let opaquePixels = 0;
+    for (let y = 0; y < info.height; y += 1) {
+      for (let x = left; x < right; x += 1) {
+        const alpha = data[(y * info.width + x) * 4 + 3];
+        if (alpha < 24) continue;
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        alphaTotal += alpha;
+        opaquePixels += 1;
+      }
+    }
+    metrics.push({ height: maxY - minY + 1, alpha: alphaTotal / opaquePixels });
+  }
+  return metrics;
+}
+
 for (const athleteId of unlockables) {
   const athlete = ATHLETES.find((candidate) => candidate.id === athleteId);
   assert.ok(athlete, `${athleteId}: atleta mancante`);
@@ -34,6 +59,17 @@ for (const athleteId of unlockables) {
       );
       const frames = state === "run" ? 8 : 4;
       assert.equal(actual.width % frames, 0, `${athleteId}/${view}/${state}: i frame non sono una striscia orizzontale regolare`);
+      const actualMetrics = await frameMetrics(path.join(root, spritePath(athlete, view, state)), frames);
+      const expectedMetrics = await frameMetrics(path.join(root, spritePath(standard, view, state)), frames);
+      actualMetrics.forEach((metric, frame) => {
+        const heightRatio = metric.height / expectedMetrics[frame].height;
+        // Le pose possono essere più raccolte per silhouette, ma non devono
+        // più avere salti di scala evidenti come il vecchio Colosso (0,75x).
+        assert.ok(heightRatio >= 0.85 && heightRatio <= 1.20,
+          `${athleteId}/${view}/${state}/${frame}: altezza visiva ${heightRatio.toFixed(2)} rispetto allo standard`);
+        assert.ok(metric.alpha >= 210,
+          `${athleteId}/${view}/${state}/${frame}: alpha media troppo bassa (${metric.alpha.toFixed(1)})`);
+      });
     }
   }
   for (const outfit of ATHLETE_OUTFITS[athleteId]) {

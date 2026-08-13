@@ -33,6 +33,8 @@ function activeReferencePath(reference, view, state) {
   return path.join(ROOT, directory, `${reference}${suffix}.webp`);
 }
 
+const ALPHA_FLOOR = 24;
+
 async function frameBounds(image, left, top, width, height) {
   const { data, info } = await image
     .clone()
@@ -46,7 +48,7 @@ async function frameBounds(image, left, top, width, height) {
   let maxY = -1;
   for (let y = 0; y < info.height; y += 1) {
     for (let x = 0; x < info.width; x += 1) {
-      if (data[(y * info.width + x) * 4 + 3] < 8) continue;
+      if (data[(y * info.width + x) * 4 + 3] < ALPHA_FLOOR) continue;
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x);
@@ -57,7 +59,7 @@ async function frameBounds(image, left, top, width, height) {
   return { left: left + minX, top: top + minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
-async function connectedFrames(image, expectedCount) {
+async function connectedFrames(image, expectedCount, expectedRows = 1) {
   const { data, info } = await image.clone().ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const source = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   const visited = new Uint8Array(info.width * info.height);
@@ -94,10 +96,9 @@ async function connectedFrames(image, expectedCount) {
     components.push({ pixels, left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 });
   }
   const selected = components.sort((a, b) => b.pixels.length - a.pixels.length).slice(0, expectedCount);
-  const rows = Math.max(...selected.map((frame) => frame.top)) - Math.min(...selected.map((frame) => frame.top)) > info.height * 0.28 ? 2 : 1;
-  const frames = selected.sort((a, b) => rows === 1
+  const frames = selected.sort((a, b) => expectedRows === 1
     ? a.left - b.left
-    : Math.round(a.top / (info.height / rows)) - Math.round(b.top / (info.height / rows)) || a.left - b.left);
+    : Math.round(a.top / (info.height / expectedRows)) - Math.round(b.top / (info.height / expectedRows)) || a.left - b.left);
   if (frames.length !== expectedCount) throw new Error(`Attesi ${expectedCount} componenti, trovati ${frames.length}`);
   for (const frame of frames) {
     const isolated = Buffer.alloc(frame.width * frame.height * 4);
@@ -151,7 +152,10 @@ function median(values) {
 async function resizePremultiplied(image, sourceWidth, sourceHeight, width, height) {
   const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let offset = 0; offset < data.length; offset += 4) {
-    const alpha = data[offset + 3] / 255;
+    const sourceAlpha = data[offset + 3];
+    const normalizedAlpha = sourceAlpha < ALPHA_FLOOR ? 0 : 255;
+    data[offset + 3] = normalizedAlpha;
+    const alpha = normalizedAlpha / 255;
     data[offset] = Math.round(data[offset] * alpha);
     data[offset + 1] = Math.round(data[offset + 1] * alpha);
     data[offset + 2] = Math.round(data[offset + 2] * alpha);
@@ -178,7 +182,7 @@ async function inspectSheet(file, athlete, view, state) {
   const image = sharp(file);
   const metadata = await image.metadata();
   if ((athlete === "oracolo" || athlete === "colosso") && state === "run") {
-    const connected = await connectedFrames(image, 8);
+    const connected = await connectedFrames(image, 8, athlete === "colosso" && view === "front" ? 2 : 1);
     return { image, metadata, layout: null, bounds: connected.bounds, connected: true };
   }
   const layout = frameLayout(athlete, view, state, metadata.width, metadata.height);
@@ -188,25 +192,31 @@ async function inspectSheet(file, athlete, view, state) {
 
 async function standardize(athlete, reference, view, state) {
   const source = await inspectSheet(masterPath(athlete, view, state), athlete, view, state);
-  const model = await inspectSheet(masterPath(reference, view, state), reference, view, state);
+  const model = await inspectSheet(activeReferencePath(reference, view, state), reference, view, state);
   const count = state === "run" ? 8 : 4;
-  const cellWidth = model.metadata.width / count;
-  const modelHeight = median(model.bounds.map((box) => box.height));
-  const modelBottomMargin = median(model.bounds.map((box) => model.metadata.height - (box.top + box.height)));
-  const sourceHeight = median(source.bounds.map((box) => box.height));
-  const widestSource = Math.max(...source.bounds.map((box) => box.width));
-  const tallestSource = Math.max(...source.bounds.map((box) => box.height));
-  const scale = Math.min(
-    modelHeight / sourceHeight,
-    (cellWidth * 0.96) / widestSource,
-    (model.metadata.height * 0.98) / tallestSource,
-  );
+  const activeReference = await sharp(activeReferencePath(reference, view, state)).metadata();
+  const activeWidth = activeReference.width;
+  const activeHeight = activeReference.height;
+  const cellWidth = activeWidth / count;
 
   const layers = [];
+  const frameScales = [];
   for (let index = 0; index < source.bounds.length; index += 1) {
     const box = source.bounds[index];
-    const width = Math.min(Math.floor(cellWidth), Math.max(1, Math.round(box.width * scale)));
-    const height = Math.min(model.metadata.height, Math.max(1, Math.round(box.height * scale)));
+    const modelBox = model.bounds[index];
+    // Ogni posa eredita l'occupazione del corrispondente frame standard.
+    // Una scala unica per tutto il foglio faceva risultare piccole le pose
+    // raccolte quando un altro frame era molto più alto o largo.
+    const scale = Math.min(
+      modelBox.height / box.height,
+      // Racchetta e capelli possono oltrepassare la cella senza cambiare la
+      // scala del corpo: il canvas li ritaglia come nei fogli standard.
+      (cellWidth * 1.7) / box.width,
+      (activeHeight * 0.98) / box.height,
+    );
+    frameScales.push(scale);
+    const width = Math.min(Math.round(cellWidth * 1.7), Math.max(1, Math.round(box.width * scale)));
+    const height = Math.min(activeHeight, Math.max(1, Math.round(box.height * scale)));
     const frameImage = source.connected
       ? sharp(box.input, { raw: { width: box.width, height: box.height, channels: 4 } })
       : source.image.clone().extract(box);
@@ -215,43 +225,41 @@ async function standardize(athlete, reference, view, state) {
     const input = await resizePremultiplied(frameImage, box.width, box.height, width, height);
     layers.push({
       input,
-      left: Math.min(model.metadata.width - width, Math.max(0, Math.round(index * cellWidth + (cellWidth - width) / 2))),
+      left: Math.min(activeWidth - width, Math.max(0, Math.round(index * cellWidth + (cellWidth - width) / 2))),
       top: Math.min(
-        model.metadata.height - height,
-        Math.max(0, Math.round(model.metadata.height - modelBottomMargin - height)),
+        activeHeight - height,
+        Math.max(0, Math.round(activeHeight - (activeHeight - modelBox.top - modelBox.height) - height)),
       ),
     });
   }
 
   const normalizedMaster = sharp({
     create: {
-      width: model.metadata.width,
-      height: model.metadata.height,
+      width: activeWidth,
+      height: activeHeight,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   });
   for (const layer of layers) {
     const metadata = await sharp(layer.input).metadata();
-    if (layer.left < 0 || layer.top < 0 || layer.left + metadata.width > model.metadata.width || layer.top + metadata.height > model.metadata.height) {
-      throw new Error(`${athlete}/${view}/${state}: livello ${layer.left},${layer.top} ${metadata.width}x${metadata.height} fuori da ${model.metadata.width}x${model.metadata.height}`);
+    if (layer.left < 0 || layer.top < 0 || layer.left + metadata.width > activeWidth || layer.top + metadata.height > activeHeight) {
+      throw new Error(`${athlete}/${view}/${state}: livello ${layer.left},${layer.top} ${metadata.width}x${metadata.height} fuori da ${activeWidth}x${activeHeight}`);
     }
   }
   const masterBuffer = await normalizedMaster.composite(layers).png().toBuffer();
-  const activeReference = await sharp(activeReferencePath(reference, view, state)).metadata();
-  const activeWidth = activeReference.width;
-  const activeHeight = activeReference.height;
   const { data: masterData, info: masterInfo } = await sharp(masterBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let offset = 0; offset < masterData.length; offset += 4) {
-    if (masterData[offset + 3] < 4) {
+    if (masterData[offset + 3] < 16) {
       masterData[offset] = 0; masterData[offset + 1] = 0; masterData[offset + 2] = 0; masterData[offset + 3] = 0;
+    } else {
+      masterData[offset + 3] = 255;
     }
   }
   await sharp(masterData, { raw: { width: masterInfo.width, height: masterInfo.height, channels: 4 } })
-    .resize(activeWidth, activeHeight, { kernel: sharp.kernel.lanczos3 })
     .webp({ lossless: true })
     .toFile(outputPath(athlete, view, state));
-  console.log(`${athlete}/${view}/${state}: ${activeWidth}x${activeHeight}, scala uniforme ${scale.toFixed(3)}`);
+  console.log(`${athlete}/${view}/${state}: ${activeWidth}x${activeHeight}, scale frame ${frameScales.map((scale) => scale.toFixed(2)).join("/")}`);
 }
 
 for (const [athlete, contract] of Object.entries(CONTRACTS)) {
