@@ -385,6 +385,13 @@ export const AI_OPPONENTS = [
   { id: "rivale", name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
   { id: "ingegnere", name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
   { id: "campione", name: "Campione Steampunk", skill: 0.76, speed: 428, power: 1.05 },
+  // Leggenda: stessa progressione degli altri gradini (+0.14 skill, +42 velocita',
+  // +0.09 potenza). Non e' un avversario che bara: reagisce in 55 ms invece che
+  // in 90 e sbaglia molto meno, ma resta dentro le stesse regole.
+  // `reactionSkill` tenuto a 0.78: sopra quella soglia intercetta lo smash prima
+  // del vetro e annulla lo x2. La Leggenda e' piu' forte perche' sbaglia meno e
+  // sceglie meglio, non perche' ha riflessi impossibili.
+  { id: "leggenda", name: "Leggenda del Circuito", skill: 0.90, reactionSkill: 0.78, speed: 452, power: 1.14 },
 ];
 
 export const EVENT_LINES = [

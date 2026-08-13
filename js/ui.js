@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-sprites-lossless-v15";
-import { getMatchInfo } from "./game.js?v=20260813-sprites-lossless-v15";
-import { getVolume, isMuted } from "./audio.js?v=20260813-sprites-lossless-v15";
-import { getLang, t } from "./i18n.js?v=20260813-sprites-lossless-v15";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-sprites-lossless-v15";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-legend-v16";
+import { getMatchInfo } from "./game.js?v=20260813-legend-v16";
+import { getVolume, isMuted } from "./audio.js?v=20260813-legend-v16";
+import { getLang, t } from "./i18n.js?v=20260813-legend-v16";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-legend-v16";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -562,7 +562,7 @@ export function showResult(state, winner) {
 
 export function getAiForMatch(mode, round, difficulty = "easy") {
   if (mode === "quick") {
-    const index = { easy: 0, medium: 1, hard: 2 }[difficulty] ?? 0;
+    const index = { easy: 0, medium: 1, hard: 2, legend: 3 }[difficulty] ?? 0;
     return AI_OPPONENTS[index];
   }
   if (mode === "career") {

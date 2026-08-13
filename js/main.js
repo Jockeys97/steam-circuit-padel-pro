@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-sprites-lossless-v15";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-legend-v16";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-sprites-lossless-v15";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-sprites-lossless-v15";
-import { setReduceMotion } from "./fx.js?v=20260813-sprites-lossless-v15";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-sprites-lossless-v15";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-sprites-lossless-v15";
-import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-sprites-lossless-v15";
+} from "./game.js?v=20260813-legend-v16";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-legend-v16";
+import { setReduceMotion } from "./fx.js?v=20260813-legend-v16";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-legend-v16";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-legend-v16";
+import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-legend-v16";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-sprites-lossless-v15";
+} from "./render.js?v=20260813-legend-v16";
 import {
   applyLanguage,
   awardObjectives,
@@ -42,7 +42,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-sprites-lossless-v15";
+} from "./ui.js?v=20260813-legend-v16";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1533,7 +1533,7 @@ if (prefs.tournamentRound) ui.tournamentRound = prefs.tournamentRound;
 if (["assisted", "semi", "manual"].includes(prefs.controlMode)) ui.controlMode = prefs.controlMode;
 if (Number.isFinite(prefs.gamepadDeadzone)) ui.gamepadDeadzone = Math.min(0.3, Math.max(0.08, prefs.gamepadDeadzone));
 if (typeof prefs.vibration === "boolean") ui.vibration = prefs.vibration;
-if (["easy", "medium", "hard"].includes(prefs.aiDifficulty)) ui.aiDifficulty = prefs.aiDifficulty;
+if (["easy", "medium", "hard", "legend"].includes(prefs.aiDifficulty)) ui.aiDifficulty = prefs.aiDifficulty;
 if (["points11", "points21", "set"].includes(prefs.matchLength)) ui.matchLength = prefs.matchLength;
 if (Number.isFinite(prefs.volume)) setVolume(Math.min(1, Math.max(0, prefs.volume)));
 if (typeof prefs.reduceMotion === "boolean") ui.reduceMotion = prefs.reduceMotion;

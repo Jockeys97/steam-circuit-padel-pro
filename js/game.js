@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-sprites-lossless-v15";
-import { clamp } from "./render.js?v=20260813-sprites-lossless-v15";
-import { sfx } from "./audio.js?v=20260813-sprites-lossless-v15";
-import { t } from "./i18n.js?v=20260813-sprites-lossless-v15";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-legend-v16";
+import { clamp } from "./render.js?v=20260813-legend-v16";
+import { sfx } from "./audio.js?v=20260813-legend-v16";
+import { t } from "./i18n.js?v=20260813-legend-v16";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-sprites-lossless-v15";
+} from "./fx.js?v=20260813-legend-v16";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -540,12 +540,20 @@ function lockAiReceiverForIncomingShot(state, isServe = false) {
   state.aiPrimaryKey = key ?? "opponent";
   state.aiTargetX = forecast?.contactX ?? state[state.aiPrimaryKey].x;
   state.aiReceiverLocked = true;
-  const baseReaction = 0.28 - state.ai.skill * 0.25;
-  const pressurePenalty = state.aiShotPressure * (1 - state.ai.skill) * 0.42;
+  // La prontezza di riflessi e' separata dalla lettura di gioco. Sopra 0.78 di
+  // reattivita' l'IA intercetta lo smash prima che tocchi il vetro e lo x2
+  // smette di esistere: lo scalino sta fra 85 e 83 ms di reazione, due
+  // millesimi. Un avversario piu' forte deve sbagliare meno e scegliere meglio,
+  // non avere riflessi disumani.
+  const reactionSkill = state.ai.reactionSkill ?? state.ai.skill;
+  const baseReaction = 0.28 - reactionSkill * 0.25;
+  // Anche questi due sono prontezza, non lettura: quanto la pressione la
+  // rallenta e quanto facilmente resta controtempo.
+  const pressurePenalty = state.aiShotPressure * (1 - reactionSkill) * 0.42;
   const wrongFootedChance = isServe
     ? 0
     : clamp(
-      (state.aiShotPressure - 0.25) * (2 - state.ai.skill * 1.8),
+      (state.aiShotPressure - 0.25) * (2 - reactionSkill * 1.8),
       0,
       0.7,
     );
@@ -1690,7 +1698,8 @@ export function hitBall(
     }
     if (ball.shotType === "smash-x2" || ball.shotType === "smash-x3") {
       const smashReadPenalty = ball.shotType === "smash-x2" ? 0.48 : 0.18;
-      state.aiReactionDelay += smashReadPenalty + (1 - state.ai.skill) * 0.16;
+      state.aiReactionDelay += smashReadPenalty
+        + (1 - (state.ai.reactionSkill ?? state.ai.skill)) * 0.16;
       if (ball.shotType === "smash-x3") state.aiX3Recovery = 0.9 + state.ai.skill * 0.22;
     } else if (ball.shotType === "lob") {
       state.aiReactionDelay = Math.max(0.04, state.aiReactionDelay - state.ai.skill * 0.08);
