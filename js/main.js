@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-demo-v12";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-demo-en-v13";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-demo-v12";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-demo-v12";
-import { setReduceMotion } from "./fx.js?v=20260813-demo-v12";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-demo-v12";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-demo-v12";
-import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-demo-v12";
+} from "./game.js?v=20260813-demo-en-v13";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-demo-en-v13";
+import { setReduceMotion } from "./fx.js?v=20260813-demo-en-v13";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-demo-en-v13";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-demo-en-v13";
+import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-demo-en-v13";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-demo-v12";
+} from "./render.js?v=20260813-demo-en-v13";
 import {
   applyLanguage,
   awardObjectives,
@@ -42,7 +42,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-demo-v12";
+} from "./ui.js?v=20260813-demo-en-v13";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1546,6 +1546,10 @@ if (["it", "en"].includes(prefs.lang)) {
 }
 applyAccessibility();
 applyLanguage();
+// Allinea documento e selettore alla lingua effettiva: il markup parte in
+// inglese, ma una preferenza salvata puo' averla gia' cambiata.
+document.documentElement.lang = getLang();
+document.getElementById("langToggle")?.replaceChildren(getLang() === "it" ? "EN" : "IT");
 applyControllerLayout(gamepad.connected ? gamepad.id : "xbox");
 updateMuteButton();
 

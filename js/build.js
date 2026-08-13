@@ -42,7 +42,7 @@ export const IS_DEMO = resolveBuild();
  */
 export const DEMO_CONTENT = {
   athletes: ["maestro", "steamer"],
-  arenas: ["officina"],
+  arenas: ["clockwork"],
   modes: ["quick"],
   difficulty: "medium",
   wishlistUrl: "https://store.steampowered.com/",

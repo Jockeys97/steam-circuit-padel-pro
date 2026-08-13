@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 
 import { createMatchState, hitBall } from "../js/game.js";
 import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js";
+import { readFile } from "node:fs/promises";
+
+// Le asserzioni confrontano etichette tradotte, quindi la lingua va fissata qui
+// invece di ereditare il default dell'interfaccia. L'import deve usare la STESSA
+// specifica di game.js: i moduli sono importati con una query di cache busting e
+// `i18n.js` e `i18n.js?v=...` sono due istanze distinte, quindi setLang su una
+// non ha effetto sull'altra. La specifica viene letta dal sorgente, cosi' non
+// va aggiornata a ogni bump di versione.
+const gameSource = await readFile(new URL("../js/game.js", import.meta.url), "utf8");
+const i18nSpec = gameSource.match(/from "\.\/i18n\.js([^"]*)"/)?.[1] ?? "";
+const { setLang } = await import(`../js/i18n.js${i18nSpec}`);
+setLang("it");
 
 function seededRandom(seed) {
   // Generatore di qualita' (mulberry32). Il congruenziale lineare usato prima

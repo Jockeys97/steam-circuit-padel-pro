@@ -1007,7 +1007,7 @@ const DICT = {
   },
 };
 
-let currentLang = "it";
+let currentLang = "en";
 
 export function setLang(lang) {
   currentLang = DICT[lang] ? lang : "it";
