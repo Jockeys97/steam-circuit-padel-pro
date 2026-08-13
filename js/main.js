@@ -1626,6 +1626,12 @@ muteBtn.addEventListener("click", () => {
 const prefs = loadPrefs();
 if (prefs.muted) setMuted(true);
 if (prefs.mode) ui.selectedMode = prefs.mode;
+// L'arena era l'unica preferenza salvata e mai riletta: atleta e modalita'
+// tornavano come li avevi lasciati, il campo no.
+if (prefs.arenaId) {
+  const salvata = ARENAS.find((a) => a.id === prefs.arenaId);
+  if (salvata) ui.selectedArena = salvata;
+}
 if (prefs.tournamentRound) ui.tournamentRound = prefs.tournamentRound;
 if (["assisted", "semi", "manual"].includes(prefs.controlMode)) ui.controlMode = prefs.controlMode;
 if (Number.isFinite(prefs.gamepadDeadzone)) ui.gamepadDeadzone = Math.min(0.3, Math.max(0.08, prefs.gamepadDeadzone));
