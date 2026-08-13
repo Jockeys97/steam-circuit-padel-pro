@@ -197,7 +197,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-signature-outfits-v24" index.html js/*.js styles.css   # must total 23
+grep -c "20260813-mythic-outfits-v25" index.html js/*.js styles.css   # must total 23
 ```
 
 ---
@@ -212,6 +212,6 @@ deliberate gamble.
 
 ## Status
 
-Playable alpha with 6 complete athletes and 20 total kits. Every athlete has a unique
-signature outfit; the 14 unlockable variants use 84 dedicated lossless WebP sprite
+Playable alpha with 6 complete athletes and 26 total kits. Every athlete has unique
+signature and mythic outfits; the 20 unlockable variants use 120 dedicated lossless WebP sprite
 sheets, loaded on first request. The initial image payload remains below 15 MB.

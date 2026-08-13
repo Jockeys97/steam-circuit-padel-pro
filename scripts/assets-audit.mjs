@@ -70,8 +70,8 @@ assert.deepEqual(orphans, [],
 // e' piu' il peso al primo caricamento. Quello che conta per la demo — e quindi
 // per le wishlist — e' cosa viene chiesto all'apertura: gli sprite base degli
 // atleti che la build espone. Tutto il resto arriva quando serve.
-const { ATHLETES } = await import("../js/data.js?v=20260813-signature-outfits-v24");
-const { DEMO_CONTENT } = await import("../js/build.js?v=20260813-signature-outfits-v24");
+const { ATHLETES } = await import("../js/data.js?v=20260813-mythic-outfits-v25");
+const { DEMO_CONTENT } = await import("../js/build.js?v=20260813-mythic-outfits-v25");
 const spriteFields = ["sprite", "backSprite", "actionSprite", "backActionSprite", "runSprite", "backRunSprite"];
 
 async function weightOf(paths) {

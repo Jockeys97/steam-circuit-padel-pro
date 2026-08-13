@@ -12,35 +12,48 @@ const MASTER_ROOT = path.join(ROOT, "assets/_archivio/originali/outfits");
 
 const athletes = {
   maestro: {
+    id: "maestro",
     primary: (h, s) => h >= 175 && h <= 245 && s >= 0.28,
     accent: (h, s, v) => h >= 175 && h <= 215 && s >= 0.18 && v >= 0.62,
     concepts: "tmp/imagegen/outfits/maestro.png",
     signatureConcept: "tmp/imagegen/signature/maestro.png",
     signature: { primaryHue: 194, secondaryHue: 220, saturation: 0.92, value: 1.02 },
+    mythicConcept: "tmp/imagegen/mythic/maestro.png",
+    mythic: { primaryHue: 218, secondaryHue: 198, lowerHue: 42, saturation: 0.88, value: 0.78, sleeves: true, trousers: true, sleeveSaturation: 0.76, sleeveValue: 0.62, lowerSaturation: 0.08, lowerValue: 0.98 },
   },
   pantera: {
+    id: "pantera",
     primary: (h, s) => (h >= 332 || h <= 8) && s >= 0.48,
     accent: (h, s, v) => (h >= 338 || h <= 12) && s >= 0.28 && v >= 0.68,
     concepts: "tmp/imagegen/outfits/pantera.png",
     signatureConcept: "tmp/imagegen/signature/pantera.png",
     signature: { primaryHue: 346, secondaryHue: 326, saturation: 0.94, value: 0.82 },
+    mythicConcept: "tmp/imagegen/mythic/pantera.png",
+    mythic: { primaryHue: 346, secondaryHue: 225, lowerHue: 225, saturation: 0.94, value: 0.76, shortSleeves: true, sleeveSaturation: 0.84, sleeveValue: 0.72 },
   },
   steamer: {
+    id: "steamer",
     primary: (h, s) => h >= 12 && h <= 48 && s >= 0.72,
     accent: (h, s, v) => h >= 18 && h <= 48 && s >= 0.62 && v >= 0.72,
     secondary: (h, s) => h >= 198 && h <= 238 && s >= 0.35,
     concepts: "tmp/imagegen/outfits/steamer.png",
     signatureConcept: "tmp/imagegen/signature/steamer.png",
     signature: { primaryHue: 18, secondaryHue: 214, saturation: 0.72, value: 0.72 },
+    mythicConcept: "tmp/imagegen/mythic/steamer.png",
+    mythic: { primaryHue: 20, secondaryHue: 24, lowerHue: 25, saturation: 0.82, value: 0.62, trousers: true, lowerSaturation: 0.18, lowerValue: 0.3 },
   },
   fiamma: {
+    id: "fiamma",
     primary: (h, s) => h >= 58 && h <= 105 && s >= 0.46,
     accent: (h, s, v) => h >= 55 && h <= 108 && s >= 0.36 && v >= 0.68,
     concepts: "tmp/imagegen/outfits/fiamma.png",
     signatureConcept: "tmp/imagegen/signature/fiamma.png",
     signature: { primaryHue: 174, secondaryHue: 79, saturation: 0.9, value: 0.78 },
+    mythicConcept: "tmp/imagegen/mythic/fiamma.png",
+    mythic: { primaryHue: 185, secondaryHue: 82, lowerHue: 24, saturation: 0.9, value: 0.7, sleeves: true, sleeveSaturation: 0.86, sleeveValue: 0.76 },
   },
   oracolo: {
+    id: "oracolo",
     primary: (h, s) => h >= 245 && h <= 292 && s >= 0.28,
     accent: (h, s, v) => h >= 245 && h <= 305 && s >= 0.2 && v >= 0.45,
     source: {
@@ -50,8 +63,11 @@ const athletes = {
     },
     signatureConcept: "tmp/imagegen/signature/oracolo.png",
     signature: { primaryHue: 262, secondaryHue: 193, saturation: 0.9, value: 0.8 },
+    mythicConcept: "tmp/imagegen/mythic/oracolo.png",
+    mythic: { primaryHue: 260, secondaryHue: 193, lowerHue: 260, saturation: 0.82, value: 0.36 },
   },
   colosso: {
+    id: "colosso",
     primary: (h, s, v) => h >= 32 && h <= 62 && s >= 0.42 && v >= 0.35,
     accent: (h, s, v) => h >= 24 && h <= 62 && s >= 0.28 && v >= 0.55,
     source: {
@@ -61,6 +77,8 @@ const athletes = {
     },
     signatureConcept: "tmp/imagegen/signature/colosso.png",
     signature: { primaryHue: 29, secondaryHue: 18, saturation: 0.94, value: 0.7 },
+    mythicConcept: "tmp/imagegen/mythic/colosso.png",
+    mythic: { primaryHue: 45, secondaryHue: 126, lowerHue: 132, saturation: 0.58, value: 0.78, shortSleeves: true, sleeveSaturation: 0.1, sleeveValue: 0.92 },
   },
 };
 
@@ -68,6 +86,7 @@ const variants = {
   circuit: { primaryHue: 218, secondaryHue: 190, saturation: 0.84, value: 0.98 },
   legend: { primaryHue: 42, secondaryHue: 36, saturation: 0.82, value: 0.96 },
   signature: {},
+  mythic: {},
 };
 
 const sheets = [
@@ -108,12 +127,12 @@ function hsvToRgb(h, s, v) {
   return rgb.map((channel) => Math.round((channel + m) * 255));
 }
 
-function recolorPixel(r, g, b, athlete, variant) {
+function recolorPixel(r, g, b, athlete, variant, normalizedY) {
   const [h, s, v] = rgbToHsv(r, g, b);
   const isAccent = athlete.accent(h, s, v);
   const isPrimary = athlete.primary(h, s, v);
   const isSecondary = athlete.secondary?.(h, s, v) ?? false;
-  if (!isPrimary && !isSecondary) return [r, g, b];
+  if (variant !== "mythic" && !isPrimary && !isSecondary) return [r, g, b];
 
   if (variant === "circuit") {
     const targetHue = isSecondary ? variants.circuit.secondaryHue : variants.circuit.primaryHue;
@@ -130,6 +149,39 @@ function recolorPixel(r, g, b, athlete, variant) {
     return hsvToRgb(targetHue, targetSaturation, targetValue);
   }
 
+  if (variant === "mythic") {
+    const palette = athlete.mythic;
+    // Le racchette sono parte dell'identita' dell'atleta, non del completo.
+    // Il giallo saturo dei quattro campioni non deve essere intercettato dalle
+    // palette mitiche; Oracolo e Colosso hanno racchette gia' fuori palette.
+    const isYellowRacket = h >= 42 && h <= 68 && s >= 0.72 && v >= 0.48;
+    if (isYellowRacket) return [r, g, b];
+    const isSkin = (h <= 52 || h >= 350) && s >= 0.12 && v >= 0.12;
+    const longSleeveZone = palette.sleeves && normalizedY >= 0.24 && normalizedY <= 0.56;
+    const shortSleeveZone = palette.shortSleeves && normalizedY >= 0.25 && normalizedY <= 0.4;
+    const trouserZone = palette.trousers && normalizedY >= 0.5 && normalizedY <= 0.88;
+    if (isSkin && (longSleeveZone || shortSleeveZone || trouserZone)) {
+      const hue = trouserZone ? palette.lowerHue : palette.primaryHue;
+      const targetSaturation = trouserZone ? palette.lowerSaturation : palette.sleeveSaturation;
+      const targetValue = trouserZone ? palette.lowerValue : palette.sleeveValue;
+      return hsvToRgb(hue, targetSaturation, Math.max(0.18, Math.min(1, v * targetValue)));
+    }
+    // Pantera: la fascia bassa della vecchia canotta diventa pelle, rendendo
+    // leggibile la nuova crop T-shirt anche nello sprite piccolo.
+    if (athlete.id === "pantera" && isPrimary && normalizedY >= 0.41 && normalizedY <= 0.49) {
+      return hsvToRgb(24, Math.min(0.58, s), Math.min(1, v * 1.08));
+    }
+    // Colosso: la corazza scura del torso diventa tessuto crema. Le parti in
+    // ottone restano accessori e il completo non sembra piu' l'armatura base.
+    if (athlete.id === "colosso" && !isSkin && normalizedY >= 0.2 && normalizedY <= 0.52 && v < 0.74) {
+      return hsvToRgb(42, 0.12, Math.max(0.72, v * 1.7));
+    }
+    if (!isPrimary && !isSecondary) return [r, g, b];
+    const hue = isSecondary ? palette.secondaryHue : palette.primaryHue;
+    const value = Math.min(1, v * (isAccent ? Math.min(1.18, palette.value + 0.28) : palette.value));
+    return hsvToRgb(hue, Math.min(0.96, Math.max(0.42, s * palette.saturation)), value);
+  }
+
   if (isSecondary) return hsvToRgb(32, Math.min(0.22, s), Math.max(0.12, v * 0.48));
   if (isAccent) return hsvToRgb(45, 0.16, Math.min(1, v * 1.08));
   return hsvToRgb(variants.legend.primaryHue, Math.min(0.92, Math.max(0.52, s * variants.legend.saturation)), Math.min(1, v * variants.legend.value));
@@ -139,14 +191,40 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
   const source = path.join(SPRITES, sourceRelative);
   const image = sharp(source).ensureAlpha();
   const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+  const frameCount = sheetName.includes("run") ? 8 : 4;
+  const frameWidth = Math.floor(info.width / frameCount);
+  const frameBounds = Array.from({ length: frameCount }, () => ({ top: info.height, bottom: 0 }));
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 8) continue;
-    const [r, g, b] = recolorPixel(data[i], data[i + 1], data[i + 2], athlete, variant);
+    const pixel = i / 4;
+    const x = pixel % info.width;
+    const y = Math.floor(pixel / info.width);
+    const frame = Math.min(frameCount - 1, Math.floor(x / frameWidth));
+    frameBounds[frame].top = Math.min(frameBounds[frame].top, y);
+    frameBounds[frame].bottom = Math.max(frameBounds[frame].bottom, y);
+  }
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 8) continue;
+    const pixel = i / 4;
+    const x = pixel % info.width;
+    const pixelY = Math.floor(pixel / info.width);
+    const frame = Math.min(frameCount - 1, Math.floor(x / frameWidth));
+    const bounds = frameBounds[frame];
+    const normalizedY = (pixelY - bounds.top) / Math.max(1, bounds.bottom - bounds.top);
+    // Oracolo: si accorcia il bordo esterno della vecchia gonna. Rimangono il
+    // body e una mantellina corta, con una silhouette piu' agile e meno regale.
+    if (variant === "mythic" && athleteId === "oracolo" && normalizedY >= 0.49 && normalizedY <= 0.6) {
+      const [h, s] = rgbToHsv(data[i], data[i + 1], data[i + 2]);
+      if (h >= 245 && h <= 300 && s >= 0.42) {
+        data[i + 3] = 0;
+        continue;
+      }
+    }
+    const [r, g, b] = recolorPixel(data[i], data[i + 1], data[i + 2], athlete, variant, normalizedY);
     data[i] = r; data[i + 1] = g; data[i + 2] = b;
   }
   const outDir = path.join(OUTPUT, athleteId, variant);
   await fs.mkdir(outDir, { recursive: true });
-  const frameCount = sheetName.includes("run") ? 8 : 4;
   const targetWidth = Math.max(frameCount, Math.round((info.width * 0.6) / frameCount) * frameCount);
   await sharp(data, { raw: info })
     .resize({ width: targetWidth, kernel: sharp.kernel.lanczos3 })
@@ -160,19 +238,15 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
 // del Maestro e' verticale, gli altri orizzontali) quindi i mezzi pannelli
 // uscivano con proporzioni incompatibili fra loro.
 const PREVIEW_WIDTH = 560;
-const PREVIEW_RATIO = 0.67;   // larghezza / altezza, come i ritratti degli atleti
-const PREVIEW_TOP_ANCHOR = 0.08; // il ritaglio parte poco sotto il bordo: nelle
-                                 // illustrazioni di figura la testa sta in alto
+// 3/4 e' l'aspect-ratio di .athlete-card__art: generando gia' con quella forma
+// il `background-size: cover` della card non ritaglia nulla.
+const PREVIEW_RATIO = 0.75;
+const PREVIEW_HEIGHT = Math.round(PREVIEW_WIDTH / PREVIEW_RATIO);
 
-function previewCrop(panelWidth, panelHeight, left) {
-  const wanted = Math.round(panelWidth / PREVIEW_RATIO);
-  if (wanted >= panelHeight) {
-    // Il pannello e' gia' piu' stretto del rapporto voluto: si taglia in larghezza.
-    const width = Math.round(panelHeight * PREVIEW_RATIO);
-    return { left: left + Math.round((panelWidth - width) / 2), top: 0, width, height: panelHeight };
-  }
-  const top = Math.min(panelHeight - wanted, Math.round(panelHeight * PREVIEW_TOP_ANCHOR));
-  return { left, top, width: panelWidth, height: wanted };
+function previewPipeline(pipeline) {
+  return pipeline
+    .resize({ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, fit: "cover", position: "top" })
+    .webp({ quality: 82, effort: 6 });
 }
 
 async function createPreviews(athleteId, athlete) {
@@ -185,25 +259,29 @@ async function createPreviews(athleteId, athlete) {
     const source = path.join(ROOT, athlete.concepts);
     const meta = await sharp(source).metadata();
     const half = Math.floor(meta.width / 2);
-    const circuit = previewCrop(half, meta.height, 0);
-    const legend = previewCrop(meta.width - half, meta.height, half);
+    const panel = (left, width) => previewPipeline(
+      sharp(source).extract({ left, top: 0, width, height: meta.height }),
+    );
     tasks.push(
       fs.copyFile(source, path.join(masterDir, "concept-master.png")),
-      sharp(source).extract(circuit).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
-      sharp(source).extract(legend).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
+      panel(0, half).toFile(path.join(dir, "circuit-preview.webp")),
+      panel(half, meta.width - half).toFile(path.join(dir, "legend-preview.webp")),
     );
   }
   const signatureSource = path.join(ROOT, athlete.signatureConcept);
+  const mythicSource = path.join(ROOT, athlete.mythicConcept);
   tasks.push(
     fs.copyFile(signatureSource, path.join(masterDir, "signature-master.png")),
-    sharp(signatureSource).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "signature-preview.webp")),
+    previewPipeline(sharp(signatureSource)).toFile(path.join(dir, "signature-preview.webp")),
+    fs.copyFile(mythicSource, path.join(masterDir, "mythic-master.png")),
+    previewPipeline(sharp(mythicSource)).toFile(path.join(dir, "mythic-preview.webp")),
   );
   await Promise.all(tasks);
 }
 
 for (const [athleteId, athlete] of Object.entries(athletes)) {
   await createPreviews(athleteId, athlete);
-  const athleteVariants = athlete.concepts ? Object.keys(variants) : ["signature"];
+  const athleteVariants = athlete.concepts ? Object.keys(variants) : ["signature", "mythic"];
   for (const variant of athleteVariants) {
     for (const [sheetName, sourceName] of sheets) {
       const side = sheetName.startsWith("back-") ? "back/" : "";
@@ -214,5 +292,5 @@ for (const [athleteId, athlete] of Object.entries(athletes)) {
   }
 }
 
-const sheetCount = Object.values(athletes).reduce((total, athlete) => total + (athlete.concepts ? 3 : 1) * sheets.length, 0);
+const sheetCount = Object.values(athletes).reduce((total, athlete) => total + (athlete.concepts ? 4 : 2) * sheets.length, 0);
 console.log(`Generated outfit previews and ${sheetCount} dedicated sprite sheets in assets/outfits.`);

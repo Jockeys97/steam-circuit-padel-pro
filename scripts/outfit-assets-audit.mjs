@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-signature-outfits-v24";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-mythic-outfits-v25";
 
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
@@ -12,7 +12,7 @@ let dedicatedSheets = 0;
 
 for (const athleteId of expectedAthletes) {
   const outfits = ATHLETE_OUTFITS[athleteId];
-  const expectedCount = ["oracolo", "colosso"].includes(athleteId) ? 2 : 4;
+  const expectedCount = ["oracolo", "colosso"].includes(athleteId) ? 3 : 5;
   assert.equal(outfits?.length, expectedCount, `${athleteId}: numero di completi inatteso`);
   assert.equal(outfits[0].id, "base", `${athleteId}: il primo completo deve restare quello base`);
 

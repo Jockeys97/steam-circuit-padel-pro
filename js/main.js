@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-signature-outfits-v24";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-mythic-outfits-v25";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-signature-outfits-v24";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-signature-outfits-v24";
-import { setReduceMotion } from "./fx.js?v=20260813-signature-outfits-v24";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-signature-outfits-v24";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-signature-outfits-v24";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-signature-outfits-v24";
+} from "./game.js?v=20260813-mythic-outfits-v25";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-mythic-outfits-v25";
+import { setReduceMotion } from "./fx.js?v=20260813-mythic-outfits-v25";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-mythic-outfits-v25";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-mythic-outfits-v25";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-mythic-outfits-v25";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-signature-outfits-v24";
+} from "./render.js?v=20260813-mythic-outfits-v25";
 import {
   applyLanguage,
   awardObjectives,
@@ -43,7 +43,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-signature-outfits-v24";
+} from "./ui.js?v=20260813-mythic-outfits-v25";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
