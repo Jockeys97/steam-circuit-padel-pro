@@ -369,41 +369,41 @@ function outfitSpritePaths(athleteId, outfitId) {
 export const ATHLETE_OUTFITS = {
   maestro: [
     { id: "base", nameKey: "outfitBase", colors: ["#08bfe8", "#f4fbff"] },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#315cff", "#9ef8ff"], preview: "assets/outfits/maestro/circuit-preview.webp", sprites: outfitSpritePaths("maestro", "circuit") },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#d5a62a", "#fff0a3"], preview: "assets/outfits/maestro/legend-preview.webp", sprites: outfitSpritePaths("maestro", "legend") },
-    { id: "signature", nameKey: "outfitSignatureMaestro", unlock: { trophies: 2, stars: 8 }, colors: ["#03c7ed", "#162f61"], preview: "assets/outfits/maestro/signature-preview.webp", sprites: outfitSpritePaths("maestro", "signature") },
-    { id: "mythic", nameKey: "outfitMythicMaestro", unlock: { trophies: 4, stars: 12 }, colors: ["#172f67", "#f5f1df"], preview: "assets/outfits/maestro/mythic-preview.webp", sprites: outfitSpritePaths("maestro", "mythic") },
+    { id: "circuit", nameKey: "outfitCircuit", challenge: { metric: "winners", target: 4 }, colors: ["#315cff", "#9ef8ff"], preview: "assets/outfits/maestro/circuit-preview.webp", sprites: outfitSpritePaths("maestro", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", challenge: { metric: "errors", target: 4, atMost: true, win: true }, colors: ["#d5a62a", "#fff0a3"], preview: "assets/outfits/maestro/legend-preview.webp", sprites: outfitSpritePaths("maestro", "legend") },
+    { id: "signature", nameKey: "outfitSignatureMaestro", challenge: { metric: "doubleFaults", target: 0, atMost: true, win: true, also: { metric: "winners", target: 6 } }, colors: ["#03c7ed", "#162f61"], preview: "assets/outfits/maestro/signature-preview.webp", sprites: outfitSpritePaths("maestro", "signature") },
+    { id: "mythic", nameKey: "outfitMythicMaestro", challenge: { metric: "errors", target: 2, atMost: true, win: true, minSkill: 0.7, also: { metric: "winners", target: 6 } }, colors: ["#172f67", "#f5f1df"], preview: "assets/outfits/maestro/mythic-preview.webp", sprites: outfitSpritePaths("maestro", "mythic") },
   ],
   pantera: [
     { id: "base", nameKey: "outfitBase", colors: ["#ed3e5d", "#ff7690"] },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#2c6fff", "#caefff"], preview: "assets/outfits/pantera/circuit-preview.webp", sprites: outfitSpritePaths("pantera", "circuit") },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#ffb626", "#fff0a0"], preview: "assets/outfits/pantera/legend-preview.webp", sprites: outfitSpritePaths("pantera", "legend") },
-    { id: "signature", nameKey: "outfitSignaturePantera", unlock: { trophies: 2, stars: 8 }, colors: ["#d20d43", "#17151e"], preview: "assets/outfits/pantera/signature-preview.webp", sprites: outfitSpritePaths("pantera", "signature") },
-    { id: "mythic", nameKey: "outfitMythicPantera", unlock: { trophies: 4, stars: 12 }, colors: ["#bd174a", "#11131c"], preview: "assets/outfits/pantera/mythic-preview.webp", sprites: outfitSpritePaths("pantera", "mythic") },
+    { id: "circuit", nameKey: "outfitCircuit", challenge: { metric: "longestRally", target: 8 }, colors: ["#2c6fff", "#caefff"], preview: "assets/outfits/pantera/circuit-preview.webp", sprites: outfitSpritePaths("pantera", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", challenge: { metric: "longestRally", target: 12, win: true }, colors: ["#ffb626", "#fff0a0"], preview: "assets/outfits/pantera/legend-preview.webp", sprites: outfitSpritePaths("pantera", "legend") },
+    { id: "signature", nameKey: "outfitSignaturePantera", challenge: { metric: "longestRally", target: 18, win: true }, colors: ["#d20d43", "#17151e"], preview: "assets/outfits/pantera/signature-preview.webp", sprites: outfitSpritePaths("pantera", "signature") },
+    { id: "mythic", nameKey: "outfitMythicPantera", challenge: { metric: "errors", target: 3, atMost: true, win: true, minSkill: 0.7, also: { metric: "longestRally", target: 15 } }, colors: ["#bd174a", "#11131c"], preview: "assets/outfits/pantera/mythic-preview.webp", sprites: outfitSpritePaths("pantera", "mythic") },
   ],
   steamer: [
     { id: "base", nameKey: "outfitBase", colors: ["#f47713", "#ff9a35"] },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#087b86", "#c8fff5"], preview: "assets/outfits/steamer/circuit-preview.webp", sprites: outfitSpritePaths("steamer", "circuit") },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#e3c232", "#fff3af"], preview: "assets/outfits/steamer/legend-preview.webp", sprites: outfitSpritePaths("steamer", "legend") },
-    { id: "signature", nameKey: "outfitSignatureSteamer", unlock: { trophies: 2, stars: 8 }, colors: ["#e85d16", "#252a31"], preview: "assets/outfits/steamer/signature-preview.webp", sprites: outfitSpritePaths("steamer", "signature") },
-    { id: "mythic", nameKey: "outfitMythicSteamer", unlock: { trophies: 4, stars: 12 }, colors: ["#cf531c", "#29211c"], preview: "assets/outfits/steamer/mythic-preview.webp", sprites: outfitSpritePaths("steamer", "mythic") },
+    { id: "circuit", nameKey: "outfitCircuit", challenge: { metric: "smashWinners", target: 2 }, colors: ["#087b86", "#c8fff5"], preview: "assets/outfits/steamer/circuit-preview.webp", sprites: outfitSpritePaths("steamer", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", challenge: { metric: "winners", target: 6 }, colors: ["#e3c232", "#fff3af"], preview: "assets/outfits/steamer/legend-preview.webp", sprites: outfitSpritePaths("steamer", "legend") },
+    { id: "signature", nameKey: "outfitSignatureSteamer", challenge: { metric: "smashWinners", target: 5, win: true }, colors: ["#e85d16", "#252a31"], preview: "assets/outfits/steamer/signature-preview.webp", sprites: outfitSpritePaths("steamer", "signature") },
+    { id: "mythic", nameKey: "outfitMythicSteamer", challenge: { metric: "smashWinners", target: 6, win: true, minSkill: 0.7 }, colors: ["#cf531c", "#29211c"], preview: "assets/outfits/steamer/mythic-preview.webp", sprites: outfitSpritePaths("steamer", "mythic") },
   ],
   fiamma: [
     { id: "base", nameKey: "outfitBase", colors: ["#a9e71d", "#d7ff4b"] },
-    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#326dff", "#c8ecff"], preview: "assets/outfits/fiamma/circuit-preview.webp", sprites: outfitSpritePaths("fiamma", "circuit") },
-    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#f2a72b", "#fff0a7"], preview: "assets/outfits/fiamma/legend-preview.webp", sprites: outfitSpritePaths("fiamma", "legend") },
-    { id: "signature", nameKey: "outfitSignatureFiamma", unlock: { trophies: 2, stars: 8 }, colors: ["#087a75", "#adf51e"], preview: "assets/outfits/fiamma/signature-preview.webp", sprites: outfitSpritePaths("fiamma", "signature") },
-    { id: "mythic", nameKey: "outfitMythicFiamma", unlock: { trophies: 4, stars: 12 }, colors: ["#075c68", "#f27b18"], preview: "assets/outfits/fiamma/mythic-preview.webp", sprites: outfitSpritePaths("fiamma", "mythic") },
+    { id: "circuit", nameKey: "outfitCircuit", challenge: { metric: "totalRallyHits", target: 45 }, colors: ["#326dff", "#c8ecff"], preview: "assets/outfits/fiamma/circuit-preview.webp", sprites: outfitSpritePaths("fiamma", "circuit") },
+    { id: "legend", nameKey: "outfitLegend", challenge: { metric: "totalRallyHits", target: 70, win: true }, colors: ["#f2a72b", "#fff0a7"], preview: "assets/outfits/fiamma/legend-preview.webp", sprites: outfitSpritePaths("fiamma", "legend") },
+    { id: "signature", nameKey: "outfitSignatureFiamma", challenge: { metric: "errors", target: 3, atMost: true, win: true, also: { metric: "totalRallyHits", target: 90 } }, colors: ["#087a75", "#adf51e"], preview: "assets/outfits/fiamma/signature-preview.webp", sprites: outfitSpritePaths("fiamma", "signature") },
+    { id: "mythic", nameKey: "outfitMythicFiamma", challenge: { metric: "totalRallyHits", target: 115, win: true, minSkill: 0.7 }, colors: ["#075c68", "#f27b18"], preview: "assets/outfits/fiamma/mythic-preview.webp", sprites: outfitSpritePaths("fiamma", "mythic") },
   ],
   oracolo: [
     { id: "base", nameKey: "outfitBase", colors: ["#6d42b8", "#a96cff"] },
-    { id: "signature", nameKey: "outfitSignatureOracolo", unlock: { trophies: 3, stars: 10 }, colors: ["#38216f", "#29dfff"], preview: "assets/outfits/oracolo/signature-preview.webp", sprites: outfitSpritePaths("oracolo", "signature") },
-    { id: "mythic", nameKey: "outfitMythicOracolo", unlock: { trophies: 5, stars: 14 }, colors: ["#161224", "#28d7ff"], preview: "assets/outfits/oracolo/mythic-preview.webp", sprites: outfitSpritePaths("oracolo", "mythic") },
+    { id: "signature", nameKey: "outfitSignatureOracolo", challenge: { metric: "errors", target: 3, atMost: true, win: true }, colors: ["#38216f", "#29dfff"], preview: "assets/outfits/oracolo/signature-preview.webp", sprites: outfitSpritePaths("oracolo", "signature") },
+    { id: "mythic", nameKey: "outfitMythicOracolo", challenge: { metric: "errors", target: 4, atMost: true, win: true, minSkill: 0.85 }, colors: ["#161224", "#28d7ff"], preview: "assets/outfits/oracolo/mythic-preview.webp", sprites: outfitSpritePaths("oracolo", "mythic") },
   ],
   colosso: [
     { id: "base", nameKey: "outfitBase", colors: ["#e8b400", "#ffe98a"] },
-    { id: "signature", nameKey: "outfitSignatureColosso", unlock: { trophies: 3, stars: 10 }, colors: ["#25211e", "#ff7a12"], preview: "assets/outfits/colosso/signature-preview.webp", sprites: outfitSpritePaths("colosso", "signature") },
-    { id: "mythic", nameKey: "outfitMythicColosso", unlock: { trophies: 5, stars: 14 }, colors: ["#ede3c5", "#174b38"], preview: "assets/outfits/colosso/mythic-preview.webp", sprites: outfitSpritePaths("colosso", "mythic") },
+    { id: "signature", nameKey: "outfitSignatureColosso", challenge: { metric: "winners", target: 9, win: true }, colors: ["#25211e", "#ff7a12"], preview: "assets/outfits/colosso/signature-preview.webp", sprites: outfitSpritePaths("colosso", "signature") },
+    { id: "mythic", nameKey: "outfitMythicColosso", challenge: { metric: "smashWinners", target: 5, win: true, minSkill: 0.85 }, colors: ["#ede3c5", "#174b38"], preview: "assets/outfits/colosso/mythic-preview.webp", sprites: outfitSpritePaths("colosso", "mythic") },
   ],
 };
 
@@ -459,6 +459,46 @@ export const ARENAS = [
     unlock: { stars: 10 },
     palette: { floor: "#241014", accent: "#ffd54a", gear: "#ff5c3a" },
   },
+  {
+    id: "tempesta",
+    name: "Bastione della Tempesta",
+    desc: "Vetro molto reattivo e fondo rapido: anticipa ogni uscita.",
+    image: "assets/arenas/bastione-tempesta.webp",
+    wallBounce: 0.95,
+    floorGrip: 0.94,
+    unlock: { trophies: 3 },
+    palette: { floor: "#102a48", accent: "#52e6ff", gear: "#d89a32" },
+  },
+  {
+    id: "abissale",
+    name: "Santuario Abissale",
+    desc: "Vetro smorzato e fondo tenace: costruisci il punto con pazienza.",
+    image: "assets/arenas/santuario-abissale.webp",
+    wallBounce: 0.84,
+    floorGrip: 1.04,
+    unlock: { stars: 14 },
+    palette: { floor: "#083849", accent: "#27e7e0", gear: "#c7843f" },
+  },
+  {
+    id: "caldera",
+    name: "Caldera del Titano",
+    desc: "Grip estremo e rimbalzo secco: domina con gambe e tecnica.",
+    image: "assets/arenas/caldera-titano.webp",
+    wallBounce: 0.88,
+    floorGrip: 1.12,
+    unlock: { trophies: 4 },
+    palette: { floor: "#251b1b", accent: "#ff7138", gear: "#f4af46" },
+  },
+  {
+    id: "orrery",
+    name: "Orrery Celeste",
+    desc: "Rimbalzo brillante e grip neutro: arena totale da fine circuito.",
+    image: "assets/arenas/orrery-celeste.webp",
+    wallBounce: 0.93,
+    floorGrip: 0.99,
+    unlock: { trophies: 5, stars: 18 },
+    palette: { floor: "#111d4d", accent: "#a98cff", gear: "#e3b553" },
+  },
 ];
 
 export const AI_OPPONENTS = [
@@ -491,10 +531,53 @@ export const EVENT_LINES = [
 export const UNLOCK_CODE = "GAPROVA";
 
 export function isUnlocked(item, career) {
-  if (!item?.unlock) return true;
   if (career?.unlockAll) return true;
+  // I completi non si comprano: si vincono. Un completo e' sbloccato solo se la
+  // sua sfida risulta superata, e la sfida si supera giocando quell'atleta.
+  if (item?.challenge) return Boolean(career?.outfitsWon?.[item.unlockKey]);
+  if (!item?.unlock) return true;
   const { trophies = 0, stars = 0 } = item.unlock;
   return (career?.trophies ?? 0) >= trophies && (career?.stars ?? 0) >= stars;
+}
+
+/**
+ * Le sfide dei completi.
+ *
+ * Prima i venti completi erano dietro a stelle e trofei, cioe' dietro allo
+ * stesso contatore: si sbloccavano tutti insieme, senza fare niente di preciso e
+ * solo giocando la Carriera. Un completo di Colosso si poteva prendere senza
+ * aver mai giocato Colosso.
+ *
+ * Ora ognuno ha una prova, e la prova si supera **con l'atleta a cui il completo
+ * appartiene**: e' quello che spinge a provarli tutti e sei invece di restare
+ * sul preferito. Valgono in qualunque modalita', anche in partita rapida, cosi'
+ * si possono cercare di proposito senza dover macinare stagioni.
+ *
+ * Le soglie di difficolta' sono espresse in `skill` dell'avversario e non nel
+ * selettore: in carriera e in torneo la difficolta' non la sceglie il giocatore,
+ * e una sfida legata al selettore li' non si sarebbe mai potuta superare.
+ * Riferimenti: 0,46 facile · 0,60 medio · 0,76 difficile · 0,90 leggenda.
+ */
+export function outfitChallengeMet(challenge, contesto) {
+  if (!challenge) return false;
+  const { stats, won = false, skill = 0, athleteWins = 0 } = contesto ?? {};
+  if (challenge.win && !won) return false;
+  if (challenge.minSkill && skill < challenge.minSkill) return false;
+  const soddisfa = (prova) => {
+    const valore = prova.metric === "wins" ? athleteWins : metricValue(stats, prova.metric);
+    if (valore === null) return false;
+    return prova.atMost ? valore <= prova.target : valore >= prova.target;
+  };
+  return soddisfa(challenge) && (!challenge.also || soddisfa(challenge.also));
+}
+
+/** Il valore di una metrica dal punto di vista del giocatore. */
+function metricValue(stats, metric) {
+  if (!stats) return null;
+  // `longestRally` e `totalRallyHits` sono della partita, non di un lato.
+  if (metric === "longestRally" || metric === "totalRallyHits") return stats[metric] ?? null;
+  const voce = stats[metric];
+  return voce && typeof voce === "object" ? voce.player ?? null : null;
 }
 
 /** Pool obiettivi di stagione / match. Ogni obiettivo ha una metrica e un target. */
@@ -541,6 +624,16 @@ export function emptySeasonProgress() {
  * gia' prodotto due tabelle in disaccordo — `errors` sommato qui e tenuto al
  * massimo la' — con il gioco che seguiva una delle due e nessuno che notasse.
  */
+// L'id del completo si ripete fra atleti — "circuit" esiste per tutti — quindi
+// da solo non puo' indicizzare gli sblocchi. La chiave viene aggiunta qui, in un
+// punto solo, invece che scritta a mano su venti righe.
+for (const [athleteId, completi] of Object.entries(ATHLETE_OUTFITS)) {
+  for (const completo of completi) {
+    completo.unlockKey = `${athleteId}:${completo.id}`;
+    completo.athleteId = athleteId;
+  }
+}
+
 export const OBJECTIVE_DEFS = {
   smashWins: { metric: "smashWinners", unit: "count" },
   noDoubleFault: { metric: "doubleFaults", unit: "max" },

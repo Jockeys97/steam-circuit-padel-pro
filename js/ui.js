@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-outfit-alpha-v30";
-import { getMatchInfo } from "./game.js?v=20260813-outfit-alpha-v30";
-import { getVolume, isMuted } from "./audio.js?v=20260813-outfit-alpha-v30";
-import { getLang, t } from "./i18n.js?v=20260813-outfit-alpha-v30";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-alpha-v30";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-arena-expansion-v32";
+import { getMatchInfo } from "./game.js?v=20260813-arena-expansion-v32";
+import { getVolume, isMuted } from "./audio.js?v=20260813-arena-expansion-v32";
+import { getLang, t } from "./i18n.js?v=20260813-arena-expansion-v32";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-arena-expansion-v32";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -52,16 +52,30 @@ export function saveCareer(career) {
 }
 
 /** Assicura che gli obiettivi della stagione corrente siano inizializzati. */
+/** Firma di una terna di obiettivi: cambia se cambiano gli id o i target. */
+function objectivesSignature(objectives) {
+  return (objectives ?? []).map((o) => `${o.id}:${o.target}`).join("|");
+}
+
 export function ensureSeasonObjectives() {
   const career = ui.career;
-  if (!career.seasonObjectives?.length) {
+  const attesi = seasonObjectives(career.season);
+  // Gli obiettivi vivono in `localStorage`, e prima si rigeneravano solo quando
+  // l'elenco era vuoto: una partita a stagione iniziata si portava dietro i
+  // target del salvataggio anche dopo una ritaratura. Con la vecchia formula
+  // questo teneva in vita gli obiettivi impossibili — `winPoints` da 26 punti in
+  // match da 11 — proprio nei salvataggi che dovevano essere riparati.
+  const daRigenerare = !career.seasonObjectives?.length
+    || objectivesSignature(career.seasonObjectives) !== objectivesSignature(attesi);
+  if (daRigenerare) {
     // `claimed` distingue "da centrare" da "gia' pagato in un tentativo
     // precedente di questa stagione": il secondo si centra ancora, ma non da'
-    // un'altra stella.
+    // un'altra stella. Sopravvive alla rigenerazione, altrimenti ritarare gli
+    // obiettivi regalerebbe di nuovo le stelle gia' riscosse.
     const claimed = new Set(career.claimedObjectives?.[career.season] ?? []);
-    career.seasonObjectives = seasonObjectives(career.season)
-      .map((o) => ({ ...o, done: false, claimed: claimed.has(o.id) }));
+    career.seasonObjectives = attesi.map((o) => ({ ...o, done: false, claimed: claimed.has(o.id) }));
     career.seasonStars = 0;
+    saveCareer(career);
   }
   return career.seasonObjectives;
 }
@@ -374,6 +388,38 @@ function selectedOutfit(athlete, career = ui.career) {
 }
 
 /** Restituisce un profilo di gara con una sola variazione estetica, mai di gameplay. */
+/**
+ * Valuta le sfide dei completi alla fine di una partita e sblocca quelle
+ * superate. Vale in ogni modalita': la Carriera da' la progressione, ma un
+ * completo si puo' inseguire anche in partita rapida, scegliendo apposta
+ * l'atleta e la difficolta'. Restituisce i completi appena vinti, perche' vanno
+ * mostrati subito — uno sblocco che il giocatore non vede non premia niente.
+ */
+export function awardOutfitChallenges(state, won) {
+  const atleta = state.athlete;
+  if (!atleta) return [];
+  const career = ui.career;
+  career.outfitsWon = career.outfitsWon ?? {};
+  career.athleteWins = career.athleteWins ?? {};
+  if (won) career.athleteWins[atleta.id] = (career.athleteWins[atleta.id] ?? 0) + 1;
+
+  const contesto = {
+    stats: state.stats,
+    won,
+    skill: state.ai?.skill ?? 0,
+    athleteWins: career.athleteWins[atleta.id] ?? 0,
+  };
+  const vinti = [];
+  for (const completo of outfitsForAthlete(atleta.id)) {
+    if (!completo.challenge || career.outfitsWon[completo.unlockKey]) continue;
+    if (!outfitChallengeMet(completo.challenge, contesto)) continue;
+    career.outfitsWon[completo.unlockKey] = true;
+    vinti.push(completo);
+  }
+  if (vinti.length || won) saveCareer(career);
+  return vinti;
+}
+
 export function athleteWithOutfit(athlete, career = ui.career) {
   const outfit = selectedOutfit(athlete, career);
   if (!outfit) return athlete;
@@ -384,6 +430,34 @@ export function athleteWithOutfit(athlete, career = ui.career) {
     outfitId: outfit.id,
     color: outfit.colors?.[0] ?? athlete.color,
   };
+}
+
+/**
+ * La sfida di un completo, come sequenza di condizioni separate da un punto.
+ *
+ * A frase intera diventava contorta in due lingue ("Vinci una partita in cui non
+ * commetti piu' di due errori contro un avversario di livello difficile o
+ * superiore"); a condizioni staccate si legge in un colpo d'occhio e si traduce
+ * senza acrobazie grammaticali.
+ */
+function challengeLabel(challenge) {
+  const parte = (prova) => {
+    if (prova.metric === "longestRally") return t("chRally", { n: prova.target });
+    if (prova.metric === "totalRallyHits") return t("chTotalHits", { n: prova.target });
+    if (prova.metric === "wins") return t("chWins", { n: prova.target });
+    const cosa = t(`metric_${prova.metric}`);
+    if (prova.atMost) {
+      return prova.target === 0 ? t("chNone", { what: cosa }) : t("chAtMost", { n: prova.target, what: cosa });
+    }
+    return t("chAtLeast", { n: prova.target, what: cosa });
+  };
+  const parti = [];
+  if (challenge.win) parti.push(t("chWin"));
+  parti.push(parte(challenge));
+  if (challenge.also) parti.push(parte(challenge.also));
+  if (challenge.minSkill >= 0.85) parti.push(t("chSkillLegend"));
+  else if (challenge.minSkill) parti.push(t("chSkillHard"));
+  return parti.join(" · ");
 }
 
 function lockLabel(unlock) {
@@ -570,7 +644,11 @@ export function renderAthletes(onSelect, selectedId = null) {
         outfit.colors?.[0] ?? athlete.color,
         t(outfit.nameKey),
         t(`athlete_${athlete.id}_name`),
-        unlocked ? (active ? t("outfitEquipped") : t("outfitAvailable")) : lockLabel(outfit.unlock),
+        unlocked
+          ? (active ? t("outfitEquipped") : t("outfitAvailable"))
+          : outfit.challenge
+            ? `<span class="challenge-line">🎯 ${challengeLabel(outfit.challenge)}</span>`
+            : lockLabel(outfit.unlock),
         unlocked ? `▶ ${t("outfitPick")}` : "",
         !unlocked,
       );
@@ -968,8 +1046,15 @@ function rivalNarrative(won, rival) {
   return "";
 }
 
-function objectiveLabel(id, target) {
-  return t(`obj_${id}`, { n: target });
+/**
+ * L'etichetta dipende dallo scopo: gli obiettivi di stagione dicono "nella
+ * stagione", il bonus della partita no. Con una stringa sola per entrambi il
+ * bonus di match si annunciava come "Max 0 doppi falli in ogni partita", che
+ * descrive la regola di stagione e non quella che si stava giocando.
+ */
+function objectiveLabel(id, target, scope = "season") {
+  const key = scope === "match" ? `objMatch_${id}` : `obj_${id}`;
+  return t(key, { n: target });
 }
 
 /** Mostra gli obiettivi di carriera con esito nel riepilogo di fine match. */
@@ -987,7 +1072,7 @@ export function renderObjectives(state) {
   const mo = state.matchObjective;
   if (mo) {
     const st = objectiveStatus(mo, matchProgress(state.stats));
-    rows.push({ label: objectiveLabel(mo.id, mo.target), done: st.done, title: t("objMatchTitle"), st });
+    rows.push({ label: objectiveLabel(mo.id, mo.target, "match"), done: st.done, title: t("objMatchTitle"), st });
   }
   const earnedStars = ui.objectiveResult?.stars ?? 0;
   const totals = seasonProgress();
@@ -1001,11 +1086,22 @@ export function renderObjectives(state) {
     });
   });
 
-  if (!rows.length && !earnedStars) {
+  // I completi appena vinti vanno annunciati qui, dove il giocatore guarda gia'.
+  // Uno sblocco che si scopre per caso aprendo il guardaroba non premia niente,
+  // e soprattutto non insegna che quella cosa si e' ottenuta facendo quella cosa.
+  const vinti = ui.outfitsWonNow ?? [];
+  const annuncio = vinti.map((completo) => `
+    <div class="result-objectives__row is-done result-objectives__row--outfit">
+      <span class="result-objectives__check">🏅</span>
+      <span class="result-objectives__label">${t(completo.nameKey)} · ${t(`athlete_${completo.athleteId}_name`)}</span>
+      <span class="result-objectives__cat">${t("outfitWonNow")}</span>
+    </div>`).join("");
+
+  if (!rows.length && !earnedStars && !vinti.length) {
     el.innerHTML = "";
     return;
   }
-  el.innerHTML = `
+  el.innerHTML = annuncio + `
     <div class="result-objectives__head">${t("objTitle")}${earnedStars ? ` &nbsp;·&nbsp; <span class="result-objectives__stars">${t("objStarsEarned", { n: earnedStars })}</span>` : ""}</div>
     ${rows.map((r) => `
       <div class="result-objectives__row${r.done ? " is-done" : ""}">

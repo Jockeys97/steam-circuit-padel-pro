@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-outfit-alpha-v30";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-arena-expansion-v32";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-outfit-alpha-v30";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-outfit-alpha-v30";
-import { setReduceMotion } from "./fx.js?v=20260813-outfit-alpha-v30";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-outfit-alpha-v30";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-outfit-alpha-v30";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-alpha-v30";
+} from "./game.js?v=20260813-arena-expansion-v32";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-arena-expansion-v32";
+import { setReduceMotion } from "./fx.js?v=20260813-arena-expansion-v32";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-arena-expansion-v32";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-arena-expansion-v32";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-arena-expansion-v32";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-outfit-alpha-v30";
+} from "./render.js?v=20260813-arena-expansion-v32";
 import {
   applyLanguage,
   awardObjectives,
@@ -34,6 +34,7 @@ import {
   loadPrefs,
   recordMatch,
   renderArenas,
+  awardOutfitChallenges,
   renderAthletes,
   resolveLineup,
   renderHistory,
@@ -45,7 +46,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-outfit-alpha-v30";
+} from "./ui.js?v=20260813-arena-expansion-v32";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1223,6 +1224,11 @@ function endMatch(winner) {
     season: ui.selectedMode === "career" ? ui.career.season : undefined,
   });
 
+  // Le sfide dei completi valgono in ogni modalita', non solo in carriera: sono
+  // la ragione per provare atleti diversi, e legarle alla sola carriera le
+  // avrebbe rese un premio della progressione invece che una sfida.
+  ui.outfitsWonNow = awardOutfitChallenges(matchState, winner === "player");
+
   if (ui.selectedMode === "career") {
     ui.objectiveResult = awardObjectives(matchState);
   } else {
@@ -1512,7 +1518,9 @@ function drawDrill(now) {
   if (!drillCtx || !drillState) return;
   const d = drillState;
   const c = drillCtx;
-  const athlete = ui.selectedAthlete ?? ATHLETES[0];
+  // Con il completo applicato, come in partita: l'atleta deve essere lo stesso
+  // che si vede scendere in campo.
+  const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
 
   drawArena(c, drillCanvas, ui.selectedArena ?? ARENAS[0], now / 1000);
 
@@ -1549,7 +1557,15 @@ function drawDrill(now) {
     c.fill();
   }
 
-  drawPaddle(c, d.paddle, athlete.color, true, d.paddle.swing, d.phase === "charge" ? d.meter : 0, athlete, null, null, null, now / 1000);
+  // Gli stessi fogli sprite del match: passando `null` si cadeva sulla figura
+  // vettoriale di riserva, quindi l'allenamento mostrava un omino generico
+  // invece dell'atleta scelto col suo completo.
+  const chiave = athleteSpriteKey(athlete);
+  drawPaddle(c, d.paddle, athlete.color, true, d.paddle.swing,
+    d.phase === "charge" ? d.meter : 0, athlete,
+    athleteBackSprites.get(chiave),
+    athleteBackActionSprites.get(chiave),
+    athleteBackRunSprites.get(chiave), now / 1000);
   drawDrillOverlay(now);
 }
 

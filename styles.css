@@ -424,24 +424,21 @@ button {
 .wardrobe-kit small { color: var(--muted); font-size: 0.68rem; }
 .wardrobe__continue { display: flex; justify-content: center; padding: 18px 0 8px; }
 
-.mode-card__icon {
-  display: grid;
-  place-items: center;
-  padding: 30px;
-  color: #000;
+.mode-card__art {
+  aspect-ratio: 3 / 1;
+  margin: -18px -18px 0;
+  border-bottom: 3px solid var(--mode-accent, var(--cyan));
+  background-color: #09142e;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: inset 0 -30px 34px -28px rgba(2, 8, 24, 0.88);
 }
 
-.mode-card__icon--cyan {
-  background: linear-gradient(135deg, #009ab8, #00e5ff);
-}
-
-.mode-card__icon--gold {
-  background: linear-gradient(135deg, #c89000, #ffcc00);
-}
-
-.mode-card__icon--red {
-  background: linear-gradient(135deg, #cc2040, #ff4b6e);
-}
+.mode-card__art--quick { --mode-accent: var(--cyan); background-image: url("assets/ui/modes/quick-match.webp"); }
+.mode-card__art--tournament { --mode-accent: var(--gold); background-image: url("assets/ui/modes/tournament.webp"); }
+.mode-card__art--career { --mode-accent: var(--pink); background-image: url("assets/ui/modes/career.webp"); }
+.mode-card__art + h3 { margin-top: 14px; }
 
 .mode-card__tag {
   display: inline-block;
@@ -2919,6 +2916,12 @@ body.mode-colorblind .hero-preview {
 
 .team-slot__tag {
   display: flex;
+  /* Il suffisso "dal calendario" e' un elemento a se': in un contenitore flex
+     diventa un item separato e il nodo di spazio che lo precedeva viene
+     scartato, incollandolo all'etichetta. Lo spazio lo rimette `column-gap`, e
+     `wrap` gli permette di scendere nella riga gia' riservata sotto. */
+  flex-wrap: wrap;
+  gap: 0 0.35em;
   align-items: center;
   /* Due righe di spazio per tutte: in carriera i due rivali portano il suffisso
      "dal calendario" e vanno a capo, gli altri due no. Senza quota riservata le
@@ -3085,4 +3088,23 @@ body.mode-colorblind .hero-preview {
 
 .arena-card__preview {
   position: relative;
+}
+
+/* Completo appena vinto, annunciato a fine partita fra gli obiettivi. */
+.result-objectives__row--outfit {
+  border: 1px solid rgba(255, 210, 120, 0.45);
+  border-radius: 10px;
+  background: rgba(60, 42, 8, 0.35);
+  margin-bottom: 8px;
+}
+
+.result-objectives__row--outfit .result-objectives__cat {
+  color: #ffd98a;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.challenge-line {
+  display: block;
+  line-height: 1.5;
 }
