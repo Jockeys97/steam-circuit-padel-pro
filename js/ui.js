@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-mythic-outfits-v25";
-import { getMatchInfo } from "./game.js?v=20260813-mythic-outfits-v25";
-import { getVolume, isMuted } from "./audio.js?v=20260813-mythic-outfits-v25";
-import { getLang, t } from "./i18n.js?v=20260813-mythic-outfits-v25";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-mythic-outfits-v25";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-preview-frame-v26";
+import { getMatchInfo } from "./game.js?v=20260813-preview-frame-v26";
+import { getVolume, isMuted } from "./audio.js?v=20260813-preview-frame-v26";
+import { getLang, t } from "./i18n.js?v=20260813-preview-frame-v26";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-preview-frame-v26";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
