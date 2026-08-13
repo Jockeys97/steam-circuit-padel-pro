@@ -2707,11 +2707,9 @@ body.mode-colorblind .hero-preview {
   color: #ffc09a;
 }
 
-.team-slot--fixed {
-  cursor: default;
-}
-
-.team-slot--fixed .team-slot__tag {
+/* La casella del giocatore: non e' piu' bloccata — anche l'atleta con cui si
+   scende in campo si sceglie da qui — ma resta distinta dalle altre. */
+.team-slot--you .team-slot__tag {
   background: rgba(20, 60, 40, 0.86);
   border-color: rgba(120, 255, 190, 0.5);
   color: #9dffcf;

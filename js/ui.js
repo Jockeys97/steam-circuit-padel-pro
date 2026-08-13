@@ -327,12 +327,6 @@ export function showScreen(name) {
   window.scrollTo(0, 0);
 }
 
-function selectAthleteCard(card, athlete) {
-  document.querySelectorAll(".athlete-card").forEach((c) => c.classList.remove("athlete-card--selected"));
-  card.classList.add("athlete-card--selected");
-  ui.selectedAthlete = athlete;
-}
-
 function selectedOutfit(athlete, career = ui.career) {
   const outfits = outfitsForAthlete(athlete?.id);
   if (!outfits.length) return null;
@@ -516,14 +510,11 @@ export function renderAthletes(onSelect, selectedId = null) {
     if (!altraCasella) ui.selectedAthlete = athlete;
     grid.innerHTML = "";
     if (header) {
-      const indietro = altraCasella ? t("teamPickBack") : t("outfitBack");
+      const indietro = t("teamPickBack");
       header.innerHTML = `<button class="btn btn--ghost" type="button" data-outfit-back>${indietro}</button>
         <span class="athlete-grid__hint">${t(`athlete_${athlete.id}_name`)} — ${t("outfitSub")}</span>`;
       header.hidden = false;
-      header.querySelector("[data-outfit-back]")?.addEventListener("click", () => {
-        if (altraCasella) showTeam(giocatore);
-        else showAthletes();
-      });
+      header.querySelector("[data-outfit-back]")?.addEventListener("click", () => showTeam(giocatore));
     }
     const equipped = selectedOutfit(athlete);
     outfits.forEach((outfit) => {
@@ -576,18 +567,16 @@ export function renderAthletes(onSelect, selectedId = null) {
     };
     grid.innerHTML = "";
     if (header) {
-      header.innerHTML = `<button class="btn btn--ghost" type="button" data-team-back>${t("teamBack")}</button>
-        <span class="athlete-grid__hint">${t("teamSubSolo")}</span>
-        <button class="btn btn--primary" type="button" data-team-confirm>${t("teamConfirm")}</button>`;
+      // Nessun sottotitolo qui: lo porta gia' l'intestazione della schermata.
+      header.innerHTML = `<button class="btn btn--primary" type="button" data-team-confirm>${t("teamConfirm")}</button>`;
       header.hidden = false;
-      header.querySelector("[data-team-back]")?.addEventListener("click", () => showOutfits(athlete));
       header.querySelector("[data-team-confirm]")?.addEventListener("click", () => {
         onSelect?.(athleteWithOutfit(athlete));
       });
     }
 
     const caselle = [
-      { ruolo: null, atleta: athlete, etichetta: t("slotYou") },
+      { ruolo: "player", atleta: athlete, etichetta: t("slotYou") },
       { ruolo: "playerMate", atleta: lineup.playerMate, etichetta: t("slotPartner") },
       { ruolo: "opponent", atleta: lineup.opponent, etichetta: t("slotOpponent") },
       { ruolo: "opponentMate", atleta: lineup.opponentMate, etichetta: t("slotOpponentNet") },
@@ -599,12 +588,12 @@ export function renderAthletes(onSelect, selectedId = null) {
       // giocatore. Serve quindi un contenitore con due comandi propri.
       const card = document.createElement("div");
       card.className = "athlete-card team-slot";
-      if (!ruolo) card.classList.add("team-slot--fixed");
+      if (ruolo === "player") card.classList.add("team-slot--you");
       if (ruolo === "opponent" || ruolo === "opponentMate") card.classList.add("team-slot--rival");
       const completo = selectedOutfit(atleta);
       const haCompleti = outfitsForAthlete(atleta.id).length > 1;
       const azioni = [
-        ruolo ? `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>` : "",
+        `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>`,
         haCompleti ? `<button class="slot-action slot-action--outfit" type="button" data-azione="completo">${t("slotChangeOutfit")}</button>` : "",
       ].filter(Boolean).join("");
       // Stesse informazioni della schermata degli atleti: descrizione e abilita'
@@ -641,82 +630,81 @@ export function renderAthletes(onSelect, selectedId = null) {
    * altrove non e' un errore: le due posizioni si scambiano, che e' quello che
    * uno intende quando sposta un atleta da una parte all'altra della rete.
    */
-  const showPicker = (athlete, ruolo) => {
+  /**
+   * La griglia con cui si riempie una casella — compresa quella del giocatore.
+   *
+   * E' l'unica griglia di atleti rimasta: la schermata di selezione separata e
+   * il guardaroba raggiungibile solo da li' erano un passaggio in piu' per fare
+   * quello che il pannello fa gia'. Di conseguenza qui devono vivere anche gli
+   * atleti bloccati e il codice di sblocco, che prima stavano nella schermata
+   * che non c'e' piu'.
+   */
+  const showPicker = (giocatore, ruolo) => {
+    const perGiocatore = ruolo === "player";
     grid.innerHTML = "";
     if (header) {
       header.innerHTML = `<button class="btn btn--ghost" type="button" data-team-pick-back>${t("teamPickBack")}</button>
-        <span class="athlete-grid__hint">${t("teamChoose")}</span>`;
+        <span class="athlete-grid__hint">${perGiocatore ? t("teamChooseYou") : t("teamChoose")}</span>`;
       header.hidden = false;
-      header.querySelector("[data-team-pick-back]")?.addEventListener("click", () => showTeam(athlete));
+      header.querySelector("[data-team-pick-back]")?.addEventListener("click", () => showTeam(giocatore));
     }
-    selectableAthletes().forEach((candidato) => {
-      if (candidato.id === athlete.id) return;
+    demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((candidato) => {
+      // Per le caselle avversarie e per il secondo giocatore l'atleta del
+      // giocatore non compare: si sposta cambiando "Tu", non da qui.
+      if (!perGiocatore && candidato.id === giocatore.id) return;
+      const locked = !isUnlocked(candidato, ui.career);
+      const attivo = perGiocatore
+        ? candidato.id === giocatore.id
+        : ui.lineup[ruolo] === candidato.id;
       const card = document.createElement("button");
       card.type = "button";
       card.className = "athlete-card";
-      if (ui.lineup[ruolo] === candidato.id) card.classList.add("athlete-card--selected");
+      if (locked) card.classList.add("athlete-card--locked");
+      if (attivo) card.classList.add("athlete-card--selected");
+      card.dataset.id = candidato.id;
       const completo = selectedOutfit(candidato);
       card.innerHTML = athleteCardMarkup(
         completo?.preview ?? candidato.image,
         candidato.color,
         t(`athlete_${candidato.id}_name`),
         t(`athlete_${candidato.id}_role`),
-        statLine(candidato),
-        `⚡ ${t(`athlete_${candidato.id}_special`)}`,
-        false,
-      );
-      card.addEventListener("click", () => {
-        const precedente = ui.lineup[ruolo];
-        const altrove = Object.keys(ui.lineup).find((k) => k !== ruolo && ui.lineup[k] === candidato.id);
-        if (altrove) ui.lineup[altrove] = precedente;
-        ui.lineup[ruolo] = candidato.id;
-        showTeam(athlete);
-      });
-      grid.appendChild(card);
-    });
-  };
-
-  const showAthletes = () => {
-    grid.innerHTML = "";
-    if (header) {
-      header.innerHTML = "";
-      header.hidden = true;
-    }
-    demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
-      const locked = !isUnlocked(athlete, ui.career);
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "athlete-card";
-      if (locked) card.classList.add("athlete-card--locked");
-      card.dataset.id = athlete.id;
-      const equipped = selectedOutfit(athlete);
-      card.innerHTML = athleteCardMarkup(
-        equipped?.preview ?? athlete.image,
-        athlete.color,
-        t(`athlete_${athlete.id}_name`),
-        t(`athlete_${athlete.id}_role`),
-        locked ? lockLabel(athlete.unlock) : t(`athlete_${athlete.id}_desc`),
-        `⚡ ${t(`athlete_${athlete.id}_special`)}`,
+        locked ? lockLabel(candidato.unlock) : `<span class="slot-desc">${t(`athlete_${candidato.id}_desc`)}</span>${statLine(candidato)}`,
+        locked ? "" : `⚡ ${t(`athlete_${candidato.id}_special`)}`,
         locked,
       );
-      if (!locked) {
-        card.addEventListener("click", () => {
-          selectAthleteCard(card, athlete);
-          showOutfits(athlete);
-        });
-      } else {
+      if (locked) {
         // Niente `disabled`: un bottone disabilitato non emette click e il
         // triplo tocco per il codice di sblocco non arriverebbe mai.
         card.setAttribute("aria-disabled", "true");
         card.addEventListener("click", () => {
-          if (promptUnlockCode()) renderAthletes(onSelect, selectedId);
+          if (promptUnlockCode()) showPicker(giocatore, ruolo);
+        });
+      } else if (perGiocatore) {
+        card.addEventListener("click", () => {
+          // Se l'atleta scelto era gia' in campo altrove, le due posizioni si
+          // scambiano invece di lasciare un doppione da risolvere in silenzio.
+          const altrove = Object.keys(ui.lineup).find((k) => ui.lineup[k] === candidato.id);
+          if (altrove) ui.lineup[altrove] = giocatore.id;
+          ui.selectedAthlete = candidato;
+          showTeam(candidato);
+        });
+      } else {
+        card.addEventListener("click", () => {
+          const precedente = ui.lineup[ruolo];
+          const altrove = Object.keys(ui.lineup).find((k) => k !== ruolo && ui.lineup[k] === candidato.id);
+          if (altrove) ui.lineup[altrove] = precedente;
+          ui.lineup[ruolo] = candidato.id;
+          showTeam(giocatore);
         });
       }
       grid.appendChild(card);
     });
   };
 
-  showAthletes();
+  showTeam(demoFilter(ATHLETES, DEMO_CONTENT.athletes).find((a) => a.id === selectedId && isUnlocked(a, ui.career))
+    ?? ui.selectedAthlete
+    ?? selectableAthletes()[0]
+    ?? ATHLETES[0]);
 }
 
 export function renderArenas(onSelect) {
