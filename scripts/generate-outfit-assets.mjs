@@ -243,9 +243,88 @@ const PREVIEW_WIDTH = 560;
 const PREVIEW_RATIO = 0.75;
 const PREVIEW_HEIGHT = Math.round(PREVIEW_WIDTH / PREVIEW_RATIO);
 
+/**
+ * Un pannello molto piu' stretto del 3/4 della card non si puo' ritagliare a
+ * `cover` senza perdere meta' figura: il concept del Maestro e' verticale, e la
+ * sua meta' e' 543x1448 contro un bersaglio di 0,75, quindi il ritaglio dall'alto
+ * lasciava testa e busto e tagliava via le gambe. In quel caso la figura ci
+ * entra intera e lo sfondo viene esteso col colore del concept stesso.
+ */
 function previewPipeline(pipeline) {
   return pipeline
     .resize({ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, fit: "cover", position: "top" })
+    .webp({ quality: 82, effort: 6 });
+}
+
+/** Luminosita' media di una colonna del pannello. */
+async function lumaColonna(sorgente, left, width, height) {
+  const { channels } = await sharp(sorgente)
+    .extract({ left, top: 0, width, height })
+    .stats();
+  return channels.slice(0, 3).reduce((somma, c) => somma + c.mean, 0) / 3;
+}
+
+/**
+ * Anteprima di un pannello troppo stretto per il 3/4 della card.
+ *
+ * Il concept del Maestro e' verticale: ogni meta' e' 543x1448, rapporto 0,375
+ * contro lo 0,75 della card. Ritagliarla a `cover` significava buttare via
+ * meta' altezza, e restavano testa e busto senza gambe.
+ *
+ * Qui la figura ci entra intera e lo spazio ai lati viene riempito estendendo
+ * le colonne di bordo del pannello. Due strade piu' ovvie non funzionano: un
+ * colore piatto lascia due barre nette su un fondo che e' un gradiente, e il
+ * pannello sfocato usato come sfondo contiene la figura spalmata, quindi risulta
+ * piu' chiaro del fondo dentro il riquadro e disegna una cornice (misurati 38
+ * livelli di stacco contro i 10 di variazione naturale). Le colonne di bordo
+ * sono invece fondo puro alla stessa altezza: si raccordano senza stacco.
+ */
+async function narrowPanelPreview(panel) {
+  const sorgente = await panel().toBuffer();
+  const { width: panelW, height: panelH } = await sharp(sorgente).metadata();
+
+  const figura = await sharp(sorgente)
+    .resize({ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, fit: "inside" })
+    .toBuffer();
+  const { width: figuraW } = await sharp(figura).metadata();
+  const sinistraW = Math.floor((PREVIEW_WIDTH - figuraW) / 2);
+  const destraW = PREVIEW_WIDTH - figuraW - sinistraW;
+
+  const striscia = Math.max(2, Math.round(panelW * 0.015));
+  // La sfocatura leggera serve solo a non trasformare in bande orizzontali il
+  // rumore della singola colonna, una volta stirata su tutta la larghezza.
+  const bordo = (left, width) => sharp(sorgente)
+    .extract({ left, top: 0, width: striscia, height: panelH })
+    .resize({ width: Math.max(1, width), height: PREVIEW_HEIGHT, fit: "fill" })
+    .blur(3)
+    .toBuffer();
+
+  // Le due meta' del concept si toccano e il bagliore della figura accanto
+  // sborda oltre la cucitura: la colonna interna, stirata in orizzontale,
+  // diventava una strisciolina colorata. Si sceglie quindi la colonna piu'
+  // pulita fra le due e la si usa per entrambi i lati. "Piu' pulita" e' la piu'
+  // scura: su un fondo notturno la contaminazione e' sempre luce in piu'.
+  const [chiaraSinistra, chiaraDestra] = await Promise.all([
+    lumaColonna(sorgente, 0, striscia, panelH),
+    lumaColonna(sorgente, panelW - striscia, striscia, panelH),
+  ]);
+  const pulita = chiaraSinistra <= chiaraDestra ? 0 : panelW - striscia;
+  const [sinistra, destra] = await Promise.all([
+    bordo(pulita, sinistraW),
+    bordo(pulita, destraW),
+  ]);
+
+  return sharp({
+    create: {
+      width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, channels: 3,
+      background: { r: 0, g: 0, b: 0 },
+    },
+  })
+    .composite([
+      { input: sinistra, left: 0, top: 0 },
+      { input: destra, left: sinistraW + figuraW, top: 0 },
+      { input: figura, left: sinistraW, top: 0 },
+    ])
     .webp({ quality: 82, effort: 6 });
 }
 
@@ -259,13 +338,23 @@ async function createPreviews(athleteId, athlete) {
     const source = path.join(ROOT, athlete.concepts);
     const meta = await sharp(source).metadata();
     const half = Math.floor(meta.width / 2);
-    const panel = (left, width) => previewPipeline(
-      sharp(source).extract({ left, top: 0, width, height: meta.height }),
-    );
+    const panel = async (left, width, file) => {
+      const estrai = () => sharp(source).extract({ left, top: 0, width, height: meta.height });
+      // Quanto del pannello sacrificherebbe il ritaglio a `cover`. Sotto un
+      // quarto la figura sopravvive e il ritaglio resta la resa migliore, perche'
+      // riempie il riquadro; oltre, sparirebbero le gambe. I concept normali
+      // perdono l'11-17%, quello verticale del Maestro il 50%.
+      const perditaRitaglio = 1 - (width / meta.height) / PREVIEW_RATIO;
+      const stretto = perditaRitaglio > 0.25;
+      const immagine = stretto
+        ? await narrowPanelPreview(estrai)
+        : previewPipeline(estrai());
+      await immagine.toFile(path.join(dir, file));
+    };
     tasks.push(
       fs.copyFile(source, path.join(masterDir, "concept-master.png")),
-      panel(0, half).toFile(path.join(dir, "circuit-preview.webp")),
-      panel(half, meta.width - half).toFile(path.join(dir, "legend-preview.webp")),
+      panel(0, half, "circuit-preview.webp"),
+      panel(half, meta.width - half, "legend-preview.webp"),
     );
   }
   const signatureSource = path.join(ROOT, athlete.signatureConcept);
