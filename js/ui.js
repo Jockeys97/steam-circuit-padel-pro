@@ -447,16 +447,35 @@ function careerOutcomeText(state, won) {
  * pannello squadra la descrizione narrativa non serve: quello che si sta
  * decidendo e' come giochera' quella posizione.
  */
+/**
+ * Estremi di ogni statistica sul roster. Le barrette servono a confrontare gli
+ * atleti fra loro, quindi la scala e' quella reale del roster e non un
+ * intervallo scelto a mano: con una scala fissa Il Maestro mostrava una barretta
+ * su cinque in potenza e in velocita' pur essendo nella media, perche' l'intero
+ * centro del roster finiva schiacciato sul primo gradino.
+ */
+const STAT_RANGE = (() => {
+  const range = {};
+  for (const chiave of ["power", "control", "speed"]) {
+    const valori = ATHLETES.map((a) => a.stats[chiave]);
+    range[chiave] = { min: Math.min(...valori), max: Math.max(...valori) };
+  }
+  return range;
+})();
+
 function statLine(athlete) {
-  const barra = (valore) => {
-    const pieni = Math.round(clampUnit((valore - 0.85) / 0.55) * 5);
+  const barra = (valore, chiave) => {
+    const { min, max } = STAT_RANGE[chiave];
+    // Il piu' debole del roster tiene comunque una tacca: una barretta vuota
+    // sembra un dato mancante, non una statistica bassa.
+    const pieni = 1 + Math.round(clampUnit((valore - min) / (max - min || 1)) * 4);
     return `<span class="stat-bar">${"▮".repeat(pieni)}${"▯".repeat(5 - pieni)}</span>`;
   };
   const { power, control, speed } = athlete.stats;
   return `<span class="stat-line">
-    ${t("statPower")} ${barra(power)}
-    ${t("statControl")} ${barra(control)}
-    ${t("statSpeed")} ${barra(speed)}
+    ${t("statPower")} ${barra(power, "power")}
+    ${t("statControl")} ${barra(control, "control")}
+    ${t("statSpeed")} ${barra(speed, "speed")}
   </span>`;
 }
 
@@ -588,12 +607,24 @@ export function renderAthletes(onSelect, selectedId = null) {
         ruolo ? `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>` : "",
         haCompleti ? `<button class="slot-action slot-action--outfit" type="button" data-azione="completo">${t("slotChangeOutfit")}</button>` : "",
       ].filter(Boolean).join("");
+      // Stesse informazioni della schermata degli atleti: descrizione e abilita'
+      // speciale. Nel pannello si sceglie chi scende in campo, e sceglierlo
+      // dalla sola riga di statistiche voleva dire ricordarsi a memoria cosa fa
+      // ciascuno. Occupano lo slot della descrizione perche' quello del piede
+      // della card ospita ora i due comandi.
+      const scheda = `
+        <span class="slot-desc">${t(`athlete_${atleta.id}_desc`)}</span>
+        <span class="slot-special">⚡ ${t(`athlete_${atleta.id}_special`)}</span>
+        ${statLine(atleta)}
+      `;
       card.innerHTML = `<span class="team-slot__tag">${etichetta}</span>` + athleteCardMarkup(
         completo?.preview ?? atleta.image,
         atleta.color,
         t(`athlete_${atleta.id}_name`),
-        completo && completo.id !== "base" ? t(completo.nameKey) : t(`athlete_${atleta.id}_role`),
-        statLine(atleta),
+        completo && completo.id !== "base"
+          ? `${t(`athlete_${atleta.id}_role`)} · ${t(completo.nameKey)}`
+          : t(`athlete_${atleta.id}_role`),
+        scheda,
         azioni,
         false,
       );

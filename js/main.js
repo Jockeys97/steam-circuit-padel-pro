@@ -1577,9 +1577,12 @@ bindNavigation({
     showScreen("settings");
     syncAllSettings();
   },
+  // La modalita' viene ora prima degli atleti. Sceglierli prima significava
+  // comporre una squadra senza sapere per cosa: in carriera l'avversario e'
+  // dettato dal calendario, in torneo dal tabellone.
   selectMode: () => {
     syncMatchSetup();
-    showScreen("arena");
+    showScreen("characters");
   },
   rematch,
   resume: resumeGame,
@@ -1736,7 +1739,7 @@ function setLanguage(lang) {
   updateCareerTag();
   renderAthletes(() => {
     savePrefs(collectPrefs());
-    showScreen("modes");
+    showScreen("arena");
   }, ui.selectedAthlete?.id ?? prefs.athleteId);
   renderArenas(() => {
     savePrefs(collectPrefs());
@@ -1872,7 +1875,7 @@ updateCareerTag();
 
 renderAthletes(() => {
   savePrefs(collectPrefs());
-  showScreen("modes");
+  showScreen("arena");
 }, prefs.athleteId);
 renderArenas(() => {
   savePrefs(collectPrefs());

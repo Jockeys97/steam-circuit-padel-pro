@@ -2782,3 +2782,26 @@ body.mode-colorblind .hero-preview {
   border-color: rgba(255, 150, 110, 0.42);
   color: #ffc09a;
 }
+
+/* Descrizione e abilita' speciale dentro la casella della squadra. Vivono nello
+   slot della descrizione, che e' un <p>, quindi vanno rese a blocco per
+   impilarsi; i colori sono quelli della schermata degli atleti. */
+.slot-desc,
+.slot-special {
+  display: block;
+}
+
+.slot-special {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.team-slot--rival .slot-special {
+  color: #ffc09a;
+}
+
+.team-slot .stat-line {
+  margin-top: 12px;
+}
