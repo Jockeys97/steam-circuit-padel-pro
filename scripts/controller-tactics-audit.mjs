@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, hitBall, updateMatch } from "../js/game.js";
-import { AI_OPPONENTS, ARENAS, ATHLETES, COURT } from "../js/data.js";
+import { createMatchState, hitBall, updateMatch } from "../js/game.js?v=20260813-outfit-lossless-v21";
+import { AI_OPPONENTS, ARENAS, ATHLETES, COURT } from "../js/data.js?v=20260813-outfit-lossless-v21";
 import { readFile } from "node:fs/promises";
 
 // Le asserzioni confrontano etichette tradotte, quindi la lingua va fissata qui

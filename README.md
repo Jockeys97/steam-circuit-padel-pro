@@ -199,7 +199,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-career-lazy-v20" index.html js/*.js styles.css   # deve dare 23 in totale
+grep -c "20260813-outfit-lossless-v21" index.html js/*.js styles.css   # deve dare 23 in totale
 ```
 
 ---
@@ -214,5 +214,6 @@ azzardo consapevole.
 
 ## Stato
 
-Alpha giocabile. Mancano le illustrazioni di due atleti sbloccabili, che nel frattempo
-vengono disegnati proceduralmente.
+Alpha giocabile con 6 atleti completi. I 4 campioni iniziali hanno 3 completi ciascuno
+(12 totali): le 8 varianti sbloccabili usano 48 fogli sprite WebP lossless dedicati,
+caricati alla prima richiesta. Il pacchetto attivo contiene 105 immagini per circa 18 MB.

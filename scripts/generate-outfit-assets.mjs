@@ -8,6 +8,7 @@ const sharp = require("sharp");
 const ROOT = process.cwd();
 const SPRITES = path.join(ROOT, "assets/sprites");
 const OUTPUT = path.join(ROOT, "assets/outfits");
+const MASTER_ROOT = path.join(ROOT, "assets/_archivio/originali/outfits");
 
 const athletes = {
   maestro: {
@@ -107,10 +108,10 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
   const outDir = path.join(OUTPUT, athleteId, variant);
   await fs.mkdir(outDir, { recursive: true });
   const frameCount = sheetName.includes("run") ? 8 : 4;
-  const targetWidth = Math.max(frameCount, Math.round((info.width * 0.72) / frameCount) * frameCount);
+  const targetWidth = Math.max(frameCount, Math.round((info.width * 0.6) / frameCount) * frameCount);
   await sharp(data, { raw: info })
     .resize({ width: targetWidth, kernel: sharp.kernel.lanczos3 })
-    .webp({ quality: 64, alphaQuality: 82, effort: 6, smartSubsample: true })
+    .webp({ lossless: true, effort: 6 })
     .toFile(path.join(outDir, `${sheetName}.webp`));
 }
 
@@ -119,10 +120,13 @@ async function createPreviews(athleteId, athlete) {
   const meta = await sharp(source).metadata();
   const half = Math.floor(meta.width / 2);
   const dir = path.join(OUTPUT, athleteId);
+  const masterDir = path.join(MASTER_ROOT, athleteId);
   await fs.mkdir(dir, { recursive: true });
+  await fs.mkdir(masterDir, { recursive: true });
   await Promise.all([
-    sharp(source).extract({ left: 0, top: 0, width: half, height: meta.height }).resize({ width: 240 }).webp({ quality: 68, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
-    sharp(source).extract({ left: half, top: 0, width: meta.width - half, height: meta.height }).resize({ width: 240 }).webp({ quality: 68, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
+    fs.copyFile(source, path.join(masterDir, "concept-master.png")),
+    sharp(source).extract({ left: 0, top: 0, width: half, height: meta.height }).resize({ width: 240 }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
+    sharp(source).extract({ left: half, top: 0, width: meta.width - half, height: meta.height }).resize({ width: 240 }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
   ]);
 }
 

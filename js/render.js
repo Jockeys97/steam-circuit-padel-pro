@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-career-lazy-v20";
-import { t } from "./i18n.js?v=20260813-career-lazy-v20";
+import { BALANCE, COURT } from "./data.js?v=20260813-outfit-lossless-v21";
+import { t } from "./i18n.js?v=20260813-outfit-lossless-v21";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-career-lazy-v20";
-import { clamp } from "./render.js?v=20260813-career-lazy-v20";
-import { sfx } from "./audio.js?v=20260813-career-lazy-v20";
-import { t } from "./i18n.js?v=20260813-career-lazy-v20";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-outfit-lossless-v21";
+import { clamp } from "./render.js?v=20260813-outfit-lossless-v21";
+import { sfx } from "./audio.js?v=20260813-outfit-lossless-v21";
+import { t } from "./i18n.js?v=20260813-outfit-lossless-v21";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-career-lazy-v20";
+} from "./fx.js?v=20260813-outfit-lossless-v21";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

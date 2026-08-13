@@ -197,7 +197,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-career-lazy-v20" index.html js/*.js styles.css   # must total 23
+grep -c "20260813-outfit-lossless-v21" index.html js/*.js styles.css   # must total 23
 ```
 
 ---
@@ -212,5 +212,6 @@ deliberate gamble.
 
 ## Status
 
-Playable alpha. Two unlockable athletes are still missing their artwork and are drawn
-procedurally in the meantime.
+Playable alpha with 6 complete athletes. The 4 starting champions have 3 kits each
+(12 total): the 8 unlockable variants use 48 dedicated lossless WebP sprite sheets,
+loaded on first request. The active package contains 105 images at roughly 18 MB.

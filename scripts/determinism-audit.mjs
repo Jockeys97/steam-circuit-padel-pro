@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, prepareServe, performServe, updateMatch } from "../js/game.js";
-import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js";
+import { createMatchState, prepareServe, performServe, updateMatch } from "../js/game.js?v=20260813-outfit-lossless-v21";
+import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260813-outfit-lossless-v21";
 
 // Deve rispecchiare il ciclo di gioco in main.js.
 const FIXED_STEP = 1 / 120;

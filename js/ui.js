@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-career-lazy-v20";
-import { getMatchInfo } from "./game.js?v=20260813-career-lazy-v20";
-import { getVolume, isMuted } from "./audio.js?v=20260813-career-lazy-v20";
-import { getLang, t } from "./i18n.js?v=20260813-career-lazy-v20";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-career-lazy-v20";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-outfit-lossless-v21";
+import { getMatchInfo } from "./game.js?v=20260813-outfit-lossless-v21";
+import { getVolume, isMuted } from "./audio.js?v=20260813-outfit-lossless-v21";
+import { getLang, t } from "./i18n.js?v=20260813-outfit-lossless-v21";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-lossless-v21";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
