@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-intercept-v18";
-import { clamp } from "./render.js?v=20260813-intercept-v18";
-import { sfx } from "./audio.js?v=20260813-intercept-v18";
-import { t } from "./i18n.js?v=20260813-intercept-v18";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-career-lazy-v20";
+import { clamp } from "./render.js?v=20260813-career-lazy-v20";
+import { sfx } from "./audio.js?v=20260813-career-lazy-v20";
+import { t } from "./i18n.js?v=20260813-career-lazy-v20";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-intercept-v18";
+} from "./fx.js?v=20260813-career-lazy-v20";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

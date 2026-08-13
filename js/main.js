@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-outfit-assets-v19";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-career-lazy-v20";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-intercept-v18";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-intercept-v18";
-import { setReduceMotion } from "./fx.js?v=20260813-intercept-v18";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-intercept-v18";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-intercept-v18";
-import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-intercept-v18";
+} from "./game.js?v=20260813-career-lazy-v20";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-career-lazy-v20";
+import { setReduceMotion } from "./fx.js?v=20260813-career-lazy-v20";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-career-lazy-v20";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-career-lazy-v20";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-career-lazy-v20";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-outfit-assets-v19";
+} from "./render.js?v=20260813-career-lazy-v20";
 import {
   applyLanguage,
   awardObjectives,
@@ -43,7 +43,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-outfit-assets-v19";
+} from "./ui.js?v=20260813-career-lazy-v20";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -78,29 +78,47 @@ function athleteSpriteKey(athlete) {
   return `${athlete.id}:${athlete.outfitId ?? "base"}`;
 }
 
-const athleteSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.sprite)];
-}));
+const appearanceByKey = new Map(athleteAppearances.map((a) => [athleteSpriteKey(a), a]));
 
-const athleteBackSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backSprite)];
-}));
+/**
+ * Gli sprite venivano richiesti tutti all'apertura: sei atleti e ogni loro
+ * outfit, anche nella demo che ne mostra due e non ha progressione per
+ * sbloccarne. Misurato: 12,55 MB scaricati contro 3,16 utilizzabili, il 75% di
+ * spreco. Ora si caricano alla prima richiesta e restano in cache.
+ */
+function lazySpriteMap(field) {
+  const cache = new Map();
+  return {
+    get(key) {
+      let sprite = cache.get(key);
+      if (!sprite) {
+        sprite = loadOptionalSprite(appearanceByKey.get(key)?.[field]);
+        cache.set(key, sprite);
+      }
+      return sprite;
+    },
+  };
+}
 
-const athleteActionSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.actionSprite)];
-}));
+const athleteSprites = lazySpriteMap("sprite");
+const athleteBackSprites = lazySpriteMap("backSprite");
+const athleteActionSprites = lazySpriteMap("actionSprite");
+const athleteBackActionSprites = lazySpriteMap("backActionSprite");
+const athleteRunSprites = lazySpriteMap("runSprite");
+const athleteBackRunSprites = lazySpriteMap("backRunSprite");
 
-const athleteBackActionSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backActionSprite)];
-}));
-
-const athleteRunSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.runSprite)];
-}));
-
-const athleteBackRunSprites = new Map(athleteAppearances.map((athlete) => {
-  return [athleteSpriteKey(athlete), loadOptionalSprite(athlete.backRunSprite)];
-}));
+// Gli atleti che questa build espone davvero vengono chiesti subito, cosi' non
+// si vede il disegno procedurale nei primi istanti di partita. Gli outfit e gli
+// atleti esclusi restano differiti.
+demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
+  const key = athleteSpriteKey({ ...athlete, outfitId: "base" });
+  athleteSprites.get(key);
+  athleteBackSprites.get(key);
+  athleteActionSprites.get(key);
+  athleteBackActionSprites.get(key);
+  athleteRunSprites.get(key);
+  athleteBackRunSprites.get(key);
+});
 
 const keys = new Set();
 let hitQueued = false;
@@ -1177,7 +1195,8 @@ function endMatch(winner) {
     ? `${matchState.points.player}-${matchState.points.ai}`
     : `${matchState.sets.player}-${matchState.sets.ai}`;
   const careerWin = winner === "player" && ui.selectedMode === "career";
-  const careerSeasonWon = careerWin && ui.career.matchIndex >= CAREER_MATCHES - 1;
+  const careerSeasonWon = careerWin && ui.career.seasonWins + 1 >= CAREER_MATCHES
+    && ui.career.matchIndex + 1 >= CAREER_MATCHES;
   const tournamentTrophy = winner === "player" && ui.selectedMode === "tournament" && ui.tournamentRound === 2;
   recordMatch({
     ts: Date.now(),
@@ -1202,30 +1221,50 @@ function endMatch(winner) {
     ui.objectiveResult = null;
   }
 
-  if (careerWin) {
-    ui.career.wins += 1;
+  if (ui.selectedMode === "career") {
+    // La stagione avanza anche quando perdi. Prima `matchIndex` cresceva solo
+    // vincendo: perdere non costava nulla, si rigiocava la stessa partita
+    // all'infinito e la carriera non aveva nessuna posta in gioco.
+    const vinta = winner === "player";
+    if (vinta) {
+      ui.career.wins += 1;
+      ui.career.seasonWins = (ui.career.seasonWins ?? 0) + 1;
+      ui.career.rivalStreak = Math.max(0, ui.career.rivalStreak) + 1;
+    } else {
+      ui.career.losses += 1;
+      ui.career.rivalStreak = Math.min(0, ui.career.rivalStreak) - 1;
+    }
     ui.career.matchIndex += 1;
-    ui.career.rivalStreak = Math.max(0, ui.career.rivalStreak) + 1;
-    if (careerSeasonWon) {
-      ui.career.trophies += 1;
-      ui.career.season += 1;
+
+    ui.careerSeasonWon = false;
+    ui.careerSeasonOutcome = null;
+    if (ui.career.matchIndex >= CAREER_MATCHES) {
+      const vinte = ui.career.seasonWins ?? 0;
+      if (vinte >= CAREER_MATCHES) {
+        // Stagione perfetta: trofeo e promozione.
+        ui.career.trophies += 1;
+        ui.career.season += 1;
+        ui.careerSeasonWon = true;
+        ui.careerSeasonOutcome = "trophy";
+      } else if (vinte >= CAREER_MATCHES - 1) {
+        // Stagione positiva: si avanza, ma senza trofeo.
+        ui.career.season += 1;
+        ui.careerSeasonOutcome = "promoted";
+      } else {
+        // Stagione fallita: si resta nella stessa, da rigiocare. Le stelle e gli
+        // obiettivi gia' conquistati restano: si perde tempo, non progressi.
+        ui.careerSeasonOutcome = "repeat";
+      }
       ui.career.matchIndex = 0;
+      ui.career.seasonWins = 0;
       resetSeasonObjectives();
     }
-    ui.careerSeasonWon = careerSeasonWon;
     saveCareer(ui.career);
     ui.pendingContinue = true;
     savePrefs(collectPrefs());
     updateCareerTag();
     showResult(matchState, winner);
     return;
-  }
-
-  if (ui.selectedMode === "career") {
-    ui.career.losses += 1;
-    ui.career.rivalStreak = Math.min(0, ui.career.rivalStreak) - 1;
-    saveCareer(ui.career);
-    updateCareerTag();
   }
 
   if (winner === "player" && ui.selectedMode === "tournament" && ui.tournamentRound < 2) {

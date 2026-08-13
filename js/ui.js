@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-outfit-assets-v19";
-import { getMatchInfo } from "./game.js?v=20260813-intercept-v18";
-import { getVolume, isMuted } from "./audio.js?v=20260813-intercept-v18";
-import { getLang, t } from "./i18n.js?v=20260813-intercept-v18";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-intercept-v18";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-career-lazy-v20";
+import { getMatchInfo } from "./game.js?v=20260813-career-lazy-v20";
+import { getVolume, isMuted } from "./audio.js?v=20260813-career-lazy-v20";
+import { getLang, t } from "./i18n.js?v=20260813-career-lazy-v20";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-career-lazy-v20";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -17,6 +17,9 @@ const DEFAULT_CAREER = {
   seasonObjectives: [],
   seasonStars: 0,
   rivalStreak: 0,
+  // Vittorie nella stagione in corso: decide se si avanza, se si vince il
+  // trofeo o se la stagione va rigiocata.
+  seasonWins: 0,
   unlockAll: false,
   equippedOutfits: {},
 };
@@ -284,6 +287,24 @@ export function applyDemoLimits() {
   document.querySelectorAll("#difficultySeg button").forEach((button) => {
     if (button.dataset.value !== DEMO_CONTENT.difficulty) button.disabled = true;
   });
+}
+
+/**
+ * Cosa e' successo alla stagione. Da quando la sconfitta fa avanzare comunque
+ * il calendario, la fine stagione ha tre esiti e vanno raccontati: altrimenti
+ * il giocatore non capisce perche' a volte avanza e a volte no.
+ */
+function careerOutcomeText(state, won) {
+  const stagione = state.careerSeason;
+  switch (ui.careerSeasonOutcome) {
+    case "trophy": return t("careerSeasonWin", { season: stagione });
+    case "promoted": return t("careerSeasonPromoted", { season: stagione });
+    case "repeat": return t("careerSeasonRepeat", { season: stagione });
+    default:
+      return won
+        ? t("careerMatchWin", { season: stagione, match: ui.career.matchIndex })
+        : t("careerMatchLoss", { season: stagione, match: ui.career.matchIndex });
+  }
 }
 
 export function renderAthletes(onSelect, selectedId = null) {
@@ -598,10 +619,7 @@ export function showResult(state, winner) {
     title.textContent = t("victory");
     if (state.mode === "career") {
       const rival = rivalNarrative(true);
-      message.textContent = (ui.careerSeasonWon
-        ? t("careerSeasonWin", { season: state.careerSeason })
-        : t("careerMatchWin", { season: state.careerSeason, match: ui.career.matchIndex }))
-        + (rival ? ` ${rival}` : "");
+      message.textContent = careerOutcomeText(state, true) + (rival ? ` ${rival}` : "");
     } else if (state.mode === "tournament" && ui.tournamentRound < 2) {
       message.textContent = t("tourneyNext", { n: ui.tournamentRound + 1 });
     } else if (state.mode === "tournament") {
@@ -612,7 +630,9 @@ export function showResult(state, winner) {
   } else {
     title.textContent = t("defeat");
     const rival = state.mode === "career" ? rivalNarrative(false) : "";
-    message.textContent = (state.mode === "career" ? t("careerLoss") : t("defeatMsg")) + (rival ? ` ${rival}` : "");
+    message.textContent = (state.mode === "career"
+      ? careerOutcomeText(state, false)
+      : t("defeatMsg")) + (rival ? ` ${rival}` : "");
   }
 
   renderObjectives(state);
