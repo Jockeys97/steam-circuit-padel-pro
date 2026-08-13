@@ -2078,8 +2078,9 @@ kbd {
 .match-setup {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 18px;
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   margin: 26px auto 0;
   padding: 0 24px;
 }
@@ -2089,10 +2090,49 @@ kbd {
   gap: 8px;
 }
 
+/* La cornice vale solo per le impostazioni di partita: nel pannello dei
+   giocatori il gruppo vive gia' dentro una cornice sua e si incorniciherebbe
+   due volte. */
+.match-setup .setup-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 17px 17px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(0, 229, 255, 0.07), transparent 70%),
+    linear-gradient(180deg, rgba(11, 36, 68, 0.9), rgba(6, 20, 38, 0.92));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 .setup-group__label {
   color: #bdeeff;
   font-size: 0.7rem;
   font-weight: 900;
+}
+
+/* Un filo che corre dall'etichetta al bordo: chiude il titolo e fa leggere i
+   due pannelli come una coppia anche con titoli di lunghezza diversa. */
+.match-setup .setup-group__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.match-setup .setup-group__label::after {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.32), transparent);
+  content: "";
+}
+
+/* Il segmentato spinto in fondo: i due gruppi restano allineati fra loro anche
+   se un'etichetta va a capo. */
+.match-setup .segmented {
+  margin-top: auto;
 }
 
 .setup-group__hint {
@@ -2102,31 +2142,146 @@ kbd {
   line-height: 1.45;
 }
 
+/* Le colonne le decide il numero di bottoni. Erano tre fisse, ma la difficolta'
+   ne ha quattro: "Leggenda" cadeva a capo da sola, con mezza riga vuota
+   accanto. */
 .segmented {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
-  padding: 4px;
+  padding: 5px;
   border: 1px solid #28567d;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #091d39;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.32);
 }
 
 .segmented button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-width: 0;
-  height: 38px;
-  padding: 0 8px;
+  height: 42px;
+  padding: 0 6px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 7px;
   background: transparent;
   color: #809bb6;
   font: 900 0.68rem "Nunito", sans-serif;
+  letter-spacing: 0.03em;
   cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.segmented button:hover:not(.is-active) {
+  background: rgba(0, 229, 255, 0.1);
+  color: #cfe9f7;
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 .segmented button.is-active {
-  background: #16bed7;
+  background: linear-gradient(180deg, #22d5ee, #16bed7);
   color: #061426;
+  box-shadow: 0 0 16px rgba(22, 190, 215, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+/* ---- La difficolta' e' una scala, non quattro scelte pari ----
+   Una tacca sotto ogni voce dice quanto sale, e il colore segue la salita del
+   circuito: verde, ciano, oro, corallo. Scegliere "Leggenda" tinge il chip di
+   corallo, cosi' il livello si vede senza leggere.
+
+   Sta in uno pseudo-elemento perche' `applyLanguage` riscrive il `textContent`
+   dei bottoni a ogni cambio lingua e cancellerebbe qualsiasi figlio. */
+#difficultySeg button[data-value="easy"] {
+  --step: 25%;
+  --step-color: #1aff8a;
+  --step-lit: #86ffc4;
+  --step-glow: rgba(26, 255, 138, 0.4);
+}
+
+#difficultySeg button[data-value="medium"] {
+  --step: 50%;
+  --step-color: #00e5ff;
+  --step-lit: #86f2ff;
+  --step-glow: rgba(0, 229, 255, 0.42);
+}
+
+#difficultySeg button[data-value="hard"] {
+  --step: 75%;
+  --step-color: #ffcc00;
+  --step-lit: #ffe482;
+  --step-glow: rgba(255, 204, 0, 0.42);
+}
+
+#difficultySeg button[data-value="legend"] {
+  --step: 100%;
+  --step-color: #ff4b6e;
+  --step-lit: #ff96aa;
+  --step-glow: rgba(255, 75, 110, 0.45);
+}
+
+#difficultySeg button::after {
+  width: 100%;
+  max-width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--step-color) var(--step),
+    rgba(255, 255, 255, 0.1) var(--step)
+  );
+  content: "";
+}
+
+#difficultySeg button.is-active {
+  background: linear-gradient(180deg, var(--step-lit), var(--step-color));
+  box-shadow: 0 0 18px var(--step-glow), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* Sul chip acceso la tacca si scurisce: bianco su ciano o su oro non si
+   leggerebbe. */
+#difficultySeg button.is-active::after {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 20, 38, 0.85) var(--step),
+    rgba(6, 20, 38, 0.22) var(--step)
+  );
+}
+
+/* Anche la lunghezza e' una scala — 11 punti, 21, un set intero — quindi porta
+   la stessa tacca. Il colore resta fisso invece di salire: cosi' si legge come
+   "durata" e non si confonde con la difficolta', e i due pannelli restano
+   allineati all'occhio riga per riga. */
+#lengthSeg button[data-value="points11"] { --step: 33%; }
+#lengthSeg button[data-value="points21"] { --step: 66%; }
+#lengthSeg button[data-value="set"] { --step: 100%; }
+
+#lengthSeg button::after {
+  width: 100%;
+  max-width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 229, 255, 0.85) var(--step),
+    rgba(255, 255, 255, 0.1) var(--step)
+  );
+  content: "";
+}
+
+#lengthSeg button.is-active::after {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 20, 38, 0.85) var(--step),
+    rgba(6, 20, 38, 0.22) var(--step)
+  );
 }
 
 /* ---- Selettore modalità giocatori (partita rapida) ---- */
@@ -2574,6 +2729,16 @@ body.mode-colorblind .hero-preview {
   }
 }
 
+@media (max-width: 560px) {
+  /* Quattro colonne su una riga sola, a questa larghezza, strizzano "Leggenda"
+     fino a spezzarla: due righe da due restano una griglia leggibile. La soglia
+     e' 560 e non 480 perche' i telefoni piu' larghi cadono proprio in mezzo. */
+  #difficultySeg {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 
 /* --- Vista immersiva --------------------------------------------------------
    Di default il campo occupa tutta l'altezza disponibile e la fascia inferiore
@@ -2668,11 +2833,57 @@ body.mode-colorblind .hero-preview {
 /* --- Selezione completi ------------------------------------------------------
    I completi usano la stessa card degli atleti: cambia solo l'intestazione che
    compare sopra la griglia per tornare indietro. */
+/* Barra delle azioni del pannello squadra.
+   Il tasto di conferma stava da solo all'estrema sinistra, appena sotto
+   "Indietro" e incollato al blocco del titolo: sembrava una terza voce di
+   navigazione invece dell'azione che chiude la schermata. Ora la fascia e' una
+   barra sua, separata dall'intestazione da un filo, e resta agganciata in alto
+   mentre si scorrono le quattro card — che sono alte e la spingevano fuori
+   schermo. */
 .athlete-grid__head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 0 64px 12px;
+  margin-bottom: 6px;
+  padding: 14px 64px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.16);
+  background: linear-gradient(180deg, rgba(7, 7, 42, 0.97), rgba(7, 7, 42, 0.74));
+  backdrop-filter: blur(8px);
+}
+
+/* La conferma va all'estremita' opposta ai comandi di ritorno: e' l'uscita in
+   avanti. Con un figlio solo `space-between` non basta, serve il margine. */
+.athlete-grid__head [data-team-confirm] {
+  margin-left: auto;
+  padding: 14px 30px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #22e9ff, #00b4cc 58%, #0b8ba3);
+  font-size: 0.98rem;
+  letter-spacing: 0.06em;
+  box-shadow: 0 10px 26px rgba(0, 229, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.athlete-grid__head [data-team-confirm]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 34px rgba(0, 229, 255, 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+@media (max-width: 860px) {
+  .athlete-grid__head {
+    padding: 12px 24px;
+  }
+
+  /* Su schermo stretto la conferma prende tutta la riga: a fianco dei comandi
+     di ritorno si comprimerebbe fino a spezzare l'etichetta. */
+  .athlete-grid__head [data-team-confirm] {
+    flex: 1;
+    margin-left: 0;
+    padding: 14px 18px;
+  }
 }
 
 .athlete-grid__hint {
@@ -2807,4 +3018,19 @@ body.mode-colorblind .hero-preview {
 
 .team-slot .stat-line {
   margin-top: 12px;
+}
+
+/* Casella dettata dal calendario o dal tabellone: si guarda, non si cambia. */
+.team-slot--dettata {
+  cursor: default;
+}
+
+.team-slot--dettata:hover {
+  transform: none;
+}
+
+.team-slot__tag em {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.75;
 }

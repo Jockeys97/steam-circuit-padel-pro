@@ -281,6 +281,36 @@ export function currentFixture() {
  * atleti, e un identificativo salvato puo' riferirsi a un atleta non ancora
  * sbloccato in questa carriera.
  */
+/**
+ * Chi ti tocca affrontare, quando non lo decidi tu.
+ *
+ * In carriera il rivale e il suo livello vengono dal calendario — la schermata
+ * lo nomina pure — e in torneo dal tabellone. Scegliersi anche gli avversari
+ * significherebbe scegliersi il sorteggio: la progressione perde il suo senso
+ * se il gradino successivo se lo compone il giocatore. Restituisce `null` per
+ * la partita rapida, dove invece e' giusto scegliere tutto.
+ *
+ * La coppia e' derivata dal punto del circuito in cui ci si trova, quindi e'
+ * sempre la stessa per quella giornata: la si puo' preparare, e ripetere un
+ * match perso non rimescola l'avversario.
+ */
+export function dictatedRivals(esclusi = []) {
+  const seme = ui.selectedMode === "career"
+    ? ui.career.season * CAREER_MATCHES + ui.career.matchIndex
+    : ui.selectedMode === "tournament"
+      ? ui.tournamentRound + 1
+      : null;
+  if (seme === null) return null;
+  const pool = ATHLETES.filter((a) => !esclusi.includes(a.id));
+  if (pool.length < 2) return null;
+  const primo = pool[seme % pool.length];
+  const resto = pool.filter((a) => a.id !== primo.id);
+  return {
+    opponent: primo,
+    opponentMate: resto[(seme * 3 + 1) % resto.length],
+  };
+}
+
 export function resolveLineup(athlete) {
   const disponibili = selectableAthletes();
   const scelto = (id) => (id ? disponibili.find((a) => a.id === id) : null) ?? null;
@@ -293,8 +323,16 @@ export function resolveLineup(athlete) {
   // ci si ritroverebbe altrimenti due volte lo stesso in campo.
   const lineup = { playerMate: null, opponent: null, opponentMate: null };
   const usati = new Set([athlete.id]);
-  for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
-    const candidato = scelto(ui.lineup[ruolo]);
+  // Il secondo giocatore si sceglie sempre: e' la tua meta' campo.
+  const candidatoMate = scelto(ui.lineup.playerMate);
+  if (candidatoMate && !usati.has(candidatoMate.id)) {
+    lineup.playerMate = candidatoMate;
+    usati.add(candidatoMate.id);
+  }
+  // Gli avversari li sceglie il calendario o il tabellone, quando ce n'e' uno.
+  const dettati = dictatedRivals([athlete.id, lineup.playerMate?.id].filter(Boolean));
+  for (const ruolo of ["opponent", "opponentMate"]) {
+    const candidato = dettati ? dettati[ruolo] : scelto(ui.lineup[ruolo]);
     if (candidato && !usati.has(candidato.id)) {
       lineup[ruolo] = candidato;
       usati.add(candidato.id);
@@ -575,6 +613,11 @@ export function renderAthletes(onSelect, selectedId = null) {
       });
     }
 
+    // Se il circuito detta gli avversari, le loro caselle non offrono il comando
+    // per cambiarli: un bottone che non cambia niente e' peggio di nessun
+    // bottone. Il completo resta, perche' e' estetica e vale per quell'atleta
+    // ovunque compaia.
+    const avversariDettati = dictatedRivals([]) !== null;
     const caselle = [
       { ruolo: "player", atleta: athlete, etichetta: t("slotYou") },
       { ruolo: "playerMate", atleta: lineup.playerMate, etichetta: t("slotPartner") },
@@ -592,8 +635,9 @@ export function renderAthletes(onSelect, selectedId = null) {
       if (ruolo === "opponent" || ruolo === "opponentMate") card.classList.add("team-slot--rival");
       const completo = selectedOutfit(atleta);
       const haCompleti = outfitsForAthlete(atleta.id).length > 1;
+      const dettata = avversariDettati && (ruolo === "opponent" || ruolo === "opponentMate");
       const azioni = [
-        `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>`,
+        dettata ? "" : `<button class="slot-action" type="button" data-azione="atleta">${t("slotChangeAthlete")}</button>`,
         haCompleti ? `<button class="slot-action slot-action--outfit" type="button" data-azione="completo">${t("slotChangeOutfit")}</button>` : "",
       ].filter(Boolean).join("");
       // Stesse informazioni della schermata degli atleti: descrizione e abilita'
@@ -606,7 +650,11 @@ export function renderAthletes(onSelect, selectedId = null) {
         <span class="slot-special">⚡ ${t(`athlete_${atleta.id}_special`)}</span>
         ${statLine(atleta)}
       `;
-      card.innerHTML = `<span class="team-slot__tag">${etichetta}</span>` + athleteCardMarkup(
+      if (dettata) card.classList.add("team-slot--dettata");
+      const tag = dettata
+        ? `${etichetta} <em>${ui.selectedMode === "career" ? t("slotByCalendar") : t("slotByBracket")}</em>`
+        : etichetta;
+      card.innerHTML = `<span class="team-slot__tag">${tag}</span>` + athleteCardMarkup(
         completo?.preview ?? atleta.image,
         atleta.color,
         t(`athlete_${atleta.id}_name`),
@@ -622,7 +670,7 @@ export function renderAthletes(onSelect, selectedId = null) {
       // due bottoni piccoli rispondono e' la stessa card che si comporta in due
       // modi diversi. I due comandi restano, e fermano la propagazione perche'
       // "Completo" deve aprire il guardaroba e non il selettore.
-      card.addEventListener("click", () => showPicker(athlete, ruolo));
+      if (!dettata) card.addEventListener("click", () => showPicker(athlete, ruolo));
       card.querySelector('[data-azione="atleta"]')
         ?.addEventListener("click", (evento) => {
           evento.stopPropagation();
