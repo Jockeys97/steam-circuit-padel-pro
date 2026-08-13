@@ -289,14 +289,6 @@ export const ATHLETES = [
     backRunSprite: "assets/sprites/back/oracolo-run-unique.webp",
     runFrames: 8,
     runDisplay: { front: 123, back: 85 },
-    spriteAspect: {
-      front: { idle: 0.375, action: 0.626, run: 0.313 },
-      back: { idle: 0.5, action: 0.375, run: 0.25 },
-    },
-    spriteHeights: {
-      front: { idle: 180, action: 180, run: 285 },
-      back: { idle: 180, action: 180, run: 295 },
-    },
     role: "Tecnica",
     color: "#c98bff",
     unlock: { trophies: 1 },
@@ -322,15 +314,6 @@ export const ATHLETES = [
     backRunSprite: "assets/sprites/back/colosso-run-unique.webp",
     runFrames: 8,
     runDisplay: { front: 143, back: 77 },
-    runGrid: { front: { columns: 4, rows: 2 } },
-    spriteAspect: {
-      front: { idle: 0.5, action: 0.5, run: 0.749 },
-      back: { idle: 0.5, action: 0.375, run: 0.376 },
-    },
-    spriteHeights: {
-      front: { idle: 180, action: 180, run: 180 },
-      back: { idle: 180, action: 180, run: 250 },
-    },
     role: "Potenza",
     color: "#ffd54a",
     unlock: { stars: 6 },
@@ -345,6 +328,26 @@ export const ATHLETES = [
     pattern: "repeating-linear-gradient(135deg,#3a2a06 0,#3a2a06 10px,#241a04 10px,#241a04 20px)",
   },
 ];
+
+/**
+ * Media delle statistiche sul roster.
+ *
+ * Serve a far contare l'atleta scelto anche sulle racchette guidate dal
+ * computer senza spostare la difficolta' del livello. Le statistiche degli
+ * avversari entrano come rapporto rispetto a questa media, quindi l'atleta
+ * medio vale esattamente 1,00: chi sceglie Il Colosso trova un avversario che
+ * picchia di piu' ed e' piu' lento, ma "Difficile" resta difficile come prima.
+ * Senza questa normalizzazione la scelta dell'avversario diventerebbe un
+ * secondo selettore di difficolta' nascosto dentro quello vero.
+ */
+export const ROSTER_AVERAGE = (() => {
+  const keys = ["speed", "power", "control", "reach", "stamina"];
+  const media = {};
+  for (const key of keys) {
+    media[key] = ATHLETES.reduce((somma, a) => somma + a.stats[key], 0) / ATHLETES.length;
+  }
+  return media;
+})();
 
 /**
  * Completi estetici: non toccano mai statistiche, hitbox o abilita'.
@@ -527,4 +530,62 @@ export function matchObjective(season, matchIndex) {
     { id: "noDoubleFault", target: 0 },
   ];
   return pool[(season * 7 + matchIndex * 3) % pool.length];
+}
+
+/**
+ * Ultima stagione del circuito: vincerla e' il finale della carriera. Oltre si
+ * gioca ancora, ma come circuito aperto — prima la carriera non finiva mai e
+ * dalla stagione 5 era la Leggenda ogni volta, sempre piu' veloce.
+ */
+export const CAREER_FINAL_SEASON = 6;
+
+/**
+ * I quattro rivali del circuito, uno per gradino. Restano gli stessi profili di
+ * `AI_OPPONENTS`: qui si aggiunge solo l'identita' che ritorna, perche' lo streak
+ * raccontava un rivale che nel codice non esisteva come entita'.
+ */
+export function careerRival(season) {
+  const index = Math.min(Math.max(season - 1, 0), AI_OPPONENTS.length - 1);
+  return AI_OPPONENTS[index];
+}
+
+/**
+ * Rampa di difficolta' della carriera. La crescita e' la stessa di prima, ma con
+ * un tetto anche sulla velocita': skill e potenza saturavano alla stagione 4-5
+ * mentre la velocita' continuava a salire senza limite (704 alla stagione 40),
+ * ed e' l'unica variabile che gli audit mostrano capace di ribaltare l'esito di
+ * uno scambio da sola.
+ */
+export const CAREER_RAMP = {
+  skillCap: 0.96,
+  powerCap: 1.2,
+  // Il gradino piu' alto e' la Leggenda a 452: oltre +48 la difesa dello smash
+  // diventa una lotteria di pixel, non una lettura.
+  speedCap: 500,
+  seasonGain: 0.05,
+  matchGain: 0.04,
+};
+
+export function careerAiProfile(season, matchIndex) {
+  const base = careerRival(season);
+  const growth = Math.max(0, season - AI_OPPONENTS.length) * CAREER_RAMP.seasonGain
+    + matchIndex * CAREER_RAMP.matchGain;
+  return {
+    ...base,
+    skill: Math.min(CAREER_RAMP.skillCap, base.skill + growth),
+    speed: Math.min(CAREER_RAMP.speedCap, base.speed + growth * 140),
+    power: Math.min(CAREER_RAMP.powerCap, base.power + growth),
+  };
+}
+
+/**
+ * Calendario di stagione: ogni match ha la sua arena, invece di lasciare la
+ * scelta libera e identica per tutte e tre le partite. Le arene bloccate non
+ * entrano in calendario, cosi' il calendario non puo' mandarti dove non puoi
+ * ancora giocare.
+ */
+export function careerFixture(season, matchIndex, availableArenas = ARENAS) {
+  const pool = availableArenas.length ? availableArenas : ARENAS;
+  const arena = pool[(season * 3 + matchIndex) % pool.length];
+  return { arena, rival: careerRival(season), matchIndex, season };
 }

@@ -2653,3 +2653,58 @@ body.mode-colorblind .hero-preview {
   color: var(--muted);
   font-size: 0.88rem;
 }
+
+/* Pannello squadra: le quattro caselle riusano la card dell'atleta, quindi
+   serve solo l'etichetta di posizione e la distinzione fra i due lati della
+   rete. La casella del giocatore non e' cliccabile e lo dice smorzandosi. */
+.team-slot {
+  position: relative;
+}
+
+.team-slot__tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  background: rgba(4, 10, 35, 0.82);
+  border: 1px solid rgba(120, 200, 255, 0.45);
+  color: #9ef8ff;
+}
+
+.team-slot--rival .team-slot__tag {
+  border-color: rgba(255, 150, 110, 0.5);
+  color: #ffc09a;
+}
+
+.team-slot--fixed {
+  cursor: default;
+}
+
+.team-slot--fixed .team-slot__tag {
+  background: rgba(20, 60, 40, 0.86);
+  border-color: rgba(120, 255, 190, 0.5);
+  color: #9dffcf;
+}
+
+.stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.stat-bar {
+  letter-spacing: 0.08em;
+  color: #7ee0ff;
+}
+
+.team-slot--rival .stat-bar {
+  color: #ffb08c;
+}

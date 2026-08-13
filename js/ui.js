@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-unlockable-animation-v27";
-import { getMatchInfo } from "./game.js?v=20260813-unlockable-animation-v27";
-import { getVolume, isMuted } from "./audio.js?v=20260813-unlockable-animation-v27";
-import { getLang, t } from "./i18n.js?v=20260813-unlockable-animation-v27";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-unlockable-animation-v27";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-standard-sprites-v29";
+import { getMatchInfo } from "./game.js?v=20260813-standard-sprites-v29";
+import { getVolume, isMuted } from "./audio.js?v=20260813-standard-sprites-v29";
+import { getLang, t } from "./i18n.js?v=20260813-standard-sprites-v29";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-standard-sprites-v29";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -20,6 +20,15 @@ const DEFAULT_CAREER = {
   // Vittorie nella stagione in corso: decide se si avanza, se si vince il
   // trofeo o se la stagione va rigiocata.
   seasonWins: 0,
+  // Totale delle metriche sui match della stagione: gli obiettivi di stagione si
+  // misurano qui, non sull'ultima partita.
+  seasonProgress: emptySeasonProgress(),
+  // Obiettivi di stagione gia' premiati, per stagione: "3" -> ["winners", ...].
+  // Ripetere una stagione non deve poter ridare la stessa stella.
+  claimedObjectives: {},
+  // Stagione piu' alta raggiunta: il finale si vede una volta sola.
+  bestSeason: 1,
+  finaleSeen: false,
   unlockAll: false,
   equippedOutfits: {},
 };
@@ -46,37 +55,68 @@ export function saveCareer(career) {
 export function ensureSeasonObjectives() {
   const career = ui.career;
   if (!career.seasonObjectives?.length) {
-    career.seasonObjectives = seasonObjectives(career.season).map((o) => ({ ...o, done: false }));
+    // `claimed` distingue "da centrare" da "gia' pagato in un tentativo
+    // precedente di questa stagione": il secondo si centra ancora, ma non da'
+    // un'altra stella.
+    const claimed = new Set(career.claimedObjectives?.[career.season] ?? []);
+    career.seasonObjectives = seasonObjectives(career.season)
+      .map((o) => ({ ...o, done: false, claimed: claimed.has(o.id) }));
     career.seasonStars = 0;
   }
   return career.seasonObjectives;
 }
 
-/** Legge la metrica del giocatore dai stats di fine match. */
-function objectiveValue(defId, stats) {
-  const metric = OBJECTIVE_DEFS[defId]?.metric;
-  switch (metric) {
-    case "smashWinners": return stats.smashWinners.player;
-    case "doubleFaults": return stats.doubleFaults.player;
-    case "pointsWon": return stats.pointsWon.player;
-    case "longestRally": return stats.longestRally;
-    case "winners": return stats.winners.player;
-    case "errors": return stats.errors.player;
-    default: return 0;
-  }
-}
-
-function objectiveMet(defId, target, stats) {
-  const value = objectiveValue(defId, stats);
-  const isMax = OBJECTIVE_DEFS[defId]?.unit === "max";
-  return isMax ? value <= target : value >= target;
-}
-
-/** Valuta un singolo obiettivo e ritorna { done, progress, target }. */
-export function objectiveStatus(objective, stats) {
+/**
+ * Riduce i stats di un match alla mappa piatta `metrica -> valore` con cui si
+ * misurano gli obiettivi. Match e stagione usano cosi' la stessa forma: prima la
+ * valutazione leggeva direttamente `stats.x.player` e il totale di stagione non
+ * aveva modo di passare da li'.
+ */
+export function matchProgress(stats) {
   return {
-    done: objectiveMet(objective.id, objective.target, stats),
-    progress: objectiveValue(objective.id, stats),
+    pointsWon: stats.pointsWon.player,
+    winners: stats.winners.player,
+    smashWinners: stats.smashWinners.player,
+    errors: stats.errors.player,
+    doubleFaults: stats.doubleFaults.player,
+    longestRally: stats.longestRally,
+  };
+}
+
+/**
+ * Somma un match nel totale della stagione. Gli obiettivi di stagione si
+ * valutano su questo, non sull'ultima partita giocata.
+ */
+export function accumulateSeasonProgress(stats) {
+  const career = ui.career;
+  const totals = { ...emptySeasonProgress(), ...(career.seasonProgress ?? {}) };
+  const match = matchProgress(stats);
+  Object.entries(SEASON_METRIC_AGG).forEach(([metric, agg]) => {
+    totals[metric] = agg === "max"
+      ? Math.max(totals[metric] ?? 0, match[metric])
+      : (totals[metric] ?? 0) + match[metric];
+  });
+  career.seasonProgress = totals;
+  return totals;
+}
+
+/** Il totale di stagione, anche prima che sia stato giocato un match. */
+export function seasonProgress() {
+  return { ...emptySeasonProgress(), ...(ui.career.seasonProgress ?? {}) };
+}
+
+function objectiveMet(defId, target, progress) {
+  const metric = OBJECTIVE_DEFS[defId]?.metric;
+  const value = progress?.[metric] ?? 0;
+  return OBJECTIVE_DEFS[defId]?.unit === "max" ? value <= target : value >= target;
+}
+
+/** Valuta un obiettivo su una mappa di progresso e ritorna { done, progress, target }. */
+export function objectiveStatus(objective, progress) {
+  const metric = OBJECTIVE_DEFS[objective.id]?.metric;
+  return {
+    done: objectiveMet(objective.id, objective.target, progress),
+    progress: progress?.[metric] ?? 0,
     target: objective.target,
   };
 }
@@ -91,21 +131,30 @@ export function awardObjectives(state) {
   const result = { seasonDone: [], matchDone: false, stars: 0 };
   if (!stats) return result;
 
-  // Obiettivo per-match
+  // L'obiettivo bonus vive dentro il singolo match: si valuta su quello.
   const mo = matchObjective(career.season, career.matchIndex);
-  if (objectiveMet(mo.id, mo.target, stats)) {
+  if (objectiveMet(mo.id, mo.target, matchProgress(stats))) {
     result.matchDone = true;
     result.stars += 1;
   }
 
-  // Obiettivi di stagione (premio una sola volta ciascuno)
+  // Gli obiettivi di stagione si valutano sul totale accumulato, e una stella
+  // per obiettivo si prende una volta per stagione: `claimedObjectives` lo
+  // ricorda anche quando la stagione viene rigiocata. Prima le stelle si
+  // riazzeravano a ogni ripetizione, quindi perdendo di proposito si restava in
+  // stagione 1 e si rifarmavano le stesse tre stelle all'infinito — 60 stelle in
+  // dieci cicli, abbastanza per tutto cio' che le stelle sbloccano.
+  const totals = accumulateSeasonProgress(stats);
+  const claimed = new Set(career.claimedObjectives?.[career.season] ?? []);
   ensureSeasonObjectives().forEach((o) => {
-    if (!o.done && objectiveMet(o.id, o.target, stats)) {
-      o.done = true;
-      result.seasonDone.push(o.id);
-      result.stars += 1;
-    }
+    if (!objectiveMet(o.id, o.target, totals)) return;
+    o.done = true;
+    if (claimed.has(o.id)) return;
+    claimed.add(o.id);
+    result.seasonDone.push(o.id);
+    result.stars += 1;
   });
+  career.claimedObjectives = { ...(career.claimedObjectives ?? {}), [career.season]: [...claimed] };
 
   career.stars += result.stars;
   career.seasonStars += result.stars;
@@ -113,10 +162,15 @@ export function awardObjectives(state) {
   return result;
 }
 
-/** Reset obiettivi quando inizia una nuova stagione. */
+/**
+ * Azzera lo stato di stagione: obiettivi e totali ripartono da zero. Le stelle
+ * gia' riscosse no — quelle vivono in `career.claimedObjectives`, che sopravvive
+ * alla ripetizione della stagione.
+ */
 export function resetSeasonObjectives() {
   ui.career.seasonObjectives = [];
   ui.career.seasonStars = 0;
+  ui.career.seasonProgress = emptySeasonProgress();
   ensureSeasonObjectives();
   saveCareer(ui.career);
 }
@@ -156,6 +210,7 @@ export function collectPrefs() {
     colorblind: ui.colorblind,
     lang: ui.lang,
     playerMode: ui.playerMode,
+    lineup: ui.lineup,
   };
 }
 
@@ -190,8 +245,73 @@ export const ui = {
   colorblind: false,
   lang: "en",
   playerMode: "solo",
+  // Chi occupa le altre tre posizioni: identificativi, non oggetti, perche'
+  // vengono salvati fra una sessione e l'altra. `null` significa "scegli tu",
+  // ed e' il valore con cui il gioco parte.
+  lineup: { playerMate: null, opponent: null, opponentMate: null },
   career: loadCareer(),
 };
+
+/** Gli atleti effettivamente schierabili: niente bloccati, niente fuori demo. */
+export function selectableAthletes() {
+  return demoFilter(ATHLETES, DEMO_CONTENT.athletes).filter((a) => isUnlocked(a, ui.career));
+}
+
+/** Le arene giocabili, con lo stesso criterio degli atleti. */
+export function selectableArenas() {
+  return demoFilter(ARENAS, DEMO_CONTENT.arenas).filter((a) => isUnlocked(a, ui.career));
+}
+
+/**
+ * Il turno di calendario in corso: quale arena e quale rivale. In carriera l'arena
+ * la decide il circuito, non il menu — tre match nello stesso campo scelto da te
+ * erano tre match indistinguibili, e non davano nessun motivo per giocare l'arena
+ * difficile.
+ */
+export function currentFixture() {
+  return careerFixture(ui.career.season, ui.career.matchIndex, selectableArenas());
+}
+
+/**
+ * Da tre identificativi alle tre formazioni complete.
+ *
+ * Le posizioni non scelte vengono riempite con i primi atleti disponibili, che
+ * e' esattamente cio' che il gioco faceva prima in automatico. Serve anche a
+ * reggere i casi limite senza schermate d'errore: nella demo ci sono due soli
+ * atleti, e un identificativo salvato puo' riferirsi a un atleta non ancora
+ * sbloccato in questa carriera.
+ */
+export function resolveLineup(athlete) {
+  const disponibili = selectableAthletes();
+  const scelto = (id) => (id ? disponibili.find((a) => a.id === id) : null) ?? null;
+  // Si sceglie solo fra gli atleti disponibili, ma il ripiego pesca dal roster
+  // intero: nella demo si gioca con due atleti e si affrontano gli altri, che e'
+  // esattamente cio' che accadeva prima. Restringere anche il ripiego avrebbe
+  // messo lo stesso avversario in tutte e tre le posizioni.
+  // Un identificativo vale solo se l'atleta e' disponibile, non e' quello con
+  // cui si gioca e non e' gia' schierato altrove: cambiando atleta principale
+  // ci si ritroverebbe altrimenti due volte lo stesso in campo.
+  const lineup = { playerMate: null, opponent: null, opponentMate: null };
+  const usati = new Set([athlete.id]);
+  for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
+    const candidato = scelto(ui.lineup[ruolo]);
+    if (candidato && !usati.has(candidato.id)) {
+      lineup[ruolo] = candidato;
+      usati.add(candidato.id);
+    }
+  }
+  // Il ripiego non ripesca chi e' gia' in campo, cosi' una partita fra quattro
+  // atleti diversi resta il caso normale anche senza scegliere niente.
+  const riserve = ATHLETES.filter((a) => a.id !== athlete.id);
+  const libero = () => {
+    const occupati = new Set([athlete.id, ...Object.values(lineup).filter(Boolean).map((a) => a.id)]);
+    return riserve.find((a) => !occupati.has(a.id)) ?? riserve[0] ?? athlete;
+  };
+  for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
+    if (!lineup[ruolo]) lineup[ruolo] = libero();
+  }
+  return lineup;
+}
 
 export function showScreen(name) {
   Object.entries(screens).forEach(([key, el]) => {
@@ -313,6 +433,28 @@ function careerOutcomeText(state, won) {
  * in una sezione sotto la griglia e bisognava scorrere per vederlo; e ogni card
  * resta un bottone a se', quindi non ci sono bottoni annidati.
  */
+/**
+ * Le tre statistiche che si sentono in campo, come barrette compatte. Nel
+ * pannello squadra la descrizione narrativa non serve: quello che si sta
+ * decidendo e' come giochera' quella posizione.
+ */
+function statLine(athlete) {
+  const barra = (valore) => {
+    const pieni = Math.round(clampUnit((valore - 0.85) / 0.55) * 5);
+    return `<span class="stat-bar">${"▮".repeat(pieni)}${"▯".repeat(5 - pieni)}</span>`;
+  };
+  const { power, control, speed } = athlete.stats;
+  return `<span class="stat-line">
+    ${t("statPower")} ${barra(power)}
+    ${t("statControl")} ${barra(control)}
+    ${t("statSpeed")} ${barra(speed)}
+  </span>`;
+}
+
+function clampUnit(value) {
+  return Math.min(1, Math.max(0, value));
+}
+
 function athleteCardMarkup(art, color, title, subtitle, description, footer, locked) {
   return `
     <div class="athlete-card__art" style="background-image:linear-gradient(180deg, transparent 48%, rgba(4, 10, 35, 0.5) 100%),url('${art}');border-bottom-color:${color}" aria-hidden="true">${locked ? `<span class="lock-badge">🔒</span>` : ""}</div>
@@ -332,7 +474,7 @@ export function renderAthletes(onSelect, selectedId = null) {
   const showOutfits = (athlete) => {
     const outfits = outfitsForAthlete(athlete.id);
     if (!outfits.length) {
-      onSelect?.(athleteWithOutfit(athlete));
+      showTeam(athlete);
       return;
     }
     ui.selectedAthlete = athlete;
@@ -367,11 +509,111 @@ export function renderAthletes(onSelect, selectedId = null) {
         card.addEventListener("click", () => {
           ui.career.equippedOutfits = { ...(ui.career.equippedOutfits ?? {}), [athlete.id]: outfit.id };
           saveCareer(ui.career);
-          onSelect?.(athleteWithOutfit(athlete));
+          showTeam(athlete);
         });
       } else {
         card.setAttribute("aria-disabled", "true");
       }
+      grid.appendChild(card);
+    });
+  };
+
+  /**
+   * Il pannello squadra: quattro caselle nella stessa griglia a quattro colonne
+   * delle card, cosi' non serve un layout nuovo e ogni posizione ha la faccia
+   * di chi la occupa. Le caselle sono gia' riempite, quindi chi non vuole
+   * scegliere preme Conferma e va: la scelta e' un'opzione, non un pedaggio.
+   */
+  const showTeam = (athlete) => {
+    ui.selectedAthlete = athlete;
+    const lineup = resolveLineup(athlete);
+    // Si salva la formazione risolta, non quella richiesta: quello che si vede
+    // nel pannello e' esattamente quello che scendera' in campo.
+    ui.lineup = {
+      playerMate: lineup.playerMate.id,
+      opponent: lineup.opponent.id,
+      opponentMate: lineup.opponentMate.id,
+    };
+    grid.innerHTML = "";
+    if (header) {
+      header.innerHTML = `<button class="btn btn--ghost" type="button" data-team-back>${t("teamBack")}</button>
+        <span class="athlete-grid__hint">${t("teamSub")}</span>
+        <button class="btn btn--primary" type="button" data-team-confirm>${t("teamConfirm")}</button>`;
+      header.hidden = false;
+      header.querySelector("[data-team-back]")?.addEventListener("click", () => showOutfits(athlete));
+      header.querySelector("[data-team-confirm]")?.addEventListener("click", () => {
+        onSelect?.(athleteWithOutfit(athlete));
+      });
+    }
+
+    const caselle = [
+      { ruolo: null, atleta: athlete, etichetta: t("slotYou") },
+      { ruolo: "playerMate", atleta: lineup.playerMate, etichetta: t("slotPartner") },
+      { ruolo: "opponent", atleta: lineup.opponent, etichetta: t("slotOpponent") },
+      { ruolo: "opponentMate", atleta: lineup.opponentMate, etichetta: t("slotOpponentNet") },
+    ];
+
+    caselle.forEach(({ ruolo, atleta, etichetta }) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "athlete-card team-slot";
+      if (!ruolo) card.classList.add("team-slot--fixed");
+      if (ruolo === "opponent" || ruolo === "opponentMate") card.classList.add("team-slot--rival");
+      const completo = selectedOutfit(atleta);
+      card.innerHTML = `<span class="team-slot__tag">${etichetta}</span>` + athleteCardMarkup(
+        completo?.preview ?? atleta.image,
+        atleta.color,
+        t(`athlete_${atleta.id}_name`),
+        t(`athlete_${atleta.id}_role`),
+        statLine(atleta),
+        ruolo ? t("slotChange") : t("slotFixed"),
+        false,
+      );
+      if (ruolo) {
+        card.addEventListener("click", () => showPicker(athlete, ruolo));
+      } else {
+        card.setAttribute("aria-disabled", "true");
+      }
+      grid.appendChild(card);
+    });
+  };
+
+  /**
+   * La griglia con cui si riempie una casella. Sceglierne uno gia' schierato
+   * altrove non e' un errore: le due posizioni si scambiano, che e' quello che
+   * uno intende quando sposta un atleta da una parte all'altra della rete.
+   */
+  const showPicker = (athlete, ruolo) => {
+    grid.innerHTML = "";
+    if (header) {
+      header.innerHTML = `<button class="btn btn--ghost" type="button" data-team-pick-back>${t("teamPickBack")}</button>
+        <span class="athlete-grid__hint">${t("teamChoose")}</span>`;
+      header.hidden = false;
+      header.querySelector("[data-team-pick-back]")?.addEventListener("click", () => showTeam(athlete));
+    }
+    selectableAthletes().forEach((candidato) => {
+      if (candidato.id === athlete.id) return;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "athlete-card";
+      if (ui.lineup[ruolo] === candidato.id) card.classList.add("athlete-card--selected");
+      const completo = selectedOutfit(candidato);
+      card.innerHTML = athleteCardMarkup(
+        completo?.preview ?? candidato.image,
+        candidato.color,
+        t(`athlete_${candidato.id}_name`),
+        t(`athlete_${candidato.id}_role`),
+        statLine(candidato),
+        `⚡ ${t(`athlete_${candidato.id}_special`)}`,
+        false,
+      );
+      card.addEventListener("click", () => {
+        const precedente = ui.lineup[ruolo];
+        const altrove = Object.keys(ui.lineup).find((k) => k !== ruolo && ui.lineup[k] === candidato.id);
+        if (altrove) ui.lineup[altrove] = precedente;
+        ui.lineup[ruolo] = candidato.id;
+        showTeam(athlete);
+      });
       grid.appendChild(card);
     });
   };
@@ -681,15 +923,7 @@ export function getAiForMatch(mode, round, difficulty = "easy") {
     return AI_OPPONENTS[index];
   }
   if (mode === "career") {
-    const career = ui.career;
-    const base = AI_OPPONENTS[Math.min(career.season - 1, AI_OPPONENTS.length - 1)];
-    const growth = Math.max(0, career.season - AI_OPPONENTS.length) * 0.05 + career.matchIndex * 0.04;
-    return {
-      ...base,
-      skill: Math.min(0.96, base.skill + growth),
-      speed: base.speed + growth * 140,
-      power: Math.min(1.2, base.power + growth),
-    };
+    return careerAiProfile(ui.career.season, ui.career.matchIndex);
   }
   return AI_OPPONENTS[Math.min(round, AI_OPPONENTS.length - 1)];
 }

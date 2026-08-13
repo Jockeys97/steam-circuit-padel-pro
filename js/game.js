@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-unlockable-animation-v27";
-import { clamp } from "./render.js?v=20260813-unlockable-animation-v27";
-import { sfx } from "./audio.js?v=20260813-unlockable-animation-v27";
-import { t } from "./i18n.js?v=20260813-unlockable-animation-v27";
+import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260813-standard-sprites-v29";
+import { clamp } from "./render.js?v=20260813-standard-sprites-v29";
+import { sfx } from "./audio.js?v=20260813-standard-sprites-v29";
+import { t } from "./i18n.js?v=20260813-standard-sprites-v29";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-unlockable-animation-v27";
+} from "./fx.js?v=20260813-standard-sprites-v29";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -37,10 +37,15 @@ export function createPaddle(x, y, isPlayer, profile) {
   return {
     x,
     y,
-    w: BALANCE.basePaddleWidth * (isPlayer ? 0.86 + stats.control * 0.14 : 0.94),
+    // Le racchette avversarie prendono larghezza e allungo dall'atleta scelto,
+    // gia' normalizzati sulla media del roster. Sulla larghezza il rapporto
+    // entra a meta' peso: la larghezza e' la probabilita' stessa di arrivare
+    // sulla palla, e a peso pieno un avversario di controllo sarebbe diventato
+    // un secondo livello di difficolta'.
+    w: BALANCE.basePaddleWidth * (isPlayer ? 0.86 + stats.control * 0.14 : 0.94 * (profile.widthRatio ?? 1)),
     h: 16,
     speed: profile.speed ?? BALANCE.basePaddleSpeed * stats.speed,
-    reach: 46 * (isPlayer ? stats.reach ?? 1 : 1),
+    reach: 46 * (isPlayer ? stats.reach ?? 1 : profile.reachRatio ?? 1),
     swing: 0,
     swingSide: 1,
     actionPose: 0,
@@ -134,9 +139,54 @@ function syncPointDisplay(state) {
   state.aiScore = state.tieBreak ? String(state.tieBreakPoints.ai) : pointLabel(state.points.ai, state.points.player);
 }
 
+/**
+ * Chi gioca in ciascuna delle quattro posizioni.
+ *
+ * Prima il compagno riceveva `athlete.stats`, cioe' era un clone statistico del
+ * giocatore con un'altra faccia, e i due avversari non avevano statistiche
+ * affatto: contavano solo `skill` e `speed` del livello di difficolta'. La
+ * scelta della squadra esisteva solo come grafica.
+ *
+ * `player` non e' negoziabile: e' l'atleta con cui si gioca. Gli altri tre
+ * possono mancare, e in quel caso si ricade sul comportamento di prima — e'
+ * cosi' che gli audit continuano a misurare la difficolta' e non la formazione.
+ */
+function buildLineup(athlete, lineup = {}) {
+  return {
+    player: athlete,
+    playerMate: lineup.playerMate ?? null,
+    opponent: lineup.opponent ?? null,
+    opponentMate: lineup.opponentMate ?? null,
+  };
+}
+
+/** L'atleta di quella racchetta, o quello del giocatore se non e' stato scelto. */
+export function athleteFor(state, paddle) {
+  return state.lineup?.[paddle?.key] ?? state.athlete;
+}
+
+/**
+ * Statistica di un atleta come rapporto sulla media del roster. Un atleta medio
+ * restituisce 1,00, quindi moltiplicare per questo valore da' carattere alla
+ * racchetta senza spostare il livello di difficolta' scelto.
+ */
+function statRatio(chosen, key, spread = 1) {
+  if (!chosen) return 1;
+  const ratio = chosen.stats[key] / ROSTER_AVERAGE[key];
+  return 1 + (ratio - 1) * spread;
+}
+
+/** Come sopra, ma per la racchetta: sceglie l'atleta e applica il rapporto. */
+function paddleRatio(state, paddle, key, spread = 1) {
+  return statRatio(state.lineup?.[paddle?.key], key, spread);
+}
+
 export function createMatchState(mode, athlete, arena, aiProfile, tournamentRound = 0, options = {}) {
   const humanMode = options.humanMode ?? "solo";
+  const lineup = buildLineup(athlete, options.lineup);
+  const mateStats = (lineup.playerMate ?? athlete).stats;
   const state = {
+    lineup,
     mode,
     athlete,
     arena,
@@ -189,16 +239,20 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     events: [],
     result: null,
     player: createPaddle((COURT.left + COURT.right) / 2, COURT.bottom - 52, true, { stats: athlete.stats, controlled: true, key: "player" }),
-    playerMate: createPaddle((COURT.left + COURT.right) / 2, COURT.netY + 88, true, { stats: athlete.stats, role: "net", key: "playerMate" }),
+    playerMate: createPaddle((COURT.left + COURT.right) / 2, COURT.netY + 88, true, { stats: mateStats, role: "net", key: "playerMate" }),
     opponent: createPaddle((COURT.left + COURT.right) / 2, COURT.top + 76, false, {
-      speed: aiProfile.speed * (0.86 + aiProfile.skill * 0.1),
+      speed: aiProfile.speed * (0.86 + aiProfile.skill * 0.1) * statRatio(lineup.opponent, "speed"),
       skill: aiProfile.skill,
+      reachRatio: statRatio(lineup.opponent, "reach"),
+      widthRatio: statRatio(lineup.opponent, "control", 0.5),
       role: "back",
       key: "opponent",
     }),
     opponentMate: createPaddle((COURT.left + COURT.right) / 2, COURT.netY - 84, false, {
-      speed: aiProfile.speed * (0.9 + aiProfile.skill * 0.1),
+      speed: aiProfile.speed * (0.9 + aiProfile.skill * 0.1) * statRatio(lineup.opponentMate, "speed"),
       skill: aiProfile.skill,
+      reachRatio: statRatio(lineup.opponentMate, "reach"),
+      widthRatio: statRatio(lineup.opponentMate, "control", 0.5),
       role: "net",
       key: "opponentMate",
     }),
@@ -649,8 +703,8 @@ export function performServe(state, requestedCharge = null, slice = false) {
   // Cresce con la carica e cala con il controllo dell'atleta; la seconda palla
   // e' piu' prudente, come farebbe chiunque dopo un errore.
   const serverControl = isPlayer
-    ? state.athlete.stats.control
-    : 0.92 + state.ai.skill * 0.1;
+    ? athleteFor(state, server).stats.control
+    : (0.92 + state.ai.skill * 0.1) * paddleRatio(state, server, "control", 0.6);
   const secondServe = state.serveAttempts > 0;
   const spread = BALANCE.serveSpread
     * (BALANCE.serveSpreadBase + charge * charge * (1 - BALANCE.serveSpreadBase))
@@ -728,9 +782,9 @@ function crossedPaddle(paddle, ball, previousBall) {
 }
 
 function hitPowerProfile(paddle, state, power) {
-  if (paddle.isPlayer) return power * state.athlete.stats.power;
+  if (paddle.isPlayer) return power * athleteFor(state, paddle).stats.power;
   if (state.pvp && paddle.controlled) return power * (state.pvpAthlete?.stats.power ?? state.ai.power);
-  return power * state.ai.power;
+  return power * state.ai.power * paddleRatio(state, paddle, "power");
 }
 
 function shotSide(paddle) {
@@ -827,7 +881,7 @@ function updateShotRead(state, paddle) {
   // l'indicatore non promette qualcosa di diverso da quello che accade.
   const aimFreedom = profile === "control" ? 0.78 : profile === "attack" ? 0.96 : 1.1;
   const previewOffset = clamp(
-    (state.shotAim ?? 0) * (state.athlete?.stats.control ?? 1) * aimFreedom,
+    (state.shotAim ?? 0) * (athleteFor(state, paddle)?.stats.control ?? 1) * aimFreedom,
     -1,
     1,
   );
@@ -886,10 +940,10 @@ function evaluateShotQuality(
     : clamp(1 - Math.max(0, ball.z - 82) / 100, 0.55, 1);
   const energy = clamp(state.rallyEnergy?.[side] ?? 1, BALANCE.rallyEnergyFloor, 1);
   const control = paddle.isPlayer
-    ? clamp(state.athlete.stats.control / 1.22, 0.72, 1.05)
+    ? clamp(athleteFor(state, paddle).stats.control / 1.22, 0.72, 1.05)
     : state.pvp && paddle.controlled
       ? clamp((state.pvpAthlete?.stats.control ?? 1) / 1.22, 0.72, 1.05)
-      : clamp(0.72 + state.ai.skill * 0.34, 0.72, 1.02);
+      : clamp((0.72 + state.ai.skill * 0.34) * paddleRatio(state, paddle, "control", 0.6), 0.72, 1.02);
   const quality = clamp(
     timing * 0.34
       + position * 0.25
@@ -932,10 +986,24 @@ function evaluateShotQuality(
  * tasso d'errore. Il ruolo "Resistenza" non esisteva meccanicamente.
  */
 function rallyStamina(state, side) {
+  // `rallyEnergy` e' una risorsa di squadra, non di racchetta: si consuma e si
+  // recupera per meta' campo. Con due atleti diversi in coppia la resistenza
+  // che conta e' quindi la media dei due, non quella di chi tira in quel
+  // momento — altrimenti la stessa squadra avrebbe due energie diverse a
+  // seconda di chi ha toccato per ultimo.
+  const media = (uno, due) => {
+    const a = uno?.stats.stamina;
+    const b = due?.stats.stamina;
+    if (a === undefined && b === undefined) return 1;
+    if (a === undefined) return b;
+    if (b === undefined) return a;
+    return (a + b) / 2;
+  };
   if (side !== "player") {
-    return state.pvp ? clamp(state.pvpAthlete?.stats.stamina ?? 1, 0.7, 1.5) : 1;
+    if (state.pvp) return clamp(state.pvpAthlete?.stats.stamina ?? 1, 0.7, 1.5);
+    return clamp(media(state.lineup?.opponent, state.lineup?.opponentMate), 0.7, 1.5);
   }
-  return clamp(state.athlete?.stats.stamina ?? 1, 0.7, 1.5);
+  return clamp(media(state.athlete, state.lineup?.playerMate), 0.7, 1.5);
 }
 
 function consumeRallyEnergy(state, paddle, assessment, variant, slice) {
@@ -979,10 +1047,11 @@ function showShotFeedback(state, paddle, assessment) {
 
 function computerProfile(state, paddle) {
   if (!paddle.isPlayer) return state.ai;
-  const control = state.athlete.stats.control;
+  const compagno = athleteFor(state, paddle);
+  const control = compagno.stats.control;
   return {
     skill: clamp(0.6 + (control - 0.9) * 0.34, 0.58, 0.78),
-    power: state.athlete.stats.power,
+    power: compagno.stats.power,
     speed: paddle.speed,
   };
 }
@@ -1285,12 +1354,23 @@ function applyComputerShot(state, paddle, contactHeight = 0) {
   }
 
   const powerScale = clamp(profile.power, 0.84, 1.08);
+  // La potenza dell'IA non e' un moltiplicatore sulla palla: e' il tempo di volo
+  // della traiettoria. Nella formula qui sotto `powerScale` — che porta la
+  // difficolta' — pesa l'8% sui colpi da fondo, quindi un avversario "potente"
+  // cambiava la propria racchetta senza cambiare il peso dei propri colpi:
+  // misurati 336,1 contro 331,2, l'1,5%, sotto la soglia del percettibile.
+  //
+  // La potenza dell'atleta scelto entra percio' a parte e a peso pieno, che e'
+  // esattamente il trattamento che il giocatore riceve da `hitPowerProfile`.
+  // Tenerle separate e' il punto: la taratura della difficolta' non si muove
+  // (senza formazione il rapporto vale 1), e la scelta dell'avversario si sente.
+  const atletaPower = clamp(paddleRatio(state, paddle, "power"), 0.85, 1.2);
   const executionSpread = assessment.risk * (1 - profile.skill * 0.45);
   target.x += (nextRandom(state) - 0.5) * executionSpread * 150;
   target.y += (nextRandom(state) - 0.45) * executionSpread * 105;
   if (target.kind === "smash-x2" || target.kind === "smash-x3") {
     const targetY = opponentSide === "ai" ? COURT.top + 44 : COURT.bottom - 44;
-    setComputerTrajectory(ball, target.x, targetY, target.flightTime / powerScale);
+    setComputerTrajectory(ball, target.x, targetY, target.flightTime / (powerScale * atletaPower));
     ball.shotType = target.kind;
     ball.smashTargetSide = opponentSide;
     ball.topspin = target.kind === "smash-x3" ? 1.12 : 0.98;
@@ -1298,7 +1378,7 @@ function applyComputerShot(state, paddle, contactHeight = 0) {
       ? Math.sign(target.x - centerX || 1) * 76
       : clamp(ball.vx * 0.04, -24, 24);
   } else {
-    setComputerTrajectory(ball, target.x, target.y, target.flightTime / (0.92 + powerScale * 0.08));
+    setComputerTrajectory(ball, target.x, target.y, target.flightTime / ((0.92 + powerScale * 0.08) * atletaPower));
     ball.shotType = target.kind;
     ball.spin = clamp(ball.vx * (target.kind === "vibora" ? 0.2 : 0.08), -72, 72);
     if (target.kind === "vibora") ball.backspin = 0.76;
@@ -1340,10 +1420,10 @@ export function hitBall(
   });
   const powerMul = hitPowerProfile(paddle, state, power);
   const control = paddle.isPlayer
-    ? athlete.stats.control
+    ? athleteFor(state, paddle).stats.control
     : state.pvp && paddle.controlled
       ? (state.pvpAthlete?.stats.control ?? 0.92 + state.ai.skill * 0.1)
-      : 0.92 + state.ai.skill * 0.1;
+      : (0.92 + state.ai.skill * 0.1) * paddleRatio(state, paddle, "control", 0.6);
   const direction = paddle.isPlayer ? -1 : 1;
   ball.y = paddle.y + direction * (ball.r + 6);
   ball.z = Math.max(22, Math.min(ball.z, 74));
@@ -1863,7 +1943,18 @@ function finishGame(state, winner) {
   state.serveCourt = "right";
 }
 
-function recordPointStats(state, winner, reason) {
+/**
+ * Categoria del punto. La decide chi lo assegna, non un'analisi del messaggio:
+ * prima `recordPointStats` deduceva "colpo vincente" ed "errore" con una regex
+ * sul testo *gia' tradotto*, quindi in inglese non corrispondeva quasi niente e
+ * `errors` restava a zero per l'intera partita. Un obiettivo di carriera come
+ * "meno di N errori" diventava una stella regalata, e "N colpi vincenti"
+ * irraggiungibile.
+ */
+const POINT_WINNER = "winner";
+const POINT_ERROR = "error";
+
+function recordPointStats(state, winner, kind) {
   const stats = state.stats;
   if (!stats) return;
   const loser = other(winner);
@@ -1871,9 +1962,8 @@ function recordPointStats(state, winner, reason) {
   stats.longestRally = Math.max(stats.longestRally, state.rallyHits);
   stats.totalRallyHits += state.rallyHits;
   stats.rallyCount += 1;
-  const text = reason || "";
-  const isWinnerShot = /Secondo rimbalzo|Parete avversaria|SMASH x[23]/.test(text);
-  const isError = /Rete|Palla corta|Palla fuori|Doppio fallo/.test(text);
+  const isWinnerShot = kind === POINT_WINNER;
+  const isError = kind === POINT_ERROR;
   if (isWinnerShot) stats.winners[winner] += 1;
   if (isError) stats.errors[loser] += 1;
   if (state.ball.shotType === "smash-x2" || state.ball.shotType === "smash-x3") stats.smashWinners[winner] += 1;
@@ -1883,10 +1973,10 @@ function recordPointStats(state, winner, reason) {
   }
 }
 
-function scorePoint(state, winner, reason) {
+function scorePoint(state, winner, reason, kind = null) {
   const receiver = other(state.serveSide);
   if (reason) addEvent(state, reason);
-  recordPointStats(state, winner, reason);
+  recordPointStats(state, winner, kind);
   if (state.tieBreak) {
     state.tieBreakPoints[winner] += 1;
     if (state.tieBreakPoints[winner] >= 7 && state.tieBreakPoints[winner] - state.tieBreakPoints[other(winner)] >= 2) finishSet(state, winner);
@@ -1933,7 +2023,7 @@ function serveFault(state, reason) {
     return;
   }
   state.doubleFaultFlag = true;
-  scorePoint(state, other(state.serveSide), t("doubleFault", { reason: reason.toLowerCase() }));
+  scorePoint(state, other(state.serveSide), t("doubleFault", { reason: reason.toLowerCase() }), POINT_ERROR);
   state.doubleFaultFlag = false;
 }
 
@@ -1959,11 +2049,11 @@ function handleGroundBounce(state, impactVz, remainingTime) {
   const { ball } = state;
   const side = courtSide(ball.y);
   if (ball.netFaultOwner) {
-    scorePoint(state, other(ball.netFaultOwner), t("msgNetFault"));
+    scorePoint(state, other(ball.netFaultOwner), t("msgNetFault"), POINT_ERROR);
     return true;
   }
   if (ball.y < COURT.top || ball.y > COURT.bottom) {
-    scorePoint(state, other(side), t("msgOut"));
+    scorePoint(state, other(side), t("msgOut"), POINT_ERROR);
     return true;
   }
   if (ball.serveInFlight) {
@@ -1980,12 +2070,12 @@ function handleGroundBounce(state, impactVz, remainingTime) {
     addEvent(state, t("evServeValid"));
   } else {
     if (state.lastHitterSide === side && !ball.crossedNet) {
-      scorePoint(state, other(side), t("msgNetShort"));
+      scorePoint(state, other(side), t("msgNetShort"), POINT_ERROR);
       return true;
     }
     ball.bounces[side] += 1;
     if (ball.bounces[side] > 1) {
-      scorePoint(state, other(side), t("msgDoubleBounce"));
+      scorePoint(state, other(side), t("msgDoubleBounce"), POINT_WINNER);
       return true;
     }
   }
@@ -2032,7 +2122,7 @@ function handleWalls(state) {
       return true;
     }
     if (state.lastHitterSide !== side || ball.crossedNet) {
-      scorePoint(state, side, t("msgWallNoBounce"));
+      scorePoint(state, side, t("msgWallNoBounce"), POINT_WINNER);
       return true;
     }
     addEvent(state, t("evOwnWallOut"));
@@ -2051,7 +2141,7 @@ function handleWalls(state) {
       : recovery.paddle.y > backLimit;
     const recovered = read && recovery.distance <= recovery.paddle.reach * 2.05 && inBack;
     if (!recovered) {
-      scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"));
+      scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"), POINT_WINNER);
       return true;
     }
     // The defender has read the exit and plays it off the side glass instead of granting an automatic winner.
@@ -3098,7 +3188,7 @@ export function updateMatch(state, dt, input, input2 = null) {
         && ball.y <= COURT.netY
         && ball.vy < 0));
   if (smashReturnsOverNet) {
-    scorePoint(state, state.lastHitterSide, t("msgSmashReturned"));
+    scorePoint(state, state.lastHitterSide, t("msgSmashReturned"), POINT_WINNER);
     return state.result;
   }
   if (!ball.crossedNet

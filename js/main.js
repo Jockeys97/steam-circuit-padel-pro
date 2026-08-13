@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-unlockable-animation-v27";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-standard-sprites-v29";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-unlockable-animation-v27";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-unlockable-animation-v27";
-import { setReduceMotion } from "./fx.js?v=20260813-unlockable-animation-v27";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-unlockable-animation-v27";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-unlockable-animation-v27";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-unlockable-animation-v27";
+} from "./game.js?v=20260813-standard-sprites-v29";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-standard-sprites-v29";
+import { setReduceMotion } from "./fx.js?v=20260813-standard-sprites-v29";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-standard-sprites-v29";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-standard-sprites-v29";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-standard-sprites-v29";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-unlockable-animation-v27";
+} from "./render.js?v=20260813-standard-sprites-v29";
 import {
   applyLanguage,
   awardObjectives,
@@ -34,6 +34,7 @@ import {
   recordMatch,
   renderArenas,
   renderAthletes,
+  resolveLineup,
   renderHistory,
   renderProfile,
   resetSeasonObjectives,
@@ -43,7 +44,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-unlockable-animation-v27";
+} from "./ui.js?v=20260813-standard-sprites-v29";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -844,22 +845,29 @@ function startMatch() {
   gameLoopGeneration += 1;
   resetTransientInput({ awaitRelease: true, resetButtons: true });
   const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
-  const arena = ui.selectedArena ?? ARENAS[0];
+  // In carriera l'arena arriva dal calendario di stagione, non dal menu: va
+  // risolta prima di costruire la partita, perche' il campo entra nella fisica.
+  const fixture = ui.selectedMode === "career" ? currentFixture() : null;
+  const arena = fixture?.arena ?? ui.selectedArena ?? ARENAS[0];
   const ai = getAiForMatch(ui.selectedMode, ui.tournamentRound, ui.aiDifficulty);
   const humanMode = ui.selectedMode === "quick" ? (ui.playerMode ?? "solo") : "solo";
 
+  // La formazione va decisa prima di costruire la partita, non dopo: le
+  // racchette prendono le statistiche di chi le occupa al momento in cui
+  // nascono. Assegnarla solo ai campi usati dal disegno, com'era prima,
+  // lasciava un compagno con la faccia di un atleta e i numeri di un altro.
+  const lineup = resolveLineup(athlete);
   matchState = createMatchState(
     ui.selectedMode,
     athlete,
     arena,
     ai,
     ui.tournamentRound,
-    { humanMode },
+    { humanMode, lineup },
   );
-  const supportingAthletes = ATHLETES.filter((candidate) => candidate.id !== athlete.id);
-  matchState.playerMateAthlete = supportingAthletes[0];
-  matchState.opponentAthlete = supportingAthletes[1];
-  matchState.opponentMateAthlete = supportingAthletes[2];
+  matchState.playerMateAthlete = lineup.playerMate;
+  matchState.opponentAthlete = lineup.opponent;
+  matchState.opponentMateAthlete = lineup.opponentMate;
   matchState.pvpAthlete = matchState.opponentAthlete;
   matchState.controlMode = ui.controlMode;
   if (ui.selectedMode === "quick" && ui.matchLength !== "set") {
@@ -1591,6 +1599,15 @@ if (typeof prefs.reduceMotion === "boolean") ui.reduceMotion = prefs.reduceMotio
 if (typeof prefs.colorblind === "boolean") ui.colorblind = prefs.colorblind;
 if (typeof prefs.matchPanel === "boolean") ui.matchPanel = prefs.matchPanel;
 if (["solo", "coop", "pvp"].includes(prefs.playerMode)) ui.playerMode = prefs.playerMode;
+if (prefs.lineup && typeof prefs.lineup === "object") {
+  for (const ruolo of ["playerMate", "opponent", "opponentMate"]) {
+    const id = prefs.lineup[ruolo];
+    // Si accetta solo un identificativo che esiste ancora: `resolveLineup`
+    // scarta comunque i bloccati e i fuori demo, ma un salvataggio vecchio puo'
+    // contenere un atleta rimosso dal roster.
+    if (typeof id === "string" && ATHLETES.some((a) => a.id === id)) ui.lineup[ruolo] = id;
+  }
+}
 if (["it", "en"].includes(prefs.lang)) {
   ui.lang = prefs.lang;
   setLang(prefs.lang);
