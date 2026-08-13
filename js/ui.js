@@ -617,10 +617,22 @@ export function renderAthletes(onSelect, selectedId = null) {
         azioni,
         false,
       );
+      // Tutta la casella apre il selettore, non solo il bottone: un rettangolo
+      // grande con la faccia dell'atleta invita al clic, e non rispondere mentre
+      // due bottoni piccoli rispondono e' la stessa card che si comporta in due
+      // modi diversi. I due comandi restano, e fermano la propagazione perche'
+      // "Completo" deve aprire il guardaroba e non il selettore.
+      card.addEventListener("click", () => showPicker(athlete, ruolo));
       card.querySelector('[data-azione="atleta"]')
-        ?.addEventListener("click", () => showPicker(athlete, ruolo));
+        ?.addEventListener("click", (evento) => {
+          evento.stopPropagation();
+          showPicker(athlete, ruolo);
+        });
       card.querySelector('[data-azione="completo"]')
-        ?.addEventListener("click", () => showOutfits(atleta, athlete));
+        ?.addEventListener("click", (evento) => {
+          evento.stopPropagation();
+          showOutfits(atleta, athlete);
+        });
       grid.appendChild(card);
     });
   };

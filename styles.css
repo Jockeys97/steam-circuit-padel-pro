@@ -2736,7 +2736,12 @@ body.mode-colorblind .hero-preview {
 /* Le caselle della squadra hanno due comandi distinti — chi gioca e come e'
    vestito — quindi la card e' un contenitore, non un bottone. */
 .team-slot {
-  cursor: default;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.team-slot:hover {
+  transform: translateY(-2px);
 }
 
 .team-slot .athlete-card__special {
