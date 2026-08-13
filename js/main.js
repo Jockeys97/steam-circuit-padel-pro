@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-immersive-v9";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-fullbleed-v11";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-immersive-v9";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-immersive-v9";
-import { setReduceMotion } from "./fx.js?v=20260813-immersive-v9";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-immersive-v9";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-immersive-v9";
+} from "./game.js?v=20260813-fullbleed-v11";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-fullbleed-v11";
+import { setReduceMotion } from "./fx.js?v=20260813-fullbleed-v11";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-fullbleed-v11";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-fullbleed-v11";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-immersive-v9";
+} from "./render.js?v=20260813-fullbleed-v11";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-immersive-v9";
+} from "./ui.js?v=20260813-fullbleed-v11";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");

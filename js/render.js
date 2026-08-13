@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-immersive-v9";
-import { t } from "./i18n.js?v=20260813-immersive-v9";
+import { BALANCE, COURT } from "./data.js?v=20260813-fullbleed-v11";
+import { t } from "./i18n.js?v=20260813-fullbleed-v11";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -585,32 +585,8 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(topLeft.x, topLeft.y); ctx.lineTo(topRight.x, topRight.y); ctx.stroke();
   drawGlassSheen(ctx, time);
-  const signLabels = scene === "locomotive"
-    ? [[95, 290, 102, 29, "RAIL"], [762, 292, 103, 29, "DEPOT"], [122, 412, 84, 27, "TRACK"], [756, 417, 83, 27, "STEAM"]]
-    : scene === "cattedrale"
-      ? [[95, 290, 102, 29, "NAVE"], [762, 292, 103, 29, "VAPOR"], [122, 412, 84, 27, "ARCH"], [756, 417, 83, 27, "CROWN"]]
-    : scene === "clockwork" || scene === "forgia"
-      ? []
-      : [[95, 290, 102, 29, "PADEL"], [762, 292, 103, 29, "FLOW"], [122, 412, 84, 27, "PRO"], [756, 417, 83, 27, "PLAY"]];
-  ctx.fillStyle = "#16486f";
-  signLabels.forEach(([x, y, w, h, label], index) => {
-    roundedRect(ctx, x, y, w, h, 3); ctx.fill();
-    ctx.save();
-    ctx.shadowColor = "rgba(247,225,101,0.85)";
-    ctx.shadowBlur = 5 + 5 * Math.sin(time * 2.4 + index);
-    ctx.fillStyle = "#f7e165";
-    ctx.font = "800 12px Nunito, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(label, x + w / 2, y + 19);
-    ctx.restore();
-    ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(time * (1.8 + index * 0.6) + index));
-    ctx.fillStyle = "#ff5c3a";
-    ctx.beginPath();
-    ctx.arc(x - 5, y + h / 2, 2.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "#16486f";
-  });
+  // Le insegne pubblicitarie sui vetri sono state rimosse: aggiungevano rumore
+  // visivo su un campo che deve restare leggibile durante lo scambio.
 
   // A full padel net: dark mesh, white tape and substantial padded posts.
   const netLeft = point(COURT.left, COURT.netY);

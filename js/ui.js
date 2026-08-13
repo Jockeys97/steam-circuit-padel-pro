@@ -1,7 +1,7 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-immersive-v9";
-import { getMatchInfo } from "./game.js?v=20260813-immersive-v9";
-import { getVolume, isMuted } from "./audio.js?v=20260813-immersive-v9";
-import { getLang, t } from "./i18n.js?v=20260813-immersive-v9";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-fullbleed-v11";
+import { getMatchInfo } from "./game.js?v=20260813-fullbleed-v11";
+import { getVolume, isMuted } from "./audio.js?v=20260813-fullbleed-v11";
+import { getLang, t } from "./i18n.js?v=20260813-fullbleed-v11";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
