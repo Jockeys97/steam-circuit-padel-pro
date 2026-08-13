@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-legend-v16";
-import { clamp } from "./render.js?v=20260813-legend-v16";
-import { sfx } from "./audio.js?v=20260813-legend-v16";
-import { t } from "./i18n.js?v=20260813-legend-v16";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-intercept-v17";
+import { clamp } from "./render.js?v=20260813-intercept-v17";
+import { sfx } from "./audio.js?v=20260813-intercept-v17";
+import { t } from "./i18n.js?v=20260813-intercept-v17";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-legend-v16";
+} from "./fx.js?v=20260813-intercept-v17";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -1697,7 +1697,19 @@ export function hitBall(
       state.specialReadPenalty = 0;
     }
     if (ball.shotType === "smash-x2" || ball.shotType === "smash-x3") {
-      const smashReadPenalty = ball.shotType === "smash-x2" ? 0.48 : 0.18;
+      // Leggere in anticipo uno smash e' intelligenza, non riflessi: dipende da
+      // `skill`, non da `reactionSkill`. Senza questa lettura l'intercettazione
+      // era una funzione a gradino — nessuno ci arrivava mai, oppure sempre —
+      // perche' bastava scendere sotto ~610 ms di ritardo totale.
+      const letto = nextRandom(state) < clamp(
+        BALANCE.smashInterceptBase + state.ai.skill * BALANCE.smashInterceptSkill,
+        0,
+        BALANCE.smashInterceptCap,
+      );
+      const smashReadPenalty = letto
+        ? BALANCE.smashInterceptPenalty
+        : ball.shotType === "smash-x2" ? 0.48 : 0.18;
+      if (letto) addEvent(state, t("evSmashIntercepted"));
       state.aiReactionDelay += smashReadPenalty
         + (1 - (state.ai.reactionSkill ?? state.ai.skill)) * 0.16;
       if (ball.shotType === "smash-x3") state.aiX3Recovery = 0.9 + state.ai.skill * 0.22;

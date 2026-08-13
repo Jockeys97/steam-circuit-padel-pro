@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-legend-v16";
-import { t } from "./i18n.js?v=20260813-legend-v16";
+import { BALANCE, COURT } from "./data.js?v=20260813-wardrobe-v17";
+import { t } from "./i18n.js?v=20260813-wardrobe-v17";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -909,6 +909,7 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
     ctx.ellipse(projected.x - 9 * projected.scale, feetY + 4 * projected.scale, 24 * projected.scale, 4.5 * projected.scale, 0.18, 0, Math.PI * 2);
     ctx.fill();
     const drawFrame = (frameIndex) => {
+      if (appearance?.spriteFilter && appearance.spriteFilter !== "none") ctx.filter = appearance.spriteFilter;
       ctx.drawImage(
         activeSprite,
         frameIndex * frameWidth,
@@ -920,6 +921,7 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
         destWidth,
         destHeight,
       );
+      ctx.filter = "none";
     };
     drawFrame(frame);
     ctx.restore();

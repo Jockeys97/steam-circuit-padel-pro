@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-legend-v16";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-wardrobe-v17";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-legend-v16";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-legend-v16";
-import { setReduceMotion } from "./fx.js?v=20260813-legend-v16";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-legend-v16";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-legend-v16";
-import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-legend-v16";
+} from "./game.js?v=20260813-intercept-v17";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-intercept-v17";
+import { setReduceMotion } from "./fx.js?v=20260813-intercept-v17";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-intercept-v17";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-wardrobe-v17";
+import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-intercept-v17";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,10 +21,11 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-legend-v16";
+} from "./render.js?v=20260813-wardrobe-v17";
 import {
   applyLanguage,
   awardObjectives,
+  athleteWithOutfit,
   bindNavigation,
   collectPrefs,
   ensureSeasonObjectives,
@@ -42,7 +43,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-legend-v16";
+} from "./ui.js?v=20260813-wardrobe-v17";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -813,7 +814,7 @@ const CAREER_MATCHES = 3;
 function startMatch() {
   gameLoopGeneration += 1;
   resetTransientInput({ awaitRelease: true, resetButtons: true });
-  const athlete = ui.selectedAthlete ?? ATHLETES[0];
+  const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
   const arena = ui.selectedArena ?? ARENAS[0];
   const ai = getAiForMatch(ui.selectedMode, ui.tournamentRound, ui.aiDifficulty);
   const humanMode = ui.selectedMode === "quick" ? (ui.playerMode ?? "solo") : "solo";

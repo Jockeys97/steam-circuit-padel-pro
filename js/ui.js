@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-legend-v16";
-import { getMatchInfo } from "./game.js?v=20260813-legend-v16";
-import { getVolume, isMuted } from "./audio.js?v=20260813-legend-v16";
-import { getLang, t } from "./i18n.js?v=20260813-legend-v16";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-legend-v16";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-wardrobe-v17";
+import { getMatchInfo } from "./game.js?v=20260813-intercept-v17";
+import { getVolume, isMuted } from "./audio.js?v=20260813-intercept-v17";
+import { getLang, t } from "./i18n.js?v=20260813-wardrobe-v17";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-intercept-v17";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -18,6 +18,7 @@ const DEFAULT_CAREER = {
   seasonStars: 0,
   rivalStreak: 0,
   unlockAll: false,
+  equippedOutfits: {},
 };
 
 export function loadCareer() {
@@ -202,6 +203,27 @@ function selectAthleteCard(card, athlete) {
   ui.selectedAthlete = athlete;
 }
 
+function selectedOutfit(athlete, career = ui.career) {
+  const outfits = outfitsForAthlete(athlete?.id);
+  if (!outfits.length) return null;
+  const selectedId = career.equippedOutfits?.[athlete.id] ?? "base";
+  const candidate = outfits.find((outfit) => outfit.id === selectedId);
+  return candidate && isUnlocked(candidate, career) ? candidate : outfits[0];
+}
+
+/** Restituisce un profilo di gara con una sola variazione estetica, mai di gameplay. */
+export function athleteWithOutfit(athlete, career = ui.career) {
+  const outfit = selectedOutfit(athlete, career);
+  if (!outfit) return athlete;
+  return {
+    ...athlete,
+    outfit,
+    outfitId: outfit.id,
+    spriteFilter: outfit.spriteFilter,
+    color: outfit.colors?.[0] ?? athlete.color,
+  };
+}
+
 function lockLabel(unlock) {
   const parts = [];
   if (unlock?.trophies) parts.push(t("unlockTrophies", { n: unlock.trophies }));
@@ -266,7 +288,46 @@ export function applyDemoLimits() {
 
 export function renderAthletes(onSelect, selectedId = null) {
   const grid = document.getElementById("athleteGrid");
+  const wardrobe = document.getElementById("athleteWardrobe");
+  const continueEl = document.getElementById("athleteContinue");
   grid.innerHTML = "";
+
+  const renderWardrobe = (athlete) => {
+    if (!wardrobe || !continueEl) return;
+    const outfits = outfitsForAthlete(athlete.id);
+    if (!outfits.length) {
+      wardrobe.innerHTML = "";
+      continueEl.innerHTML = `<button class="btn btn--primary" type="button">${t("outfitContinue")}</button>`;
+    } else {
+      const equipped = selectedOutfit(athlete);
+      wardrobe.innerHTML = `
+        <div class="wardrobe__head">
+          <div><span>${t("outfitEyebrow")}</span><h3>${t("outfitTitle")}</h3></div>
+          <p>${t("outfitSub")}</p>
+        </div>
+        <div class="wardrobe__kits">
+          ${outfits.map((outfit) => {
+            const unlocked = isUnlocked(outfit, ui.career);
+            const active = equipped?.id === outfit.id;
+            return `<button class="wardrobe-kit${active ? " is-selected" : ""}${unlocked ? "" : " is-locked"}" type="button" data-outfit="${outfit.id}" ${unlocked ? "" : 'aria-disabled="true"'}>
+              <span class="wardrobe-kit__swatch" style="--kit-primary:${outfit.colors[0]};--kit-secondary:${outfit.colors[1]}"></span>
+              <strong>${t(outfit.nameKey)}</strong>
+              <small>${unlocked ? (active ? t("outfitEquipped") : t("outfitAvailable")) : lockLabel(outfit.unlock)}</small>
+            </button>`;
+          }).join("")}
+        </div>`;
+      wardrobe.querySelectorAll("[data-outfit]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.classList.contains("is-locked")) return;
+          ui.career.equippedOutfits = { ...(ui.career.equippedOutfits ?? {}), [athlete.id]: button.dataset.outfit };
+          saveCareer(ui.career);
+          renderWardrobe(athlete);
+        });
+      });
+      continueEl.innerHTML = `<button class="btn btn--primary" type="button">${t("outfitContinue")}</button>`;
+    }
+    continueEl.querySelector("button")?.addEventListener("click", () => onSelect?.(athleteWithOutfit(athlete)));
+  };
 
   demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
     const locked = !isUnlocked(athlete, ui.career);
@@ -287,9 +348,12 @@ export function renderAthletes(onSelect, selectedId = null) {
     if (!locked) {
       card.addEventListener("click", () => {
         selectAthleteCard(card, athlete);
-        onSelect?.(athlete);
+        renderWardrobe(athlete);
       });
-      if (athlete.id === selectedId) selectAthleteCard(card, athlete);
+      if (athlete.id === selectedId) {
+        selectAthleteCard(card, athlete);
+        renderWardrobe(athlete);
+      }
     } else {
       // Niente `disabled`: un bottone disabilitato non emette click, quindi il
       // triplo tocco non arriverebbe mai. Resta inselezionabile perche' l'unica
@@ -301,6 +365,8 @@ export function renderAthletes(onSelect, selectedId = null) {
     }
     grid.appendChild(card);
   });
+
+  if (!ui.selectedAthlete && continueEl) continueEl.innerHTML = "";
 }
 
 export function renderArenas(onSelect) {
@@ -667,6 +733,9 @@ export function renderProfile() {
     const items = [
       ...ATHLETES.filter((a) => a.unlock).map((a) => ({ name: t(`athlete_${a.id}_name`), item: a, kind: t("profileKindAthlete") })),
       ...ARENAS.filter((a) => a.unlock).map((a) => ({ name: t(`arena_${a.id}_name`), item: a, kind: t("profileKindArena") })),
+      ...ATHLETES.flatMap((athlete) => outfitsForAthlete(athlete.id)
+        .filter((outfit) => outfit.unlock)
+        .map((outfit) => ({ name: `${t(`athlete_${athlete.id}_name`)} · ${t(outfit.nameKey)}`, item: outfit, kind: t("profileKindOutfit") }))),
     ];
     unlockEl.innerHTML = items.length
       ? items.map(({ name, item, kind }) => {

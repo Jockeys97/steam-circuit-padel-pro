@@ -131,6 +131,12 @@ export const BALANCE = {
   smashReturnDefenceArc: 0.16,
   smashReturnScrambleArc: 0.38,
   // Lettura dell'uscita dello x2: decisa una volta sola sul vetro di fondo.
+  // Lettura anticipata dello smash: chi la indovina taglia il colpo prima del
+  // vetro. Legata a `skill`, non ai riflessi.
+  smashInterceptBase: -0.06,
+  smashInterceptSkill: 0.3,
+  smashInterceptCap: 0.3,
+  smashInterceptPenalty: 0.24,
   smashX2ReadBase: 0.05,
   smashX2ReadSkill: 0.90,
   smashX2ReadProximity: 0.22,
@@ -330,6 +336,38 @@ export const ATHLETES = [
     pattern: "repeating-linear-gradient(135deg,#3a2a06 0,#3a2a06 10px,#241a04 10px,#241a04 20px)",
   },
 ];
+
+/**
+ * Completi estetici: non toccano mai statistiche, hitbox o abilita'.
+ * `spriteFilter` viene applicato a base, corsa e azioni, quindi una livrea
+ * resta riconoscibile in ogni stato dell'atleta senza duplicare i fogli sprite.
+ */
+export const ATHLETE_OUTFITS = {
+  maestro: [
+    { id: "base", nameKey: "outfitBase", colors: ["#08bfe8", "#f4fbff"], spriteFilter: "none" },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#7d63ff", "#9ef8ff"], spriteFilter: "hue-rotate(116deg) saturate(1.2) contrast(1.04)" },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#d5a62a", "#fff0a3"], spriteFilter: "hue-rotate(332deg) saturate(1.35) sepia(0.12) contrast(1.07)" },
+  ],
+  pantera: [
+    { id: "base", nameKey: "outfitBase", colors: ["#ed3e5d", "#ff7690"], spriteFilter: "none" },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#2cc5ff", "#caefff"], spriteFilter: "hue-rotate(150deg) saturate(1.18) contrast(1.04)" },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#ffb626", "#fff0a0"], spriteFilter: "hue-rotate(43deg) saturate(1.3) sepia(0.1) contrast(1.07)" },
+  ],
+  steamer: [
+    { id: "base", nameKey: "outfitBase", colors: ["#f47713", "#ff9a35"], spriteFilter: "none" },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#43d7c4", "#c8fff5"], spriteFilter: "hue-rotate(104deg) saturate(1.15) contrast(1.04)" },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#e3c232", "#fff3af"], spriteFilter: "hue-rotate(16deg) saturate(1.26) sepia(0.12) contrast(1.08)" },
+  ],
+  fiamma: [
+    { id: "base", nameKey: "outfitBase", colors: ["#a9e71d", "#d7ff4b"], spriteFilter: "none" },
+    { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#42a9ff", "#c8ecff"], spriteFilter: "hue-rotate(118deg) saturate(1.18) contrast(1.04)" },
+    { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#f2a72b", "#fff0a7"], spriteFilter: "hue-rotate(44deg) saturate(1.3) sepia(0.1) contrast(1.07)" },
+  ],
+};
+
+export function outfitsForAthlete(athleteId) {
+  return ATHLETE_OUTFITS[athleteId] ?? [];
+}
 
 export const ARENAS = [
   {

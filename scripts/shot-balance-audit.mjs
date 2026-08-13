@@ -126,6 +126,11 @@ for (let frame = 0; frame < 5000 && glassState.rallyHits < 5; frame += 1) {
 assert(glassReached, "Il lob profondo deve poter raggiungere il vetro");
 assert(glassState.rallyHits >= 5, "L'IA deve poter rispondere dopo il proprio vetro");
 
+// L'intercettazione anticipata dello smash e' una contromisura voluta e cresce
+// con la difficolta'. Prima era una funzione a gradino: o nessuno ci arrivava
+// mai, o tutti sempre. Qui si verifica che resti una minoranza dei casi e che
+// la progressione fra i livelli sia coerente.
+const intercettazioni = [];
 for (let aiIndex = 0; aiIndex < AI_OPPONENTS.length; aiIndex += 1) {
   let x2ThroughGlass = 0;
   let x2Winners = 0;
@@ -134,9 +139,13 @@ for (let aiIndex = 0; aiIndex < AI_OPPONENTS.length; aiIndex += 1) {
     if (result.maxSmashStage >= 2) x2ThroughGlass += 1;
     if (result.winner) x2Winners += 1;
   }
-  assert(x2ThroughGlass / 300 > 0.9, `Lo X2 deve svilupparsi attraverso il vetro (AI ${aiIndex})`);
+  intercettazioni.push(1 - x2ThroughGlass / 300);
+  assert(x2ThroughGlass / 300 > 0.7,
+    `Lo X2 deve svilupparsi nella grande maggioranza dei casi (AI ${aiIndex}): ${x2ThroughGlass}/300`);
   assert(x2Winners > 0 && x2Winners < 120, `Lo X2 deve essere forte ma difendibile (AI ${aiIndex})`);
 }
+assert(intercettazioni.at(-1) > intercettazioni[0] + 0.05,
+  `L'avversario piu' forte deve leggere lo smash piu' spesso del piu' debole: ${intercettazioni.map((v) => v.toFixed(3)).join(" -> ")}`);
 
 let mediumX3Winners = 0;
 for (let seed = 1; seed <= 300; seed += 1) {
