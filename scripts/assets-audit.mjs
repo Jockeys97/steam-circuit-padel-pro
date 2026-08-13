@@ -66,24 +66,50 @@ const orphans = onDisk.filter((p) => !referenced.includes(p) && !coveredByRoot(p
 assert.deepEqual(orphans, [],
   `Immagini attive mai referenziate: vanno in assets/_archivio/ ${orphans.join(", ")}`);
 
+// Da quando gli sprite si caricano alla prima richiesta, il peso su disco non
+// e' piu' il peso al primo caricamento. Quello che conta per la demo — e quindi
+// per le wishlist — e' cosa viene chiesto all'apertura: gli sprite base degli
+// atleti che la build espone. Tutto il resto arriva quando serve.
+const { ATHLETES } = await import("../js/data.js?v=20260813-signature-outfits-v24");
+const { DEMO_CONTENT } = await import("../js/build.js?v=20260813-signature-outfits-v24");
+const spriteFields = ["sprite", "backSprite", "actionSprite", "backActionSprite", "runSprite", "backRunSprite"];
+
+async function weightOf(paths) {
+  let total = 0;
+  for (const path of paths) {
+    try { total += (await stat(new URL(path, root))).size; } catch { /* assente */ }
+  }
+  return total / (1024 * 1024);
+}
+
+const eagerPaths = (ids) => ATHLETES
+  .filter((a) => !ids || ids.includes(a.id))
+  .flatMap((a) => spriteFields.map((f) => a[f]).filter(Boolean));
+
+const demoEager = await weightOf(eagerPaths(DEMO_CONTENT.athletes));
+const fullEager = await weightOf(eagerPaths(null));
+
 let bytes = 0;
 for (const path of onDisk) bytes += (await stat(new URL(path, root))).size;
-
-// Il peso degli asset e' il tempo di primo caricamento della demo, e la demo e'
-// il motore delle wishlist: oltre questa soglia la gente se ne va prima di
-// giocare.
 const megabytes = bytes / (1024 * 1024);
-// Soglia alzata da 15 a 20 MB con l'arrivo degli outfit. Attenzione: oggi TUTTI
-// gli outfit vengono richiesti all'apertura della pagina, anche quelli non
-// sbloccati e anche nella demo che non puo' usarli. Se diventassero a
-// caricamento differito questa soglia potrebbe tornare a 15.
-assert.ok(megabytes < 20,
-  `Gli asset attivi devono restare sotto i 20 MB: ${megabytes.toFixed(1)} MB`);
+
+// La demo e' il link che si condivide: deve agganciare in pochi secondi.
+assert.ok(demoEager < 6,
+  `La demo deve chiedere meno di 6 MB all'apertura: ${demoEager.toFixed(2)} MB`);
+// Il gioco completo puo' permettersi di piu', ma non deve scivolare.
+assert.ok(fullEager < 14,
+  `Il gioco completo deve restare sotto i 14 MB all'apertura: ${fullEager.toFixed(2)} MB`);
+// Guardia larga sul totale: serve solo a intercettare una crescita fuori
+// controllo, non a limitare i contenuti differiti.
+assert.ok(megabytes < 60,
+  `Gli asset totali devono restare sotto i 60 MB: ${megabytes.toFixed(1)} MB`);
 
 console.log(JSON.stringify({
   referenced: referenced.length,
   onDisk: onDisk.length,
   missing: missing.length,
   orphans: orphans.length,
-  activeMegabytes: Number(megabytes.toFixed(1)),
+  demoFirstLoadMb: Number(demoEager.toFixed(2)),
+  fullFirstLoadMb: Number(fullEager.toFixed(2)),
+  totalMb: Number(megabytes.toFixed(1)),
 }, null, 2));

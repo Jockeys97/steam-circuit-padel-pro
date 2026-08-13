@@ -359,21 +359,33 @@ export const ATHLETE_OUTFITS = {
     { id: "base", nameKey: "outfitBase", colors: ["#08bfe8", "#f4fbff"] },
     { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#315cff", "#9ef8ff"], preview: "assets/outfits/maestro/circuit-preview.webp", sprites: outfitSpritePaths("maestro", "circuit") },
     { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#d5a62a", "#fff0a3"], preview: "assets/outfits/maestro/legend-preview.webp", sprites: outfitSpritePaths("maestro", "legend") },
+    { id: "signature", nameKey: "outfitSignatureMaestro", unlock: { trophies: 2, stars: 8 }, colors: ["#03c7ed", "#162f61"], preview: "assets/outfits/maestro/signature-preview.webp", sprites: outfitSpritePaths("maestro", "signature") },
   ],
   pantera: [
     { id: "base", nameKey: "outfitBase", colors: ["#ed3e5d", "#ff7690"] },
     { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#2c6fff", "#caefff"], preview: "assets/outfits/pantera/circuit-preview.webp", sprites: outfitSpritePaths("pantera", "circuit") },
     { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#ffb626", "#fff0a0"], preview: "assets/outfits/pantera/legend-preview.webp", sprites: outfitSpritePaths("pantera", "legend") },
+    { id: "signature", nameKey: "outfitSignaturePantera", unlock: { trophies: 2, stars: 8 }, colors: ["#d20d43", "#17151e"], preview: "assets/outfits/pantera/signature-preview.webp", sprites: outfitSpritePaths("pantera", "signature") },
   ],
   steamer: [
     { id: "base", nameKey: "outfitBase", colors: ["#f47713", "#ff9a35"] },
     { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#087b86", "#c8fff5"], preview: "assets/outfits/steamer/circuit-preview.webp", sprites: outfitSpritePaths("steamer", "circuit") },
     { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#e3c232", "#fff3af"], preview: "assets/outfits/steamer/legend-preview.webp", sprites: outfitSpritePaths("steamer", "legend") },
+    { id: "signature", nameKey: "outfitSignatureSteamer", unlock: { trophies: 2, stars: 8 }, colors: ["#e85d16", "#252a31"], preview: "assets/outfits/steamer/signature-preview.webp", sprites: outfitSpritePaths("steamer", "signature") },
   ],
   fiamma: [
     { id: "base", nameKey: "outfitBase", colors: ["#a9e71d", "#d7ff4b"] },
     { id: "circuit", nameKey: "outfitCircuit", unlock: { stars: 3 }, colors: ["#326dff", "#c8ecff"], preview: "assets/outfits/fiamma/circuit-preview.webp", sprites: outfitSpritePaths("fiamma", "circuit") },
     { id: "legend", nameKey: "outfitLegend", unlock: { trophies: 1, stars: 5 }, colors: ["#f2a72b", "#fff0a7"], preview: "assets/outfits/fiamma/legend-preview.webp", sprites: outfitSpritePaths("fiamma", "legend") },
+    { id: "signature", nameKey: "outfitSignatureFiamma", unlock: { trophies: 2, stars: 8 }, colors: ["#087a75", "#adf51e"], preview: "assets/outfits/fiamma/signature-preview.webp", sprites: outfitSpritePaths("fiamma", "signature") },
+  ],
+  oracolo: [
+    { id: "base", nameKey: "outfitBase", colors: ["#6d42b8", "#a96cff"] },
+    { id: "signature", nameKey: "outfitSignatureOracolo", unlock: { trophies: 3, stars: 10 }, colors: ["#38216f", "#29dfff"], preview: "assets/outfits/oracolo/signature-preview.webp", sprites: outfitSpritePaths("oracolo", "signature") },
+  ],
+  colosso: [
+    { id: "base", nameKey: "outfitBase", colors: ["#e8b400", "#ffe98a"] },
+    { id: "signature", nameKey: "outfitSignatureColosso", unlock: { trophies: 3, stars: 10 }, colors: ["#25211e", "#ff7a12"], preview: "assets/outfits/colosso/signature-preview.webp", sprites: outfitSpritePaths("colosso", "signature") },
   ],
 };
 

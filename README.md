@@ -199,7 +199,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-wardrobe-cards-v22" index.html js/*.js styles.css   # deve dare 23 in totale
+grep -c "20260813-signature-outfits-v24" index.html js/*.js styles.css   # deve dare 23 in totale
 ```
 
 ---
@@ -214,6 +214,6 @@ azzardo consapevole.
 
 ## Stato
 
-Alpha giocabile con 6 atleti completi. I 4 campioni iniziali hanno 3 completi ciascuno
-(12 totali): le 8 varianti sbloccabili usano 48 fogli sprite WebP lossless dedicati,
-caricati alla prima richiesta. Il pacchetto attivo contiene 105 immagini per circa 18 MB.
+Alpha giocabile con 6 atleti completi e 20 completi complessivi. Ogni atleta ha un
+outfit firma esclusivo; le 14 varianti sbloccabili usano 84 fogli sprite WebP lossless
+dedicati, caricati alla prima richiesta. Il payload immagini iniziale resta sotto 15 MB.

@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-wardrobe-cards-v22";
-import { clamp } from "./render.js?v=20260813-wardrobe-cards-v22";
-import { sfx } from "./audio.js?v=20260813-wardrobe-cards-v22";
-import { t } from "./i18n.js?v=20260813-wardrobe-cards-v22";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-signature-outfits-v24";
+import { clamp } from "./render.js?v=20260813-signature-outfits-v24";
+import { sfx } from "./audio.js?v=20260813-signature-outfits-v24";
+import { t } from "./i18n.js?v=20260813-signature-outfits-v24";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-wardrobe-cards-v22";
+} from "./fx.js?v=20260813-signature-outfits-v24";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

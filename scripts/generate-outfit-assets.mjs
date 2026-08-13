@@ -15,28 +15,59 @@ const athletes = {
     primary: (h, s) => h >= 175 && h <= 245 && s >= 0.28,
     accent: (h, s, v) => h >= 175 && h <= 215 && s >= 0.18 && v >= 0.62,
     concepts: "tmp/imagegen/outfits/maestro.png",
+    signatureConcept: "tmp/imagegen/signature/maestro.png",
+    signature: { primaryHue: 194, secondaryHue: 220, saturation: 0.92, value: 1.02 },
   },
   pantera: {
     primary: (h, s) => (h >= 332 || h <= 8) && s >= 0.48,
     accent: (h, s, v) => (h >= 338 || h <= 12) && s >= 0.28 && v >= 0.68,
     concepts: "tmp/imagegen/outfits/pantera.png",
+    signatureConcept: "tmp/imagegen/signature/pantera.png",
+    signature: { primaryHue: 346, secondaryHue: 326, saturation: 0.94, value: 0.82 },
   },
   steamer: {
     primary: (h, s) => h >= 12 && h <= 48 && s >= 0.72,
     accent: (h, s, v) => h >= 18 && h <= 48 && s >= 0.62 && v >= 0.72,
     secondary: (h, s) => h >= 198 && h <= 238 && s >= 0.35,
     concepts: "tmp/imagegen/outfits/steamer.png",
+    signatureConcept: "tmp/imagegen/signature/steamer.png",
+    signature: { primaryHue: 18, secondaryHue: 214, saturation: 0.72, value: 0.72 },
   },
   fiamma: {
     primary: (h, s) => h >= 58 && h <= 105 && s >= 0.46,
     accent: (h, s, v) => h >= 55 && h <= 108 && s >= 0.36 && v >= 0.68,
     concepts: "tmp/imagegen/outfits/fiamma.png",
+    signatureConcept: "tmp/imagegen/signature/fiamma.png",
+    signature: { primaryHue: 174, secondaryHue: 79, saturation: 0.9, value: 0.78 },
+  },
+  oracolo: {
+    primary: (h, s) => h >= 245 && h <= 292 && s >= 0.28,
+    accent: (h, s, v) => h >= 245 && h <= 305 && s >= 0.2 && v >= 0.45,
+    source: {
+      idle: "oracolo-idle-unique.webp",
+      action: "oracolo-action-unique.webp",
+      run: "oracolo-run-unique.webp",
+    },
+    signatureConcept: "tmp/imagegen/signature/oracolo.png",
+    signature: { primaryHue: 262, secondaryHue: 193, saturation: 0.9, value: 0.8 },
+  },
+  colosso: {
+    primary: (h, s, v) => h >= 32 && h <= 62 && s >= 0.42 && v >= 0.35,
+    accent: (h, s, v) => h >= 24 && h <= 62 && s >= 0.28 && v >= 0.55,
+    source: {
+      idle: "colosso-idle-unique.webp",
+      action: "colosso-action-unique.webp",
+      run: "colosso-run-unique.webp",
+    },
+    signatureConcept: "tmp/imagegen/signature/colosso.png",
+    signature: { primaryHue: 29, secondaryHue: 18, saturation: 0.94, value: 0.7 },
   },
 };
 
 const variants = {
   circuit: { primaryHue: 218, secondaryHue: 190, saturation: 0.84, value: 0.98 },
   legend: { primaryHue: 42, secondaryHue: 36, saturation: 0.82, value: 0.96 },
+  signature: {},
 };
 
 const sheets = [
@@ -91,6 +122,14 @@ function recolorPixel(r, g, b, athlete, variant) {
     return hsvToRgb(targetHue, targetSaturation, targetValue);
   }
 
+  if (variant === "signature") {
+    const palette = athlete.signature;
+    const targetHue = isSecondary ? palette.secondaryHue : palette.primaryHue;
+    const targetSaturation = Math.min(0.98, Math.max(0.5, s * palette.saturation));
+    const targetValue = Math.min(1, v * (isAccent ? Math.min(1.16, palette.value + 0.24) : palette.value));
+    return hsvToRgb(targetHue, targetSaturation, targetValue);
+  }
+
   if (isSecondary) return hsvToRgb(32, Math.min(0.22, s), Math.max(0.12, v * 0.48));
   if (isAccent) return hsvToRgb(45, 0.16, Math.min(1, v * 1.08));
   return hsvToRgb(variants.legend.primaryHue, Math.min(0.92, Math.max(0.52, s * variants.legend.saturation)), Math.min(1, v * variants.legend.value));
@@ -137,29 +176,43 @@ function previewCrop(panelWidth, panelHeight, left) {
 }
 
 async function createPreviews(athleteId, athlete) {
-  const source = path.join(ROOT, athlete.concepts);
-  const meta = await sharp(source).metadata();
-  const half = Math.floor(meta.width / 2);
   const dir = path.join(OUTPUT, athleteId);
   const masterDir = path.join(MASTER_ROOT, athleteId);
   await fs.mkdir(dir, { recursive: true });
   await fs.mkdir(masterDir, { recursive: true });
-  const circuit = previewCrop(half, meta.height, 0);
-  const legend = previewCrop(meta.width - half, meta.height, half);
-  await Promise.all([
-    fs.copyFile(source, path.join(masterDir, "concept-master.png")),
-    sharp(source).extract(circuit).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
-    sharp(source).extract(legend).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
-  ]);
+  const tasks = [];
+  if (athlete.concepts) {
+    const source = path.join(ROOT, athlete.concepts);
+    const meta = await sharp(source).metadata();
+    const half = Math.floor(meta.width / 2);
+    const circuit = previewCrop(half, meta.height, 0);
+    const legend = previewCrop(meta.width - half, meta.height, half);
+    tasks.push(
+      fs.copyFile(source, path.join(masterDir, "concept-master.png")),
+      sharp(source).extract(circuit).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
+      sharp(source).extract(legend).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
+    );
+  }
+  const signatureSource = path.join(ROOT, athlete.signatureConcept);
+  tasks.push(
+    fs.copyFile(signatureSource, path.join(masterDir, "signature-master.png")),
+    sharp(signatureSource).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "signature-preview.webp")),
+  );
+  await Promise.all(tasks);
 }
 
 for (const [athleteId, athlete] of Object.entries(athletes)) {
   await createPreviews(athleteId, athlete);
-  for (const variant of Object.keys(variants)) {
+  const athleteVariants = athlete.concepts ? Object.keys(variants) : ["signature"];
+  for (const variant of athleteVariants) {
     for (const [sheetName, sourceName] of sheets) {
-      await createSheet(athleteId, athlete, variant, sheetName, sourceName(athleteId));
+      const side = sheetName.startsWith("back-") ? "back/" : "";
+      const sourceKey = sheetName.replace("back-", "");
+      const sourceRelative = athlete.source ? `${side}${athlete.source[sourceKey]}` : sourceName(athleteId);
+      await createSheet(athleteId, athlete, variant, sheetName, sourceRelative);
     }
   }
 }
 
-console.log(`Generated outfit previews and ${Object.keys(athletes).length * Object.keys(variants).length * sheets.length} dedicated sprite sheets in assets/outfits.`);
+const sheetCount = Object.values(athletes).reduce((total, athlete) => total + (athlete.concepts ? 3 : 1) * sheets.length, 0);
+console.log(`Generated outfit previews and ${sheetCount} dedicated sprite sheets in assets/outfits.`);

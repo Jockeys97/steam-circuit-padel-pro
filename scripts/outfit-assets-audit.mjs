@@ -1,18 +1,19 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
-import { ATHLETE_OUTFITS } from "../js/data.js?v=20260813-outfit-lossless-v21";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-signature-outfits-v24";
 
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
 
-const expectedAthletes = ["maestro", "pantera", "steamer", "fiamma"];
+const expectedAthletes = ["maestro", "pantera", "steamer", "fiamma", "oracolo", "colosso"];
 const spriteKeys = ["sprite", "backSprite", "actionSprite", "backActionSprite", "runSprite", "backRunSprite"];
 let dedicatedSheets = 0;
 
 for (const athleteId of expectedAthletes) {
   const outfits = ATHLETE_OUTFITS[athleteId];
-  assert.equal(outfits?.length, 3, `${athleteId}: servono base e due completi sbloccabili`);
+  const expectedCount = ["oracolo", "colosso"].includes(athleteId) ? 2 : 4;
+  assert.equal(outfits?.length, expectedCount, `${athleteId}: numero di completi inatteso`);
   assert.equal(outfits[0].id, "base", `${athleteId}: il primo completo deve restare quello base`);
 
   for (const outfit of outfits.slice(1)) {
@@ -24,12 +25,8 @@ for (const athleteId of expectedAthletes) {
       await fs.access(outfit.sprites[key]);
       const generated = await sharp(outfit.sprites[key]).metadata();
       const generatedStats = await sharp(outfit.sprites[key]).stats();
-      const originalPath = key === "sprite" ? `assets/sprites/${athleteId}.webp`
-        : key === "backSprite" ? `assets/sprites/back/${athleteId}.webp`
-          : key === "actionSprite" ? `assets/sprites/${athleteId}-action.webp`
-            : key === "backActionSprite" ? `assets/sprites/back/${athleteId}-action.webp`
-              : key === "runSprite" ? `assets/sprites/${athleteId}-run-v3.webp`
-                : `assets/sprites/back/${athleteId}-run-v3.webp`;
+      const originalPath = ATHLETES.find((athlete) => athlete.id === athleteId)?.[key];
+      assert.ok(originalPath, `${athleteId}/${key}: sprite sorgente mancante nei dati atleta`);
       const original = await sharp(originalPath).metadata();
       const frameCount = key.toLowerCase().includes("run") ? 8 : 4;
       const expectedWidth = Math.round((original.width * 0.6) / frameCount) * frameCount;
@@ -41,5 +38,8 @@ for (const athleteId of expectedAthletes) {
   }
 }
 
-assert.equal(dedicatedSheets, 48, "La guardaroba deve avere 48 fogli sprite dedicati");
-console.log(JSON.stringify({ athletes: expectedAthletes.length, outfits: 12, dedicatedSheets }, null, 2));
+const outfitCount = expectedAthletes.reduce((total, athleteId) => total + ATHLETE_OUTFITS[athleteId].length, 0);
+const unlockableOutfitCount = outfitCount - expectedAthletes.length;
+assert.equal(dedicatedSheets, unlockableOutfitCount * spriteKeys.length,
+  "Ogni completo sbloccabile deve avere sei fogli sprite dedicati");
+console.log(JSON.stringify({ athletes: expectedAthletes.length, outfits: outfitCount, dedicatedSheets }, null, 2));
