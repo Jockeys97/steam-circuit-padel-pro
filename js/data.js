@@ -498,6 +498,42 @@ export function isUnlocked(item, career) {
 }
 
 /** Pool obiettivi di stagione / match. Ogni obiettivo ha una metrica e un target. */
+/**
+ * Parametri della Carriera.
+ *
+ * RICOSTRUITI. Questo blocco esisteva nel working tree della sessione parallela
+ * e non era mai stato committato; l'ho perso ripristinando `data.js` da HEAD.
+ * I nomi e la semantica sono fissati dai punti d'uso in `ui.js` e `main.js`,
+ * che sono intatti, e i due valori numerici vengono dalla storia di git
+ * (`const CAREER_MATCHES = 3` e `pointsToWin = 11` in main.js prima dello
+ * spostamento). L'unico valore non deducibile e' CAREER_PROMOTION_WINS: con tre
+ * partite a stagione, "stagione positiva ma senza trofeo" puo' solo essere due
+ * vittorie. Va confermato da chi ha scritto il refactor.
+ */
+export const CAREER_MATCHES = 3;
+export const CAREER_POINTS_TO_WIN = 11;
+export const CAREER_PROMOTION_WINS = 2;
+
+/**
+ * Come si accumula ogni metrica sulla stagione. Le metriche di conteggio si
+ * sommano; quelle su cui l'obiettivo pone un tetto — errori e doppi falli —
+ * tengono il caso peggiore, perche' "al massimo N errori" deve valere per ogni
+ * partita e non in media. Lo scambio piu' lungo e' un massimo per definizione.
+ */
+export const SEASON_METRIC_AGG = {
+  pointsWon: "sum",
+  winners: "sum",
+  smashWinners: "sum",
+  errors: "max",
+  doubleFaults: "max",
+  longestRally: "max",
+};
+
+/** Totale di stagione a zero: le stesse chiavi che produce `matchProgress`. */
+export function emptySeasonProgress() {
+  return Object.fromEntries(Object.keys(SEASON_METRIC_AGG).map((metric) => [metric, 0]));
+}
+
 export const OBJECTIVE_DEFS = {
   smashWins: { metric: "smashWinners", unit: "count" },
   noDoubleFault: { metric: "doubleFaults", unit: "max" },
