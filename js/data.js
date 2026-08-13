@@ -144,6 +144,19 @@ export const BALANCE = {
   // Il laterale ha gia' due significati (wall-angle e uscita x3) e un terzo lo
   // renderebbe illeggibile; il fondo e' la parete del recupero, ed e' quella
   // che il colpo deve negare.
+  // Globo: doppio Y. Un globo riuscito e' altissimo e profondo e costringe la
+  // coppia avversaria a indietreggiare. Uno sbagliato resta corto e alto, cioe'
+  // il punteggio massimo di attaccabilita' — se ne abusi te lo smashano.
+  globoTapWindow: 0.7,
+  globoBufferWindow: 0.85,
+  globoMinCharge: 0.55,
+  globoMaxHeight: 92,
+  globoMinQuality: 0.72,
+  globoDepth: 218,
+  globoFlightTime: 1.98,
+  globoFailDepth: 118,
+  globoFailFlightTime: 1.52,
+  globoEnergyCost: 0.115,
   cutVolleyTapWindow: 0.7,
   cutVolleyBufferWindow: 0.85,
   cutVolleyMinHeight: 34,

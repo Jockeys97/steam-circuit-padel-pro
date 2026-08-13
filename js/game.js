@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260812-deterministic-v8";
-import { clamp } from "./render.js?v=20260812-deterministic-v8";
-import { sfx } from "./audio.js?v=20260812-deterministic-v8";
-import { t } from "./i18n.js?v=20260812-deterministic-v8";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-immersive-v9";
+import { clamp } from "./render.js?v=20260813-immersive-v9";
+import { sfx } from "./audio.js?v=20260813-immersive-v9";
+import { t } from "./i18n.js?v=20260813-immersive-v9";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260812-deterministic-v8";
+} from "./fx.js?v=20260813-immersive-v9";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -225,6 +225,8 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     smashPrimed: false,
     cutVolleyPrimed: false,
     cutVolleyTapWindow: 0,
+    globoPrimed: false,
+    globoTapWindow: 0,
     smashTapWindow: 0,
     smashContactGrace: 0,
     smashContactFallback: false,
@@ -597,6 +599,8 @@ export function prepareServe(state) {
   state.smashTapWindow = 0;
   state.cutVolleyPrimed = false;
   state.cutVolleyTapWindow = 0;
+  state.globoPrimed = false;
+  state.globoTapWindow = 0;
   state.smashContactGrace = 0;
   state.smashContactFallback = false;
   state.playerSwingBuffer = 0;
@@ -930,7 +934,9 @@ function consumeRallyEnergy(state, paddle, assessment, variant, slice) {
   const side = shotSide(paddle);
   const isSmash = variant === "smash" || variant.startsWith("smash-");
   const isLob = variant === "lob" || variant === "defensive-lob";
-  const baseCost = variant === "chiquita" ? 0.025 : slice ? 0.035 : isLob ? 0.055 : isSmash ? 0.13 : 0.045;
+  const baseCost = variant === "globo"
+    ? BALANCE.globoEnergyCost
+    : variant === "chiquita" ? 0.025 : slice ? 0.035 : isLob ? 0.055 : isSmash ? 0.13 : 0.045;
   const powerCost = assessment.mode === "power" ? 0.095 : assessment.mode === "balanced" ? 0.04 : 0.012;
   const movementCost = (paddle.moveRatio ?? 0) * 0.025;
   state.rallyEnergy[side] = clamp(
@@ -1593,6 +1599,23 @@ export function hitBall(
       ball.shotType = "wall-angle";
       ball.spin = aimedOffset * 68 * control;
       addEvent(state, t("evAngleWall"));
+    } else if (shotVariant === "globo") {
+      // Il globo riuscito e' altissimo e va a morire in fondo: la coppia
+      // avversaria non puo' restare a rete. Quello sbagliato resta corto e alto,
+      // cioe' esattamente cio' che `attackRead` giudica piu' attaccabile: se ne
+      // abusi senza costruirlo, te lo smashano. L'antiabuso e' il gioco stesso.
+      const globoRiuscito = assessment.quality >= BALANCE.globoMinQuality;
+      const globoDepth = globoRiuscito ? BALANCE.globoDepth : BALANCE.globoFailDepth;
+      setComputerTrajectory(
+        ball,
+        clamp(centerX + aimedOffset * (COURT.right - COURT.left) * 0.26,
+          COURT.left + 96, COURT.right - 96),
+        targetYForSide(paddle.isPlayer ? "ai" : "player", globoDepth),
+        globoRiuscito ? BALANCE.globoFlightTime : BALANCE.globoFailFlightTime,
+      );
+      ball.shotType = globoRiuscito ? "globo" : "lob";
+      if (globoRiuscito && paddle.isPlayer) state.aiRecoveryMode = true;
+      addEvent(state, t(globoRiuscito ? "evGlobo" : "evGloboShort"));
     } else if (shotVariant === "cut-volley" && assessment.quality >= BALANCE.cutVolleyMinQuality) {
       // Volee profonda e molto tagliata: rimbalza e va a morire sul vetro di
       // fondo. `wallKill` porta la forza dell'effetto fino al contatto con la
@@ -2474,6 +2497,7 @@ const EMPTY_INPUT = {
   technicalModifier: false,
   teamTactic: null,
   cutVolley: false,
+  globo: false,
 };
 
 function moveHumanPaddle(state, paddle, input, dt) {
@@ -2847,6 +2871,10 @@ export function updateMatch(state, dt, input, input2 = null) {
       state.cutVolleyTapWindow = Math.max(0, state.cutVolleyTapWindow - dt);
       if (state.cutVolleyTapWindow === 0) state.cutVolleyPrimed = false;
     }
+    if (state.globoPrimed) {
+      state.globoTapWindow = Math.max(0, state.globoTapWindow - dt);
+      if (state.globoTapWindow === 0) state.globoPrimed = false;
+    }
     if (input.hit) {
       queueChargedShot(state, input.slice, input.shotVariant ?? (input.slice ? "slice" : "auto"));
       const queuedPower = state.queuedShotPower * state.athlete.stats.power;
@@ -2867,15 +2895,36 @@ export function updateMatch(state, dt, input, input2 = null) {
         && ball.z >= BALANCE.cutVolleyMinHeight;
       state.smashPrimed = canPrimeSmash;
       state.smashTapWindow = canPrimeSmash ? BALANCE.smashDoubleTapWindow : 0;
+      // Globo: serve una carica sostanziosa e una palla non troppo alta, perche'
+      // il globo si costruisce da sotto.
+      const canPrimeGlobo = !canPrimeSmash
+        && !canPrimeCutVolley
+        && state.queuedShotVariant === "lob"
+        && state.queuedShotCharge >= BALANCE.globoMinCharge
+        && ball.z <= BALANCE.globoMaxHeight;
       state.cutVolleyPrimed = canPrimeCutVolley;
       state.cutVolleyTapWindow = canPrimeCutVolley ? BALANCE.cutVolleyTapWindow : 0;
+      state.globoPrimed = canPrimeGlobo;
+      state.globoTapWindow = canPrimeGlobo ? BALANCE.globoTapWindow : 0;
       state.playerSwingBuffer = canPrimeSmash
         ? BALANCE.smashBufferWindow
         : canPrimeCutVolley
           ? BALANCE.cutVolleyBufferWindow
-          : BALANCE.shotBufferWindow;
+          : canPrimeGlobo
+            ? BALANCE.globoBufferWindow
+            : BALANCE.shotBufferWindow;
       if (canPrimeSmash) addEvent(state, t("evSmashPrimed"));
       else if (canPrimeCutVolley) addEvent(state, t("evCutVolleyPrimed"));
+      else if (canPrimeGlobo) addEvent(state, t("evGloboPrimed"));
+    }
+    if (input.globo && state.globoPrimed && state.playerSwingBuffer > 0) {
+      state.queuedShotVariant = "globo";
+      state.queuedShotAim = clamp(input.aim ?? state.queuedShotAim, -1, 1);
+      state.queuedShotAge = 0;
+      state.shotIntent = "globo";
+      state.globoPrimed = false;
+      state.globoTapWindow = 0;
+      addEvent(state, t("evGloboConfirmed"));
     }
     if (input.cutVolley && state.cutVolleyPrimed && state.playerSwingBuffer > 0) {
       state.queuedShotVariant = "cut-volley";

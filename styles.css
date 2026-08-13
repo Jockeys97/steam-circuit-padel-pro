@@ -2484,3 +2484,28 @@ body.mode-colorblind .hero-preview {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* --- Vista immersiva --------------------------------------------------------
+   Di default il campo occupa tutta l'altezza disponibile e la fascia inferiore
+   (comandi, misuratori) resta nascosta: si riapre dal pulsante ▤ nell'HUD.
+   La scelta viene ricordata fra una sessione e l'altra. */
+.match-panel {
+  display: block;
+}
+
+#screen-game.immersive .match-panel {
+  display: none;
+}
+
+#screen-game.immersive .canvas-wrap {
+  /* 960x700 e' il rapporto del canvas: limito la larghezza in funzione
+     dell'altezza disponibile per riempire lo schermo senza deformare. */
+  max-width: min(100%, calc((100vh - 108px) * 960 / 700));
+  margin-inline: auto;
+}
+
+.hud-pause--panel[aria-pressed="true"] {
+  background: var(--cyan);
+  color: #04203a;
+}

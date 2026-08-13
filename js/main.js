@@ -1,13 +1,13 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260812-character-sprites-v8";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-immersive-v9";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260812-deterministic-v8";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260812-deterministic-v8";
-import { setReduceMotion } from "./fx.js?v=20260812-deterministic-v8";
-import { createDrill, updateDrill } from "./drill.js?v=20260812-deterministic-v8";
-import { getLang, setLang, t } from "./i18n.js?v=20260812-deterministic-v8";
+} from "./game.js?v=20260813-immersive-v9";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-immersive-v9";
+import { setReduceMotion } from "./fx.js?v=20260813-immersive-v9";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-immersive-v9";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-immersive-v9";
 import {
   drawArena,
   drawActiveIndicator,
@@ -20,7 +20,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260812-deterministic-v8";
+} from "./render.js?v=20260813-immersive-v9";
 import {
   applyLanguage,
   awardObjectives,
@@ -41,7 +41,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260812-deterministic-v8";
+} from "./ui.js?v=20260813-immersive-v9";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -117,6 +117,7 @@ const gamepad = {
   smashTapConsumed: false,
   smashUpgradeQueued: false,
   cutVolleyQueued: false,
+  globoQueued: false,
   switchStickLatched: false,
   splitStep: 0,
   sprint: 0,
@@ -137,6 +138,7 @@ const gamepad2 = {
   smashTapConsumed: false,
   smashUpgradeQueued: false,
   cutVolleyQueued: false,
+  globoQueued: false,
   switchStickLatched: false,
   splitStep: 0,
   sprint: 0,
@@ -246,6 +248,7 @@ function releaseGamepadKeys() {
   gamepad.smashTapConsumed = false;
   gamepad.smashUpgradeQueued = false;
   gamepad.cutVolleyQueued = false;
+  gamepad.globoQueued = false;
   gamepad.switchStickLatched = false;
   gamepad.splitStep = 0;
   gamepad.sprint = 0;
@@ -260,6 +263,7 @@ function releaseGamepadKeys2() {
   gamepad2.smashTapConsumed = false;
   gamepad2.smashUpgradeQueued = false;
   gamepad2.cutVolleyQueued = false;
+  gamepad2.globoQueued = false;
   gamepad2.switchStickLatched = false;
   gamepad2.splitStep = 0;
   gamepad2.sprint = 0;
@@ -583,9 +587,20 @@ function pollGamepadGameplay(g, pad, b, isSecond = false) {
   }
   g.prevButtons[2] = b(2);
 
+  // Secondo tocco su Y: globo.
+  const globoPrimed = isSecond ? secondPaddle?.globoPrimed : matchState?.globoPrimed;
+  const yJustPressed = b(3) && !g.prevButtons[3];
+  if (!b(3)) g.globoTapConsumed = false;
+  if (yJustPressed && globoPrimed) {
+    g.globoQueued = true;
+    g.globoTapConsumed = true;
+    if (!isSecond) pulseGamepad(70, 0.5, 0.55);
+  }
+  g.prevButtons[3] = b(3);
+
   const shotButton = b(2) && !g.cutVolleyTapConsumed
     ? (g.technicalModifier ? "vibora" : "slice")
-    : b(3)
+    : b(3) && !g.globoTapConsumed
       ? (g.technicalModifier ? "defensive-lob" : "lob")
       : b(0) && !g.smashTapConsumed
         ? (g.technicalModifier ? "chiquita" : "drive")
@@ -731,6 +746,7 @@ function getInput() {
     analogAim: Boolean(controllerAim),
     smashUpgrade: gamepad.smashUpgradeQueued,
     cutVolley: gamepad.cutVolleyQueued,
+    globo: gamepad.globoQueued,
     splitStep: gamepad.splitStep,
     sprint: gamepad.sprint,
     technicalModifier: gamepad.technicalModifier,
@@ -745,6 +761,7 @@ function getInput() {
   switchDirectionQueued = null;
   gamepad.smashUpgradeQueued = false;
   gamepad.cutVolleyQueued = false;
+  gamepad.globoQueued = false;
   gamepad.tacticQueued = null;
   return input;
 }
@@ -770,6 +787,7 @@ function getInput2() {
     analogAim: Boolean(controllerAim2?.x || controllerAim2?.y),
     smashUpgrade: gamepad2.smashUpgradeQueued,
     cutVolley: gamepad2.cutVolleyQueued,
+    globo: gamepad2.globoQueued,
     splitStep: gamepad2.splitStep,
     sprint: gamepad2.sprint,
     technicalModifier: gamepad2.technicalModifier,
@@ -784,6 +802,7 @@ function getInput2() {
   gamepad2.switchDirectionQueued = null;
   gamepad2.smashUpgradeQueued = false;
   gamepad2.cutVolleyQueued = false;
+  gamepad2.globoQueued = false;
   gamepad2.tacticQueued = null;
   return input2;
 }
@@ -1518,6 +1537,7 @@ if (["points11", "points21", "set"].includes(prefs.matchLength)) ui.matchLength 
 if (Number.isFinite(prefs.volume)) setVolume(Math.min(1, Math.max(0, prefs.volume)));
 if (typeof prefs.reduceMotion === "boolean") ui.reduceMotion = prefs.reduceMotion;
 if (typeof prefs.colorblind === "boolean") ui.colorblind = prefs.colorblind;
+if (typeof prefs.matchPanel === "boolean") ui.matchPanel = prefs.matchPanel;
 if (["solo", "coop", "pvp"].includes(prefs.playerMode)) ui.playerMode = prefs.playerMode;
 if (["it", "en"].includes(prefs.lang)) {
   ui.lang = prefs.lang;
@@ -1584,7 +1604,23 @@ function applyAccessibility() {
   document.body.classList.toggle("reduce-motion", ui.reduceMotion);
   document.body.classList.toggle("mode-colorblind", ui.colorblind);
   setReduceMotion(ui.reduceMotion);
+  applyMatchPanel();
 }
+
+/** La fascia inferiore e' nascosta di default: il campo prende tutto lo schermo. */
+function applyMatchPanel() {
+  const screen = document.getElementById("screen-game");
+  const button = document.getElementById("panelBtn");
+  if (screen) screen.classList.toggle("immersive", !ui.matchPanel);
+  if (button) button.setAttribute("aria-pressed", String(ui.matchPanel));
+}
+
+const panelBtn = document.getElementById("panelBtn");
+panelBtn?.addEventListener("click", () => {
+  ui.matchPanel = !ui.matchPanel;
+  applyMatchPanel();
+  savePrefs(collectPrefs());
+});
 
 function setLanguage(lang) {
   ui.lang = lang;

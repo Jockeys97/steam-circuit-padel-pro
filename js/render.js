@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260812-deterministic-v8";
-import { t } from "./i18n.js?v=20260812-deterministic-v8";
+import { BALANCE, COURT } from "./data.js?v=20260813-immersive-v9";
+import { t } from "./i18n.js?v=20260813-immersive-v9";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

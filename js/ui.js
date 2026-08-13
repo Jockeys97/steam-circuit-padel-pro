@@ -1,7 +1,7 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260812-character-sprites-v8";
-import { getMatchInfo } from "./game.js?v=20260812-deterministic-v8";
-import { getVolume, isMuted } from "./audio.js?v=20260812-deterministic-v8";
-import { getLang, t } from "./i18n.js?v=20260812-deterministic-v8";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-immersive-v9";
+import { getMatchInfo } from "./game.js?v=20260813-immersive-v9";
+import { getVolume, isMuted } from "./audio.js?v=20260813-immersive-v9";
+import { getLang, t } from "./i18n.js?v=20260813-immersive-v9";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -147,6 +147,7 @@ export function collectPrefs() {
     matchLength: ui.matchLength,
     volume: getVolume(),
     reduceMotion: ui.reduceMotion,
+    matchPanel: ui.matchPanel,
     colorblind: ui.colorblind,
     lang: ui.lang,
     playerMode: ui.playerMode,
@@ -179,6 +180,8 @@ export const ui = {
   aiDifficulty: "easy",
   matchLength: "points11",
   reduceMotion: false,
+  // Vista immersiva: il campo riempie lo schermo, la fascia sotto e' opzionale.
+  matchPanel: false,
   colorblind: false,
   lang: "it",
   playerMode: "solo",
