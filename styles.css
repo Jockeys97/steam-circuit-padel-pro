@@ -2637,3 +2637,19 @@ body.mode-colorblind .hero-preview {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+
+/* --- Selezione completi ------------------------------------------------------
+   I completi usano la stessa card degli atleti: cambia solo l'intestazione che
+   compare sopra la griglia per tornare indietro. */
+.athlete-grid__head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 64px 12px;
+}
+
+.athlete-grid__hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+}

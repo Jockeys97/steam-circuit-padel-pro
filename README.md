@@ -199,7 +199,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-outfit-lossless-v21" index.html js/*.js styles.css   # deve dare 23 in totale
+grep -c "20260813-wardrobe-cards-v22" index.html js/*.js styles.css   # deve dare 23 in totale
 ```
 
 ---

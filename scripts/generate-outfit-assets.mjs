@@ -115,6 +115,27 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
     .toFile(path.join(outDir, `${sheetName}.webp`));
 }
 
+// Le anteprime vengono mostrate come card grandi, con lo stesso stile di quelle
+// degli atleti: devono avere la loro stessa forma e la loro stessa nitidezza.
+// A 240 px si vedevano sfocate, e i concept hanno orientamenti diversi (quello
+// del Maestro e' verticale, gli altri orizzontali) quindi i mezzi pannelli
+// uscivano con proporzioni incompatibili fra loro.
+const PREVIEW_WIDTH = 560;
+const PREVIEW_RATIO = 0.67;   // larghezza / altezza, come i ritratti degli atleti
+const PREVIEW_TOP_ANCHOR = 0.08; // il ritaglio parte poco sotto il bordo: nelle
+                                 // illustrazioni di figura la testa sta in alto
+
+function previewCrop(panelWidth, panelHeight, left) {
+  const wanted = Math.round(panelWidth / PREVIEW_RATIO);
+  if (wanted >= panelHeight) {
+    // Il pannello e' gia' piu' stretto del rapporto voluto: si taglia in larghezza.
+    const width = Math.round(panelHeight * PREVIEW_RATIO);
+    return { left: left + Math.round((panelWidth - width) / 2), top: 0, width, height: panelHeight };
+  }
+  const top = Math.min(panelHeight - wanted, Math.round(panelHeight * PREVIEW_TOP_ANCHOR));
+  return { left, top, width: panelWidth, height: wanted };
+}
+
 async function createPreviews(athleteId, athlete) {
   const source = path.join(ROOT, athlete.concepts);
   const meta = await sharp(source).metadata();
@@ -123,10 +144,12 @@ async function createPreviews(athleteId, athlete) {
   const masterDir = path.join(MASTER_ROOT, athleteId);
   await fs.mkdir(dir, { recursive: true });
   await fs.mkdir(masterDir, { recursive: true });
+  const circuit = previewCrop(half, meta.height, 0);
+  const legend = previewCrop(meta.width - half, meta.height, half);
   await Promise.all([
     fs.copyFile(source, path.join(masterDir, "concept-master.png")),
-    sharp(source).extract({ left: 0, top: 0, width: half, height: meta.height }).resize({ width: 240 }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
-    sharp(source).extract({ left: half, top: 0, width: meta.width - half, height: meta.height }).resize({ width: 240 }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
+    sharp(source).extract(circuit).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "circuit-preview.webp")),
+    sharp(source).extract(legend).resize({ width: PREVIEW_WIDTH }).webp({ quality: 82, effort: 6 }).toFile(path.join(dir, "legend-preview.webp")),
   ]);
 }
 

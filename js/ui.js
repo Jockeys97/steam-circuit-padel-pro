@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-outfit-lossless-v21";
-import { getMatchInfo } from "./game.js?v=20260813-outfit-lossless-v21";
-import { getVolume, isMuted } from "./audio.js?v=20260813-outfit-lossless-v21";
-import { getLang, t } from "./i18n.js?v=20260813-outfit-lossless-v21";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-lossless-v21";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete } from "./data.js?v=20260813-wardrobe-cards-v22";
+import { getMatchInfo } from "./game.js?v=20260813-wardrobe-cards-v22";
+import { getVolume, isMuted } from "./audio.js?v=20260813-wardrobe-cards-v22";
+import { getLang, t } from "./i18n.js?v=20260813-wardrobe-cards-v22";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-wardrobe-cards-v22";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -307,87 +307,116 @@ function careerOutcomeText(state, won) {
   }
 }
 
+/**
+ * La selezione atleta ha due viste sulla STESSA griglia: prima gli atleti, poi
+ * i completi di quello scelto, con la medesima card. Prima il guardaroba stava
+ * in una sezione sotto la griglia e bisognava scorrere per vederlo; e ogni card
+ * resta un bottone a se', quindi non ci sono bottoni annidati.
+ */
+function athleteCardMarkup(art, color, title, subtitle, description, footer, locked) {
+  return `
+    <div class="athlete-card__art" style="background-image:linear-gradient(180deg, transparent 48%, rgba(4, 10, 35, 0.5) 100%),url('${art}');border-bottom-color:${color}" aria-hidden="true">${locked ? `<span class="lock-badge">🔒</span>` : ""}</div>
+    <div class="athlete-card__body">
+      <h3 style="color:${color}">${title}</h3>
+      <p class="athlete-card__role">${subtitle}</p>
+      <p class="athlete-card__desc">${description}</p>
+      <p class="athlete-card__special">${footer}</p>
+    </div>
+  `;
+}
+
 export function renderAthletes(onSelect, selectedId = null) {
   const grid = document.getElementById("athleteGrid");
-  const wardrobe = document.getElementById("athleteWardrobe");
-  const continueEl = document.getElementById("athleteContinue");
-  grid.innerHTML = "";
+  const header = document.getElementById("athleteGridHead");
 
-  const renderWardrobe = (athlete) => {
-    if (!wardrobe || !continueEl) return;
+  const showOutfits = (athlete) => {
     const outfits = outfitsForAthlete(athlete.id);
     if (!outfits.length) {
-      wardrobe.innerHTML = "";
-      continueEl.innerHTML = `<button class="btn btn--primary" type="button">${t("outfitContinue")}</button>`;
-    } else {
-      const equipped = selectedOutfit(athlete);
-      wardrobe.innerHTML = `
-        <div class="wardrobe__head">
-          <div><span>${t("outfitEyebrow")}</span><h3>${t("outfitTitle")}</h3></div>
-          <p>${t("outfitSub")}</p>
-        </div>
-        <div class="wardrobe__kits">
-          ${outfits.map((outfit) => {
-            const unlocked = isUnlocked(outfit, ui.career);
-            const active = equipped?.id === outfit.id;
-            return `<button class="wardrobe-kit${active ? " is-selected" : ""}${unlocked ? "" : " is-locked"}" type="button" data-outfit="${outfit.id}" ${unlocked ? "" : 'aria-disabled="true"'}>
-              <span class="wardrobe-kit__swatch" style="--kit-primary:${outfit.colors[0]};--kit-secondary:${outfit.colors[1]};${outfit.preview ? `background-image:url('${outfit.preview}')` : ""}"></span>
-              <strong>${t(outfit.nameKey)}</strong>
-              <small>${unlocked ? (active ? t("outfitEquipped") : t("outfitAvailable")) : lockLabel(outfit.unlock)}</small>
-            </button>`;
-          }).join("")}
-        </div>`;
-      wardrobe.querySelectorAll("[data-outfit]").forEach((button) => {
-        button.addEventListener("click", () => {
-          if (button.classList.contains("is-locked")) return;
-          ui.career.equippedOutfits = { ...(ui.career.equippedOutfits ?? {}), [athlete.id]: button.dataset.outfit };
-          saveCareer(ui.career);
-          renderWardrobe(athlete);
-        });
-      });
-      continueEl.innerHTML = `<button class="btn btn--primary" type="button">${t("outfitContinue")}</button>`;
+      onSelect?.(athleteWithOutfit(athlete));
+      return;
     }
-    continueEl.querySelector("button")?.addEventListener("click", () => onSelect?.(athleteWithOutfit(athlete)));
+    ui.selectedAthlete = athlete;
+    grid.innerHTML = "";
+    if (header) {
+      header.innerHTML = `<button class="btn btn--ghost" type="button" data-outfit-back>${t("outfitBack")}</button>
+        <span class="athlete-grid__hint">${t("outfitSub")}</span>`;
+      header.hidden = false;
+      header.querySelector("[data-outfit-back]")?.addEventListener("click", () => showAthletes());
+    }
+    const equipped = selectedOutfit(athlete);
+    outfits.forEach((outfit) => {
+      const unlocked = isUnlocked(outfit, ui.career);
+      const active = equipped?.id === outfit.id;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "athlete-card";
+      if (!unlocked) card.classList.add("athlete-card--locked");
+      if (active) card.classList.add("athlete-card--selected");
+      card.dataset.outfit = outfit.id;
+      const art = outfit.preview ?? athlete.image;
+      card.innerHTML = athleteCardMarkup(
+        art,
+        outfit.colors?.[0] ?? athlete.color,
+        t(outfit.nameKey),
+        t(`athlete_${athlete.id}_name`),
+        unlocked ? (active ? t("outfitEquipped") : t("outfitAvailable")) : lockLabel(outfit.unlock),
+        unlocked ? `▶ ${t("outfitPick")}` : "",
+        !unlocked,
+      );
+      if (unlocked) {
+        card.addEventListener("click", () => {
+          ui.career.equippedOutfits = { ...(ui.career.equippedOutfits ?? {}), [athlete.id]: outfit.id };
+          saveCareer(ui.career);
+          onSelect?.(athleteWithOutfit(athlete));
+        });
+      } else {
+        card.setAttribute("aria-disabled", "true");
+      }
+      grid.appendChild(card);
+    });
   };
 
-  demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
-    const locked = !isUnlocked(athlete, ui.career);
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "athlete-card";
-    if (locked) card.classList.add("athlete-card--locked");
-    card.dataset.id = athlete.id;
-    card.innerHTML = `
-      <div class="athlete-card__art" style="background-image:linear-gradient(180deg, transparent 48%, rgba(4, 10, 35, 0.5) 100%),url('${athlete.image}');border-bottom-color:${athlete.color}" aria-hidden="true">${locked ? `<span class="lock-badge">🔒</span>` : ""}</div>
-      <div class="athlete-card__body">
-        <h3 style="color:${athlete.color}">${t(`athlete_${athlete.id}_name`)}</h3>
-        <p class="athlete-card__role">${t(`athlete_${athlete.id}_role`)}</p>
-        <p class="athlete-card__desc">${locked ? lockLabel(athlete.unlock) : t(`athlete_${athlete.id}_desc`)}</p>
-        <p class="athlete-card__special">⚡ ${t(`athlete_${athlete.id}_special`)}</p>
-      </div>
-    `;
-    if (!locked) {
-      card.addEventListener("click", () => {
-        selectAthleteCard(card, athlete);
-        renderWardrobe(athlete);
-      });
-      if (athlete.id === selectedId) {
-        selectAthleteCard(card, athlete);
-        renderWardrobe(athlete);
-      }
-    } else {
-      // Niente `disabled`: un bottone disabilitato non emette click, quindi il
-      // triplo tocco non arriverebbe mai. Resta inselezionabile perche' l'unica
-      // cosa che fa e' contare i tocchi.
-      card.setAttribute("aria-disabled", "true");
-      card.addEventListener("click", () => {
-        if (promptUnlockCode()) renderAthletes(onSelect, selectedId);
-      });
+  const showAthletes = () => {
+    grid.innerHTML = "";
+    if (header) {
+      header.innerHTML = "";
+      header.hidden = true;
     }
-    grid.appendChild(card);
-  });
+    demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((athlete) => {
+      const locked = !isUnlocked(athlete, ui.career);
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "athlete-card";
+      if (locked) card.classList.add("athlete-card--locked");
+      card.dataset.id = athlete.id;
+      const equipped = selectedOutfit(athlete);
+      card.innerHTML = athleteCardMarkup(
+        equipped?.preview ?? athlete.image,
+        athlete.color,
+        t(`athlete_${athlete.id}_name`),
+        t(`athlete_${athlete.id}_role`),
+        locked ? lockLabel(athlete.unlock) : t(`athlete_${athlete.id}_desc`),
+        `⚡ ${t(`athlete_${athlete.id}_special`)}`,
+        locked,
+      );
+      if (!locked) {
+        card.addEventListener("click", () => {
+          selectAthleteCard(card, athlete);
+          showOutfits(athlete);
+        });
+      } else {
+        // Niente `disabled`: un bottone disabilitato non emette click e il
+        // triplo tocco per il codice di sblocco non arriverebbe mai.
+        card.setAttribute("aria-disabled", "true");
+        card.addEventListener("click", () => {
+          if (promptUnlockCode()) renderAthletes(onSelect, selectedId);
+        });
+      }
+      grid.appendChild(card);
+    });
+  };
 
-  if (!ui.selectedAthlete && continueEl) continueEl.innerHTML = "";
+  showAthletes();
 }
 
 export function renderArenas(onSelect) {

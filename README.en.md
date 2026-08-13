@@ -197,7 +197,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-outfit-lossless-v21" index.html js/*.js styles.css   # must total 23
+grep -c "20260813-wardrobe-cards-v22" index.html js/*.js styles.css   # must total 23
 ```
 
 ---
