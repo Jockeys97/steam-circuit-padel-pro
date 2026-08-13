@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-preview-frame-v26";
-import { t } from "./i18n.js?v=20260813-preview-frame-v26";
+import { BALANCE, COURT } from "./data.js?v=20260813-unlockable-animation-v27";
+import { t } from "./i18n.js?v=20260813-unlockable-animation-v27";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -881,17 +881,29 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
 
   if (activeSprite?.complete && activeSprite.naturalWidth > 0) {
     const frameCount = useRunSprite ? appearance?.runFrames ?? 4 : 4;
-    const frameWidth = activeSprite.naturalWidth / frameCount;
+    const viewKey = isPlayer ? "back" : "front";
+    const runGrid = useRunSprite ? appearance?.runGrid?.[viewKey] : null;
+    const frameColumns = runGrid?.columns ?? frameCount;
+    const frameRows = runGrid?.rows ?? 1;
+    const frameWidth = activeSprite.naturalWidth / frameColumns;
+    const frameHeight = activeSprite.naturalHeight / frameRows;
     const frame = useActionSprite
       ? actionFrame
       : useRunSprite
         ? Math.floor(paddle.runPhase ?? 0) % frameCount
       : charge > 0.08 ? 2 : swing > 0.08 ? 3 : paddle.motion > 0.12 ? 1 : 0;
-    const destWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame, appearance) * projected.scale;
-    const viewKey = isPlayer ? "back" : "front";
     const stateKey = useActionSprite ? "action" : useRunSprite ? "run" : "idle";
     const calibratedHeight = appearance?.spriteHeights?.[viewKey]?.[stateKey];
-    const destHeight = (calibratedHeight ?? (destWidth / projected.scale) * (activeSprite.naturalHeight / frameWidth)) * projected.scale;
+    const fallbackWidth = spriteDisplayWidth(isPlayer, useActionSprite, useRunSprite, actionFrame, appearance);
+    const unscaledHeight = calibratedHeight ?? fallbackWidth * (frameHeight / frameWidth);
+    const destHeight = unscaledHeight * projected.scale;
+    const calibratedAspect = appearance?.spriteAspect?.[viewKey]?.[stateKey];
+    const destWidth = (calibratedAspect
+      // Le celle degli sbloccabili hanno padding diverso fra idle, azione e
+      // corsa. Una proporzione visiva per stato evita deformazioni senza
+      // alterare il renderer dei quattro atleti base.
+      ? unscaledHeight * calibratedAspect
+      : fallbackWidth) * projected.scale;
     const feetY = projected.y + 46 * projected.scale;
     const transparentFootMargin = destHeight * (useRunSprite ? 0.04 : 0.085);
 
@@ -911,10 +923,10 @@ export function drawPaddle(ctx, paddle, color, isPlayer, swing, charge = 0, appe
     const drawFrame = (frameIndex) => {
       ctx.drawImage(
         activeSprite,
-        frameIndex * frameWidth,
-        0,
+        (frameIndex % frameColumns) * frameWidth,
+        Math.floor(frameIndex / frameColumns) * frameHeight,
         frameWidth,
-        activeSprite.naturalHeight,
+        frameHeight,
         projected.x - destWidth / 2,
         feetY - destHeight + transparentFootMargin,
         destWidth,

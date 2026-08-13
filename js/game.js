@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-preview-frame-v26";
-import { clamp } from "./render.js?v=20260813-preview-frame-v26";
-import { sfx } from "./audio.js?v=20260813-preview-frame-v26";
-import { t } from "./i18n.js?v=20260813-preview-frame-v26";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-unlockable-animation-v27";
+import { clamp } from "./render.js?v=20260813-unlockable-animation-v27";
+import { sfx } from "./audio.js?v=20260813-unlockable-animation-v27";
+import { t } from "./i18n.js?v=20260813-unlockable-animation-v27";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-preview-frame-v26";
+} from "./fx.js?v=20260813-unlockable-animation-v27";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

@@ -289,9 +289,13 @@ export const ATHLETES = [
     backRunSprite: "assets/sprites/back/oracolo-run-unique.webp",
     runFrames: 8,
     runDisplay: { front: 123, back: 85 },
+    spriteAspect: {
+      front: { idle: 0.375, action: 0.626, run: 0.313 },
+      back: { idle: 0.5, action: 0.375, run: 0.25 },
+    },
     spriteHeights: {
-      front: { idle: 180, action: 180, run: 148 },
-      back: { idle: 180, action: 180, run: 148 },
+      front: { idle: 180, action: 180, run: 285 },
+      back: { idle: 180, action: 180, run: 295 },
     },
     role: "Tecnica",
     color: "#c98bff",
@@ -318,9 +322,14 @@ export const ATHLETES = [
     backRunSprite: "assets/sprites/back/colosso-run-unique.webp",
     runFrames: 8,
     runDisplay: { front: 143, back: 77 },
+    runGrid: { front: { columns: 4, rows: 2 } },
+    spriteAspect: {
+      front: { idle: 0.5, action: 0.5, run: 0.749 },
+      back: { idle: 0.5, action: 0.375, run: 0.376 },
+    },
     spriteHeights: {
-      front: { idle: 180, action: 180, run: 148 },
-      back: { idle: 180, action: 180, run: 148 },
+      front: { idle: 180, action: 180, run: 180 },
+      back: { idle: 180, action: 180, run: 250 },
     },
     role: "Potenza",
     color: "#ffd54a",

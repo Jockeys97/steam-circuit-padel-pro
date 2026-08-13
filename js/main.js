@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-preview-frame-v26";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete } from "./data.js?v=20260813-unlockable-animation-v27";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-preview-frame-v26";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-preview-frame-v26";
-import { setReduceMotion } from "./fx.js?v=20260813-preview-frame-v26";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-preview-frame-v26";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-preview-frame-v26";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-preview-frame-v26";
+} from "./game.js?v=20260813-unlockable-animation-v27";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-unlockable-animation-v27";
+import { setReduceMotion } from "./fx.js?v=20260813-unlockable-animation-v27";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-unlockable-animation-v27";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-unlockable-animation-v27";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-unlockable-animation-v27";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-preview-frame-v26";
+} from "./render.js?v=20260813-unlockable-animation-v27";
 import {
   applyLanguage,
   awardObjectives,
@@ -43,7 +43,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-preview-frame-v26";
+} from "./ui.js?v=20260813-unlockable-animation-v27";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
