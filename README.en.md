@@ -119,6 +119,45 @@ half-power serve is now safe for everyone, while at full charge the Maestro (con
 faults 16.5% and never double-faults, and the Steamer (0.90) faults 36% and double-faults
 8.6%.
 
+### 7. The career rewarded losing on purpose
+
+The season objectives were named as such, and the hand-written targets took it for
+granted — `winPoints` asked for 26 points — but the check read the stats of **a single
+11-point match**. Three seasons out of the six-season cycle therefore had a
+mathematically unreachable star:
+
+| season | dead objective | real ceiling |
+|---|---|---|
+| 3, 4, 5 | winPoints 26 / 28 / 30 | 11 |
+| 6, 7, 8 | winners 12 / 13 / 14 | 11 |
+
+The ceiling isn't an estimate: every point goes through `scorePoint` with a category, and
+the two are exclusive, so `winners[p] + errors[opponent] = pointsWon[p] ≤ 11`.
+
+Worse than the impossible star was its mirror image. Losing two matches out of three
+replays the season, and the replay regenerated the objectives with `done: false`: the
+same three stars could be collected every cycle. Measured over ten cycles in season 1 —
+the easiest opponent — **60 stars, zero trophies**, enough for everything stars unlock.
+The optimal strategy was to lose.
+
+Targets are now derived from the reachable ceiling, season objectives are measured on the
+season total, and a star is paid once. Replaying only pays the match bonuses: 33 stars
+against the 60 earned by moving up.
+
+### 8. Two tables disagreeing on what an error was
+
+Settling the cumulative objectives produced two sources for the same rule:
+`SEASON_METRIC_AGG` said errors are kept at the **worst match**, an `agg` field on the
+objectives said they are **summed**. The game read the first; the second sat there
+looking authoritative. And because the audit computed ceilings assuming the sum,
+`fewErrors: max 18` looked tuned (18 < 33) while being impossible to fail: you cannot
+make more than 11 errors in a single match.
+
+The duplicated field is gone, and the audit now asks the real rule for the ceiling — with
+an assertion that prevents reintroducing the second table. The lesson is the same as the
+pseudo-random generator: when a value doesn't move the outcome, the instrument is the
+first suspect.
+
 ---
 
 ## When the test harness lies
@@ -138,14 +177,22 @@ game's modules import each other with a cache-busting query (`data.js?v=…`) an
 imported `data.js` without one. To Node those are **two distinct modules**, so I was
 mutating an object the game never read.
 
-Both taught me to verify the instrument before the results: if a parameter doesn't move
-the output, the measurement is the first suspect.
+**Language inside the measurement.** `recordPointStats` decided whether a point was a
+winning shot or an error with a regex over the **already translated** message. Playing in
+English almost nothing matched: `errors` stayed at zero for the whole match and the
+end-of-match screen showed 0-0. The objective "at most N errors" became a free star and
+"N winning shots" became unreachable — the entire career mode measured wrong, in one
+language only. The category is now declared by whoever awards the point, and translation
+happens only when it is drawn.
+
+All three taught me to verify the instrument before the results: if a parameter doesn't
+move the output, the measurement is the first suspect.
 
 ---
 
 ## The audit suite
 
-Five runnable scripts in `scripts/`, no test framework:
+Runnable scripts in `scripts/`, no test framework:
 
 ```bash
 node scripts/shot-quality-audit.mjs       # timing, quality, energy, speed
@@ -153,12 +200,22 @@ node scripts/shot-balance-audit.mjs       # lobs, x3, AI repertoire
 node scripts/smash-input-audit.mjs        # double tap, downgrades, serve return
 node scripts/difficulty-audit.mjs         # the three-difficulty ladder
 node scripts/controller-tactics-audit.mjs # technical shots, movement, tactics
+node scripts/career-audit.mjs             # reachable stars, ramp, farming, finale
+node scripts/module-contract-audit.mjs    # every import finds its export
+node scripts/modules-audit.mjs            # every module evaluates without throwing
 ```
 
 They don't check that the code runs: they check that the **balance** holds. Some assertions
 are explicit design constraints — for instance that the x2 smash stays *"strong but
 defendable"*, under 40% of points won. While tuning I had pushed it to 54% and that test
 stopped me: it was right and I was wrong.
+
+`module-contract-audit` is the exception that does check the code runs, and it exists for
+a failure that doesn't degrade: an import that fails to resolve breaks the module chain,
+and the page opens with the court drawn and **no button responding**, because no listener
+was ever attached. It happened twice, the second time by restoring from HEAD blocks that
+had been added deliberately. It now checks 105 imports against the real exports, and the
+version query must be a single one.
 
 All tuning lives in a single `BALANCE` object in [`js/data.js`](js/data.js), so a value can
 be moved without touching the logic.
@@ -197,7 +254,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-standard-sprites-v29" index.html js/*.js styles.css   # must total 23
+grep -c "20260813-outfit-alpha-v30" index.html js/*.js styles.css   # must total 23
 ```
 
 ---

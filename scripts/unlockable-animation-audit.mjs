@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import path from "node:path";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-standard-sprites-v29";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-outfit-alpha-v30";
 
 const unlockables = ["oracolo", "colosso"];
 const states = ["idle", "action", "run"];

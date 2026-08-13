@@ -121,6 +121,45 @@ dell'atleta. Ora un servizio a mezza forza resta sicuro per tutti, mentre a cari
 il Maestro (controllo 1.28) fallisce il 16.5% e non arriva mai al doppio fallo, lo
 Steamer (0.90) fallisce il 36% e doppia l'8.6%.
 
+### 7. La carriera premiava chi perdeva di proposito
+
+Gli obiettivi di stagione si chiamavano così, e i target scritti a mano lo davano per
+scontato — `winPoints` chiedeva 26 punti — ma la verifica leggeva i dati di **una sola
+partita da 11**. Tre stagioni su sei del ciclo avevano quindi una stella
+matematicamente irraggiungibile:
+
+| stagione | obiettivo morto | tetto reale |
+|---|---|---|
+| 3, 4, 5 | winPoints 26 / 28 / 30 | 11 |
+| 6, 7, 8 | winners 12 / 13 / 14 | 11 |
+
+Il tetto non è una stima: ogni punto passa da `scorePoint` con una categoria, e le due
+sono esclusive, quindi `winners[p] + errors[avversario] = pointsWon[p] ≤ 11`.
+
+Peggio della stella impossibile c'era la sua faccia opposta. Perdendo due partite su
+tre si ripete la stagione, e la ripetizione rigenerava gli obiettivi con `done: false`:
+le stesse tre stelle si riprendevano a ogni ciclo. Misurato su dieci cicli in stagione
+1 — l'avversario più facile — **60 stelle, zero trofei**, abbastanza per tutto ciò che
+le stelle sbloccano. La strategia ottimale era perdere.
+
+Ora i target si derivano dal tetto raggiungibile, gli obiettivi di stagione si misurano
+sul totale della stagione, e una stella si riscuote una volta sola. Ripetere paga solo i
+bonus di partita: 33 stelle contro le 60 di chi avanza.
+
+### 8. Due tabelle in disaccordo su cosa fosse un errore
+
+Assestando gli obiettivi cumulativi sono nate due fonti per la stessa regola:
+`SEASON_METRIC_AGG` diceva che gli errori si tengono al **match peggiore**, un campo
+`agg` sugli obiettivi diceva che si **sommano**. Il gioco leggeva la prima, la seconda
+restava lì a sembrare autorevole. E siccome l'audit calcolava i tetti assumendo la
+somma, `fewErrors: max 18` sembrava tarato (18 < 33) mentre era impossibile da fallire:
+in una partita non si possono fare più di 11 errori.
+
+Il campo duplicato è stato eliminato, e l'audit ora chiede il tetto alla regola vera —
+con un'asserzione che impedisce di reintrodurre la seconda tabella. La lezione è la
+stessa del generatore pseudocasuale: quando un valore non cambia l'esito, il primo
+sospettato è lo strumento.
+
 ---
 
 ## Quando il banco di prova mente
@@ -140,14 +179,22 @@ risultato. Il motivo: i moduli del gioco si importano con una query di cache bus
 (`data.js?v=…`) e il mio script importava `data.js` senza. Per Node sono **due moduli
 distinti**, quindi stavo mutando un oggetto che il gioco non leggeva mai.
 
-Da entrambi ho preso l'abitudine di verificare lo strumento prima dei risultati: se un
+**La lingua dentro la misura.** `recordPointStats` decideva se un punto era un colpo
+vincente o un errore con una regex sul messaggio **già tradotto**. Giocando in inglese
+non corrispondeva quasi niente: `errors` restava a zero per l'intera partita e la
+schermata di fine match mostrava 0-0. L'obiettivo "al massimo N errori" diventava una
+stella regalata e "N colpi vincenti" irraggiungibile — l'intera modalità carriera
+misurata sbagliato, in una lingua sola. Ora la categoria la dichiara chi assegna il
+punto e la traduzione arriva solo al momento di disegnarla.
+
+Da tutti e tre ho preso l'abitudine di verificare lo strumento prima dei risultati: se un
 parametro non cambia l'output, il primo sospettato è la misura.
 
 ---
 
 ## La suite di audit
 
-Cinque script eseguibili in `scripts/`, senza framework di test:
+Script eseguibili in `scripts/`, senza framework di test:
 
 ```bash
 node scripts/shot-quality-audit.mjs      # timing, qualità, energia, velocità
@@ -155,12 +202,22 @@ node scripts/shot-balance-audit.mjs      # lob, x3, repertorio dell'IA
 node scripts/smash-input-audit.mjs       # doppio tap, degrado, risposta al servizio
 node scripts/difficulty-audit.mjs        # scala dei tre livelli
 node scripts/controller-tactics-audit.mjs # colpi tecnici, movimento, tattiche
+node scripts/career-audit.mjs            # stelle raggiungibili, rampa, farm, finale
+node scripts/module-contract-audit.mjs   # ogni import trova il suo export
+node scripts/modules-audit.mjs           # ogni modulo si valuta senza esplodere
 ```
 
 Non verificano che il codice giri: verificano che il **bilanciamento** regga. Alcune
 asserzioni sono vincoli di design espliciti — per esempio che lo smash x2 resti *"forte
 ma difendibile"*, sotto il 40% di punti vinti. Durante il bilanciamento ero arrivato al
 54% e quel test mi ha fermato: aveva ragione lui.
+
+`module-contract-audit` è l'eccezione che verifica proprio che il codice giri, e c'è per
+un guasto che non degrada: un import che non risolve interrompe la catena dei moduli, e
+la pagina si apre con il campo disegnato e **nessun bottone che risponde**, perché
+nessun listener è mai stato agganciato. È successo due volte, la seconda ripristinando
+da HEAD dei blocchi che erano stati aggiunti di proposito. Ora 105 import vengono
+verificati contro gli export reali, e la query di versione deve essere una sola.
 
 Tutta la taratura è in un unico oggetto `BALANCE` in [`js/data.js`](js/data.js), così
 un valore si sposta senza entrare nella logica.
@@ -199,7 +256,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-standard-sprites-v29" index.html js/*.js styles.css   # deve dare 23 in totale
+grep -c "20260813-outfit-alpha-v30" index.html js/*.js styles.css   # deve dare 23 in totale
 ```
 
 ---

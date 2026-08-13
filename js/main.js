@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-standard-sprites-v29";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-outfit-alpha-v30";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-standard-sprites-v29";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-standard-sprites-v29";
-import { setReduceMotion } from "./fx.js?v=20260813-standard-sprites-v29";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-standard-sprites-v29";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-standard-sprites-v29";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-standard-sprites-v29";
+} from "./game.js?v=20260813-outfit-alpha-v30";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-outfit-alpha-v30";
+import { setReduceMotion } from "./fx.js?v=20260813-outfit-alpha-v30";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-outfit-alpha-v30";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-outfit-alpha-v30";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-alpha-v30";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-standard-sprites-v29";
+} from "./render.js?v=20260813-outfit-alpha-v30";
 import {
   applyLanguage,
   awardObjectives,
@@ -45,7 +45,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-standard-sprites-v29";
+} from "./ui.js?v=20260813-outfit-alpha-v30";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");

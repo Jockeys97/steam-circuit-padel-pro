@@ -211,23 +211,47 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
     const frame = Math.min(frameCount - 1, Math.floor(x / frameWidth));
     const bounds = frameBounds[frame];
     const normalizedY = (pixelY - bounds.top) / Math.max(1, bounds.bottom - bounds.top);
-    // Oracolo: si accorcia il bordo esterno della vecchia gonna. Rimangono il
-    // body e una mantellina corta, con una silhouette piu' agile e meno regale.
-    if (variant === "mythic" && athleteId === "oracolo" && normalizedY >= 0.49 && normalizedY <= 0.6) {
-      const [h, s] = rgbToHsv(data[i], data[i + 1], data[i + 2]);
-      if (h >= 245 && h <= 300 && s >= 0.42) {
-        data[i + 3] = 0;
-        continue;
-      }
-    }
     const [r, g, b] = recolorPixel(data[i], data[i + 1], data[i + 2], athlete, variant, normalizedY);
     data[i] = r; data[i + 1] = g; data[i + 2] = b;
   }
   const outDir = path.join(OUTPUT, athleteId, variant);
   await fs.mkdir(outDir, { recursive: true });
   const targetWidth = Math.max(frameCount, Math.round((info.width * 0.6) / frameCount) * frameCount);
-  await sharp(data, { raw: info })
-    .resize({ width: targetWidth, kernel: sharp.kernel.lanczos3 })
+  // Gli sprite base sono gia' ritagli puliti. Il resize diretto di RGBA pero'
+  // interpola anche il colore nascosto nei pixel trasparenti: sui master degli
+  // sbloccabili creava rettangoli colorati e bordi quasi invisibili. Prima
+  // azzeriamo davvero il fondo, poi ridimensioniamo RGB e alpha separatamente.
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 24) {
+      data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
+    } else {
+      data[i + 3] = 255;
+    }
+  }
+  // WebP conserva RGB anche sotto alpha zero. Impostarlo a zero *prima* della
+  // codifica non basta: il codec lossless puo' ricostruire quei canali. Una
+  // maschera alpha separata, riapplicata dopo il resize, impedisce al colore di
+  // contaminare il bordo e rende trasparente qualunque residuo del master.
+  const targetHeight = Math.round(info.height * targetWidth / info.width);
+  const alpha = Buffer.alloc(info.width * info.height);
+  const rgb = Buffer.alloc(info.width * info.height * 3);
+  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+    alpha[pixel] = data[pixel * 4 + 3];
+    rgb[pixel * 3] = data[pixel * 4];
+    rgb[pixel * 3 + 1] = data[pixel * 4 + 1];
+    rgb[pixel * 3 + 2] = data[pixel * 4 + 2];
+  }
+  const resizedColor = await sharp(rgb, { raw: { width: info.width, height: info.height, channels: 3 } })
+    .resize({ width: targetWidth, height: targetHeight, kernel: sharp.kernel.nearest })
+    .raw()
+    .toBuffer();
+  const resizedAlpha = await sharp(alpha, { raw: { width: info.width, height: info.height, channels: 1 } })
+    .resize({ width: targetWidth, height: targetHeight, kernel: sharp.kernel.nearest })
+    .extractChannel(0)
+    .raw()
+    .toBuffer();
+  await sharp(resizedColor, { raw: { width: targetWidth, height: targetHeight, channels: 3 } })
+    .joinChannel(resizedAlpha, { raw: { width: targetWidth, height: targetHeight, channels: 1 } })
     .webp({ lossless: true, effort: 6 })
     .toFile(path.join(outDir, `${sheetName}.webp`));
 }

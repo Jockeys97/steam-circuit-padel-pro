@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260813-standard-sprites-v29";
-import { clamp } from "./render.js?v=20260813-standard-sprites-v29";
-import { sfx } from "./audio.js?v=20260813-standard-sprites-v29";
-import { t } from "./i18n.js?v=20260813-standard-sprites-v29";
+import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260813-outfit-alpha-v30";
+import { clamp } from "./render.js?v=20260813-outfit-alpha-v30";
+import { sfx } from "./audio.js?v=20260813-outfit-alpha-v30";
+import { t } from "./i18n.js?v=20260813-outfit-alpha-v30";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-standard-sprites-v29";
+} from "./fx.js?v=20260813-outfit-alpha-v30";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

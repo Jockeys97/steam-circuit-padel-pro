@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, hitBall, updateMatch } from "../js/game.js?v=20260813-standard-sprites-v29";
-import { ATHLETES, AI_OPPONENTS, ARENAS, ROSTER_AVERAGE } from "../js/data.js?v=20260813-standard-sprites-v29";
+import { createMatchState, hitBall, updateMatch } from "../js/game.js?v=20260813-outfit-alpha-v30";
+import { ATHLETES, AI_OPPONENTS, ARENAS, ROSTER_AVERAGE } from "../js/data.js?v=20260813-outfit-alpha-v30";
 
 // Prima di questa funzione il compagno riceveva le statistiche del giocatore —
 // era un clone con un'altra faccia — e i due avversari non avevano statistiche

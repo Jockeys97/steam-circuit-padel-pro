@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-standard-sprites-v29";
-import { t } from "./i18n.js?v=20260813-standard-sprites-v29";
+import { BALANCE, COURT } from "./data.js?v=20260813-outfit-alpha-v30";
+import { t } from "./i18n.js?v=20260813-outfit-alpha-v30";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

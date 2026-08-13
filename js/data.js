@@ -534,13 +534,20 @@ export function emptySeasonProgress() {
   return Object.fromEntries(Object.keys(SEASON_METRIC_AGG).map((metric) => [metric, 0]));
 }
 
+/**
+ * Ogni obiettivo dichiara la metrica e il verso (`count` da superare, `max` da
+ * non superare). *Come* si aggrega sulla stagione non si scrive qui: lo dice
+ * `SEASON_METRIC_AGG`, che e' l'unica fonte. Duplicarlo su questi oggetti aveva
+ * gia' prodotto due tabelle in disaccordo — `errors` sommato qui e tenuto al
+ * massimo la' — con il gioco che seguiva una delle due e nessuno che notasse.
+ */
 export const OBJECTIVE_DEFS = {
-  smashWins: { metric: "smashWinners", unit: "count", agg: "sum" },
-  noDoubleFault: { metric: "doubleFaults", unit: "max", agg: "sum" },
-  winPoints: { metric: "pointsWon", unit: "count", agg: "sum" },
-  winRally: { metric: "longestRally", unit: "count", agg: "max" },
-  winners: { metric: "winners", unit: "count", agg: "sum" },
-  fewErrors: { metric: "errors", unit: "max", agg: "sum" },
+  smashWins: { metric: "smashWinners", unit: "count" },
+  noDoubleFault: { metric: "doubleFaults", unit: "max" },
+  winPoints: { metric: "pointsWon", unit: "count" },
+  winRally: { metric: "longestRally", unit: "count" },
+  winners: { metric: "winners", unit: "count" },
+  fewErrors: { metric: "errors", unit: "max" },
 };
 
 /** Obiettivi di stagione: tre per stagione, scelti deterministicamente. */
@@ -554,9 +561,12 @@ export function seasonObjectives(season, { pointsToWin = CAREER_POINTS_TO_WIN, m
     { id: "smashWins", target: 4 + step },
     { id: "winners", target: Math.min(cap - 6, 10 + step) },
     { id: "winRally", target: 10 + step },
+    // Questi due si misurano sul match peggiore della stagione (vedi
+    // SEASON_METRIC_AGG), quindi il tetto e' quello di una partita sola: con un
+    // target sopra `pointsToWin` non si potrebbero piu' fallire.
     { id: "noDoubleFault", target: Math.max(0, 2 - Math.floor(step / 3)) },
     { id: "winPoints", target: Math.min(cap - 3, promotionPoints + step) },
-    { id: "fewErrors", target: Math.max(6, 18 - step * 2) },
+    { id: "fewErrors", target: Math.max(3, 8 - step) },
   ];
   const offset = (season - 1) % pool.length;
   return [0, 1, 2].map((i) => pool[(offset + i) % pool.length]);

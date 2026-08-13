@@ -16,7 +16,7 @@ import {
   emptySeasonProgress,
   matchObjective,
   seasonObjectives,
-} from "../js/data.js?v=20260813-standard-sprites-v29";
+} from "../js/data.js?v=20260813-outfit-alpha-v30";
 
 /**
  * Audit della modalita' carriera. Non verifica che il codice girri: verifica che
@@ -37,18 +37,31 @@ const SEASONS = 12;
 const POINT_CAP_MATCH = CAREER_POINTS_TO_WIN;
 const POINT_CAP_SEASON = CAREER_POINTS_TO_WIN * CAREER_MATCHES;
 
-/** Tetto raggiungibile per metrica, per match e per stagione. */
-const METRIC_CAP = {
-  pointsWon: { match: POINT_CAP_MATCH, season: POINT_CAP_SEASON },
-  winners: { match: POINT_CAP_MATCH, season: POINT_CAP_SEASON },
-  smashWinners: { match: POINT_CAP_MATCH, season: POINT_CAP_SEASON },
+/** Tetto raggiungibile per metrica in un singolo match. */
+const MATCH_CAP = {
+  pointsWon: POINT_CAP_MATCH,
+  winners: POINT_CAP_MATCH,
+  smashWinners: POINT_CAP_MATCH,
   // Gli errori e i doppi falli del giocatore sono limitati dai punti che
   // l'avversario puo' vincere, non dai propri.
-  errors: { match: POINT_CAP_MATCH, season: POINT_CAP_SEASON },
-  doubleFaults: { match: POINT_CAP_MATCH, season: POINT_CAP_SEASON },
+  errors: POINT_CAP_MATCH,
+  doubleFaults: POINT_CAP_MATCH,
   // Un rally non ha tetto strutturale.
-  longestRally: { match: Infinity, season: Infinity },
+  longestRally: Infinity,
 };
+
+/**
+ * Il tetto di stagione dipende da come la metrica si accumula, e questo e' il
+ * punto in cui l'audit sbagliava: assumendo la somma per tutte, un obiettivo
+ * "max 18 errori" tenuto invece al peggior match sembrava tarato (18 < 33) mentre
+ * era impossibile da fallire (11 errori massimi in una partita). Il tetto va
+ * chiesto alla regola vera.
+ */
+function seasonCap(metric) {
+  const cap = MATCH_CAP[metric];
+  if (cap === Infinity) return Infinity;
+  return SEASON_METRIC_AGG[metric] === "max" ? cap : cap * CAREER_MATCHES;
+}
 
 const report = { seasons: [], ramp: [], farm: null, finale: null };
 
@@ -57,30 +70,37 @@ for (let season = 1; season <= SEASONS; season += 1) {
   const objs = seasonObjectives(season);
   const detail = objs.map((o) => {
     const def = OBJECTIVE_DEFS[o.id];
-    const cap = METRIC_CAP[def.metric].season;
-    const reachable = def.unit === "max" ? o.target >= 0 : o.target <= cap;
-    assert(
-      reachable,
-      `Stagione ${season}: obiettivo ${o.id} chiede ${o.target} con un tetto di ${cap}`,
-    );
-    // Un obiettivo "max" con target al tetto e' soddisfatto sempre: e' una
-    // stella regalata, l'altra faccia dell'obiettivo impossibile.
+    const cap = seasonCap(def.metric);
     if (def.unit === "max") {
+      // Un obiettivo "max" con target al tetto e' soddisfatto sempre: e' una
+      // stella regalata, l'altra faccia dell'obiettivo impossibile.
+      assert(o.target >= 0, `Stagione ${season}: ${o.id} chiede un massimo negativo`);
       assert(
         o.target < cap,
         `Stagione ${season}: ${o.id} con max ${o.target} e tetto ${cap} non si puo' fallire`,
       );
+    } else {
+      assert(
+        o.target <= cap,
+        `Stagione ${season}: obiettivo ${o.id} chiede ${o.target} con un tetto di ${cap}`,
+      );
     }
-    return `${o.id}=${o.target}/${cap === Infinity ? "∞" : cap}`;
+    // Con aggregazione a massimo l'etichetta dipende dal verso dell'obiettivo:
+    // per uno da superare quel massimo e' il record della stagione, per uno da
+    // non superare e' il match andato peggio.
+    const scope = SEASON_METRIC_AGG[def.metric] !== "max"
+      ? "totale stagione"
+      : def.unit === "max" ? "peggior match" : "record";
+    return `${o.id}=${o.target}/${cap === Infinity ? "∞" : cap} (${scope})`;
   });
   report.seasons.push({ season, objectives: detail.join(" ") });
 
   for (let m = 0; m < CAREER_MATCHES; m += 1) {
     const mo = matchObjective(season, m);
     const def = OBJECTIVE_DEFS[mo.id];
-    const cap = METRIC_CAP[def.metric].match;
+    const cap = MATCH_CAP[def.metric];
     assert(
-      def.unit === "max" ? mo.target >= 0 : mo.target <= cap,
+      def.unit === "max" ? mo.target >= 0 && mo.target < cap : mo.target <= cap,
       `Stagione ${season} match ${m + 1}: bonus ${mo.id} chiede ${mo.target} con tetto ${cap}`,
     );
   }
@@ -95,10 +115,23 @@ Object.keys(OBJECTIVE_DEFS).forEach((id) => {
   assert(visti.has(id), `L'obiettivo ${id} non esce in ${SEASONS} stagioni: e' codice morto`);
 });
 
-// Ogni metrica dichiarata negli obiettivi deve avere una regola di aggregazione.
+// Ogni metrica deve avere una regola di aggregazione, e deve averla in UN posto
+// solo. Un secondo campo `agg` sugli obiettivi era gia' finito in disaccordo con
+// SEASON_METRIC_AGG senza che nulla se ne accorgesse: il gioco leggeva una delle
+// due tabelle e l'altra restava li' a sembrare autorevole.
 Object.entries(OBJECTIVE_DEFS).forEach(([id, def]) => {
   assert(SEASON_METRIC_AGG[def.metric], `La metrica di ${id} non ha regola di aggregazione`);
-  assert(def.agg, `L'obiettivo ${id} non dichiara come si aggrega`);
+  assert(
+    def.agg === undefined,
+    `${id} dichiara un proprio "agg": l'aggregazione vive solo in SEASON_METRIC_AGG`,
+  );
+});
+
+// E ogni metrica accumulata deve servire a un obiettivo: una che non viene mai
+// letta e' peso morto che si puo' ritarare senza effetti.
+const metricheUsate = new Set(Object.values(OBJECTIVE_DEFS).map((d) => d.metric));
+Object.keys(SEASON_METRIC_AGG).forEach((metric) => {
+  assert(metricheUsate.has(metric), `La metrica ${metric} si accumula ma nessun obiettivo la legge`);
 });
 
 // ── 2. Le stelle non si possono farmare ────────────────────────────────────

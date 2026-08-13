@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-standard-sprites-v29";
-import { getMatchInfo } from "./game.js?v=20260813-standard-sprites-v29";
-import { getVolume, isMuted } from "./audio.js?v=20260813-standard-sprites-v29";
-import { getLang, t } from "./i18n.js?v=20260813-standard-sprites-v29";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-standard-sprites-v29";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-outfit-alpha-v30";
+import { getMatchInfo } from "./game.js?v=20260813-outfit-alpha-v30";
+import { getVolume, isMuted } from "./audio.js?v=20260813-outfit-alpha-v30";
+import { getLang, t } from "./i18n.js?v=20260813-outfit-alpha-v30";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-outfit-alpha-v30";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
