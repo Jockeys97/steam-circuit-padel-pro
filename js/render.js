@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-demo-en-v13";
-import { t } from "./i18n.js?v=20260813-demo-en-v13";
+import { BALANCE, COURT } from "./data.js?v=20260813-webp-v14";
+import { t } from "./i18n.js?v=20260813-webp-v14";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

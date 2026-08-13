@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-demo-en-v13";
-import { getMatchInfo } from "./game.js?v=20260813-demo-en-v13";
-import { getVolume, isMuted } from "./audio.js?v=20260813-demo-en-v13";
-import { getLang, t } from "./i18n.js?v=20260813-demo-en-v13";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-demo-en-v13";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE } from "./data.js?v=20260813-webp-v14";
+import { getMatchInfo } from "./game.js?v=20260813-webp-v14";
+import { getVolume, isMuted } from "./audio.js?v=20260813-webp-v14";
+import { getLang, t } from "./i18n.js?v=20260813-webp-v14";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-webp-v14";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";

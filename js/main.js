@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-demo-en-v13";
+import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective } from "./data.js?v=20260813-webp-v14";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-demo-en-v13";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-demo-en-v13";
-import { setReduceMotion } from "./fx.js?v=20260813-demo-en-v13";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-demo-en-v13";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-demo-en-v13";
-import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-demo-en-v13";
+} from "./game.js?v=20260813-webp-v14";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-webp-v14";
+import { setReduceMotion } from "./fx.js?v=20260813-webp-v14";
+import { createDrill, updateDrill } from "./drill.js?v=20260813-webp-v14";
+import { getLang, setLang, t } from "./i18n.js?v=20260813-webp-v14";
+import { IS_DEMO, DEMO_CONTENT } from "./build.js?v=20260813-webp-v14";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-demo-en-v13";
+} from "./render.js?v=20260813-webp-v14";
 import {
   applyLanguage,
   awardObjectives,
@@ -42,7 +42,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-demo-en-v13";
+} from "./ui.js?v=20260813-webp-v14";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -309,12 +309,12 @@ function updateGamepadIndicator(connected, id = "") {
 function detectControllerLayout(id = "") {
   const value = String(id).toLowerCase();
   if (/xbox|xinput|microsoft/.test(value)) {
-    return { type: "xbox", badge: "XBOX", image: "assets/ui/xbox-controller-steam.png", caption: t("xboxLayout"), keys: ["LS", "RS", "A", "X", "Y", "B", "LB", "LT", "RT", "RB", "D-PAD", "A+A", "☰"] };
+    return { type: "xbox", badge: "XBOX", image: "assets/ui/xbox-controller-steam.webp", caption: t("xboxLayout"), keys: ["LS", "RS", "A", "X", "Y", "B", "LB", "LT", "RT", "RB", "D-PAD", "A+A", "☰"] };
   }
   if (/playstation|dualshock|dualsense|sony|ps[345]/.test(value)) {
-    return { type: "playstation", badge: "PS", image: "assets/ui/playstation-controller-steam.png", caption: t("playstationLayout"), keys: ["L3", "R3", "✕", "□", "△", "○", "L1", "L2", "R2", "R1", "D-PAD", "✕+✕", "OPTIONS"] };
+    return { type: "playstation", badge: "PS", image: "assets/ui/playstation-controller-steam.webp", caption: t("playstationLayout"), keys: ["L3", "R3", "✕", "□", "△", "○", "L1", "L2", "R2", "R1", "D-PAD", "✕+✕", "OPTIONS"] };
   }
-  return { type: "generic", badge: "🎮", image: "assets/ui/generic-controller-steam.png", caption: t("genericControllerLayout"), keys: ["LS", "RS", "1", "3", "4", "2", "LB", "LT", "RT", "RB", "D-PAD", "1+1", "MENU"] };
+  return { type: "generic", badge: "🎮", image: "assets/ui/generic-controller-steam.webp", caption: t("genericControllerLayout"), keys: ["LS", "RS", "1", "3", "4", "2", "LB", "LT", "RT", "RB", "D-PAD", "1+1", "MENU"] };
 }
 
 function applyControllerLayout(id = gamepad.id) {

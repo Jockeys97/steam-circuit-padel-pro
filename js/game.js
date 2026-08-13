@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-demo-en-v13";
-import { clamp } from "./render.js?v=20260813-demo-en-v13";
-import { sfx } from "./audio.js?v=20260813-demo-en-v13";
-import { t } from "./i18n.js?v=20260813-demo-en-v13";
+import { BALANCE, COURT, EVENT_LINES } from "./data.js?v=20260813-webp-v14";
+import { clamp } from "./render.js?v=20260813-webp-v14";
+import { sfx } from "./audio.js?v=20260813-webp-v14";
+import { t } from "./i18n.js?v=20260813-webp-v14";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-demo-en-v13";
+} from "./fx.js?v=20260813-webp-v14";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
