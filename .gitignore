@@ -26,3 +26,8 @@ signal-preview.svg
 signal-preview.svg.png
 .vercel
 .env*
+
+# Pacchetto desktop: `dist/` e' generato da scripts/build-dist.mjs, `target/`
+# dal compilatore Rust. Entrambi si ricostruiscono con `npm run desktop`.
+dist/
+src-tauri/target/
