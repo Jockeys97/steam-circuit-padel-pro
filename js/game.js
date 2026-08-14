@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260814-feedback-v38";
-import { clamp } from "./render.js?v=20260814-feedback-v38";
-import { sfx } from "./audio.js?v=20260814-feedback-v38";
-import { t } from "./i18n.js?v=20260814-feedback-v38";
+import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260814-feedback-confirm-v39";
+import { clamp } from "./render.js?v=20260814-feedback-confirm-v39";
+import { sfx } from "./audio.js?v=20260814-feedback-confirm-v39";
+import { t } from "./i18n.js?v=20260814-feedback-confirm-v39";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260814-feedback-v38";
+} from "./fx.js?v=20260814-feedback-confirm-v39";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -2681,7 +2681,7 @@ function updateShotControl(state, dt, input) {
     const aimDirection = input.left ? -1 : input.right ? 1 : 0;
     state.shotAim = clamp(state.shotAim + aimDirection * dt * 1.9, -1, 1);
   }
-  // RT e' gia' azzerato come sprint mentre si carica: qui diventa la corsa
+  // RT durante la carica: e' l'ampiezza dell'angolo, unico mestiere che gli resta
   // analogica dell'angolo stretto, cosi' il rischio si dosa col grilletto.
   state.shotPrecision = clamp(input.sprint ?? 0, 0, 1);
   state.shotIntent = input.shotVariant ?? (input.slice ? "slice" : "drive");
@@ -2733,13 +2733,16 @@ function moveHumanPaddle(state, paddle, input, dt) {
   const moveX = clamp(input.moveX ?? digitalX, -1, 1);
   const moveY = clamp(input.moveY ?? digitalY, -1, 1);
   const splitStep = input.charging ? 0 : clamp(input.splitStep ?? 0, 0, 1);
-  const sprint = input.charging || splitStep > 0.15 ? 0 : clamp(input.sprint ?? 0, 0, 1);
+  // RT non muove piu' la racchetta: era troppo forte, e soprattutto lo stesso
+  // grilletto governava due cose diverse — la corsa qui e l'angolo stretto in
+  // `shotPrecision`. Un comando che fa due mestieri non se ne puo' dosare
+  // nessuno: si scattava per correre e ci si ritrovava la mira stretta, o si
+  // stringeva la mira e si partiva in corsa. Ora RT e' solo la direzione.
   const chargeMovement = input.charging ? 0.32 : 1;
   const movementMultiplier = chargeMovement
-    * (1 - splitStep * (1 - BALANCE.splitStepSpeed))
-    * (1 + sprint * BALANCE.sprintSpeedBonus);
+    * (1 - splitStep * (1 - BALANCE.splitStepSpeed));
   paddle.splitStep = splitStep;
-  paddle.sprinting = sprint;
+  paddle.sprinting = 0;
   const startX = paddle.x;
   const startY = paddle.y;
   paddle.x += moveX * paddle.speed * movementMultiplier * dt;
@@ -3057,14 +3060,13 @@ export function updateMatch(state, dt, input, input2 = null) {
     const playerStartY = player.y;
 
     const splitStep = input.charging ? 0 : clamp(input.splitStep ?? 0, 0, 1);
-    const sprint = input.charging || splitStep > 0.15 ? 0 : clamp(input.sprint ?? 0, 0, 1);
+    // Nessuna corsa: RT governa solo l'angolo del colpo. Vedi `moveHumanPaddle`.
     // In padel the player can adjust the feet while preparing: slower, but never frozen.
     const chargeMovement = input.charging ? 0.58 : 1;
     const movementMultiplier = chargeMovement
-      * (1 - splitStep * (1 - BALANCE.splitStepSpeed))
-      * (1 + sprint * BALANCE.sprintSpeedBonus);
+      * (1 - splitStep * (1 - BALANCE.splitStepSpeed));
     player.splitStep = splitStep;
-    player.sprinting = sprint;
+    player.sprinting = 0;
     player.x += moveX * player.speed * movementMultiplier * dt;
     player.y += moveY * player.speed * 0.68 * movementMultiplier * dt;
     if (player.dashTimer > 0) {

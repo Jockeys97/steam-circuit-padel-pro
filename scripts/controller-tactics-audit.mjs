@@ -58,8 +58,12 @@ const charging = movementDistance({ charging: true });
 const splitStep = movementDistance({ splitStep: 1 });
 const sprint = movementDistance({ sprint: 1 });
 assert(splitStep.distance < normal.distance, "Lo split-step deve privilegiare stabilita rispetto alla velocita");
-assert(sprint.distance > normal.distance, "RT deve aumentare progressivamente la velocita");
-assert(sprint.energy < normal.energy, "Lo sprint deve consumare energia");
+// RT non muove piu': governa solo l'angolo del colpo. Prima faceva entrambe le
+// cose, e nessuna delle due si poteva dosare senza subire l'altra.
+assert.equal(sprint.distance, normal.distance,
+  `RT non deve toccare la velocita': ${sprint.distance} contro ${normal.distance}`);
+assert.equal(sprint.energy, normal.energy,
+  "RT non deve consumare energia: non e' piu' una corsa");
 assert(charging.distance < normal.distance && charging.distance > normal.distance * 0.5,
   "Durante la carica il giocatore deve potersi aggiustare, ma piu lentamente");
 

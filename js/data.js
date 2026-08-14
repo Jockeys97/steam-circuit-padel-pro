@@ -176,6 +176,11 @@ export const BALANCE = {
   rallyEnergyFloor: 0.16,
   splitStepSpeed: 0.62,
   splitStepQualityBonus: 0.075,
+  // Resti della corsa su RT, rimossa perche' troppo forte e perche' lo stesso
+  // grilletto governava anche l'angolo del colpo. `paddle.sprinting` ora vale
+  // sempre zero, quindi questi tre non mordono piu' nulla: restano perche' le
+  // formule che li leggono sono ancora quelle giuste il giorno in cui una corsa
+  // tornera' su un tasto suo.
   sprintSpeedBonus: 0.34,
   sprintEnergyDrain: 0.105,
   sprintAccuracyPenalty: 0.12,
