@@ -467,9 +467,19 @@ function reflectedCourtX(x) {
   return reflected;
 }
 
+/**
+ * Quanto larga e' la fascia entro cui una racchetta arriva sulla palla.
+ *
+ * Erano due numeri scritti qui dentro, e dicevano una cosa che nessuno aveva
+ * mai misurato: il giocatore copriva 0,78 della propria racchetta, l'IA fra
+ * 0,50 e 0,64 della propria. Circa 196 px di fascia contro 150 della Leggenda —
+ * il 30% di raggio in piu' per chi gioca, prima ancora di muoversi. E' da li'
+ * che veniva la sensazione che ogni palla fosse raggiungibile.
+ */
 function contactWidth(paddle, ball) {
-  if (paddle.isPlayer) return paddle.w * 0.78 + ball.r;
-  const skillReach = 0.5 + clamp(paddle.skill, 0, 1) * 0.16;
+  if (paddle.isPlayer) return paddle.w * BALANCE.playerContactReach + ball.r;
+  const skillReach = BALANCE.aiContactReachBase
+    + clamp(paddle.skill, 0, 1) * BALANCE.aiContactReachSkill;
   return paddle.w * skillReach + ball.r;
 }
 

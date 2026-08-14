@@ -87,6 +87,10 @@ export const BALANCE = {
   serviceBounceTime: 0.92,
   basePaddleSpeed: 498,
   basePaddleWidth: 112,
+  // Fascia di contatto, in multipli della larghezza della racchetta.
+  playerContactReach: 0.66,
+  aiContactReachBase: 0.44,
+  aiContactReachSkill: 0.34,
   hitCooldownPlayer: 0.18,
   hitCooldownAi: 0.26,
   baseHitLift: 430,
@@ -247,8 +251,13 @@ export const BALANCE = {
   cutVolleyReadBase: 0.2,
   cutVolleyReadSkill: 0.62,
   cutVolleyReadSuppress: 0.4,
-  smashX2MinQuality: 0.6,
-  smashX3MinQuality: 0.7,
+  // Soglie di qualita' dello smash. Erano 0,60 e 0,70, cioe' non erano soglie:
+  // misurata la qualita' di uno smash a piena carica, resta sopra 0,70 anche
+  // con 200 ms di ritardo, quindi lo x3 usciva nel 100% dei tentativi a
+  // qualunque timing. Ora lo x3 chiede un contatto quasi perfetto — sotto i
+  // 60 ms da fermo, sotto i 30 in corsa — e lo x2 un timing comunque pulito.
+  smashX2MinQuality: 0.78,
+  smashX3MinQuality: 0.9,
   smashFlatMinQuality: 0.48,
 };
 
