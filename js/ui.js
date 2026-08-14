@@ -1685,13 +1685,24 @@ export function applyLanguage() {
   renderProfile();
 }
 
+let navigazioneAgganciata = false;
+
 export function bindNavigation(handlers) {
-  document.querySelectorAll("[data-action]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const action = el.dataset.action;
-      handlers[action]?.();
+  // Un ascoltatore solo, sul documento, invece di uno per pulsante.
+  //
+  // Prima si faceva `querySelectorAll("[data-action]")` una volta all'avvio:
+  // funzionava per il markup statico e lasciava muto tutto cio' che nasce dopo.
+  // Il pulsante "Obiettivi" del Profilo Carriera e' generato da `renderProfile`,
+  // quindi cliccarlo non faceva niente — nessun errore, nessun indizio. Con la
+  // delega ogni `data-action` funziona da subito, anche se comparira' domani.
+  if (!navigazioneAgganciata) {
+    navigazioneAgganciata = true;
+    document.addEventListener("click", (evento) => {
+      const bersaglio = evento.target?.closest?.("[data-action]");
+      if (!bersaglio) return;
+      handlers[bersaglio.dataset.action]?.();
     });
-  });
+  }
 
   applyDemoLimits();
 

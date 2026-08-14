@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 /**
  * Ogni schermata deve avere una porta, e ogni porta deve portare da qualche parte.
@@ -46,6 +46,22 @@ const daCodice = new Set([...`${ui}${main}`.matchAll(/handlers\.([A-Za-z][A-Za-z
 const irraggiungibili = [...gestori].filter((g) => !azioni.has(g) && !daCodice.has(g));
 assert.deepEqual(irraggiungibili, [],
   `Gestori che nessuno puo' invocare: ${irraggiungibili.join(", ")}`);
+
+// I `data-action` non stanno solo in index.html: alcuni pulsanti nascono da
+// template dentro il codice — il riepilogo del Profilo, la barra del feedback.
+// Da quando la navigazione usa la delega quelli funzionano senza registrazione,
+// ma un nome sbagliato resta muto esattamente come prima. Qui si pretende che
+// ogni azione citata da un template corrisponda a un gestore.
+const sorgentiJs = (await readdir(new URL("js/", root)))
+  .filter((f) => f.endsWith(".js"));
+const azioniDinamiche = new Set();
+for (const file of sorgentiJs) {
+  const testo = await readFile(new URL(`js/${file}`, root), "utf8");
+  for (const m of testo.matchAll(/data-action="([A-Za-z-]+)"/g)) azioniDinamiche.add(m[1]);
+}
+const dinamicheOrfane = [...azioniDinamiche].filter((a) => !gestori.has(a));
+assert.deepEqual(dinamicheOrfane, [],
+  `Pulsanti generati dal codice che non fanno niente: ${dinamicheOrfane.join(", ")}`);
 
 // --- 3: schermate senza porta ----------------------------------------------
 
