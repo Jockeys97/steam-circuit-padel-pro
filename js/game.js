@@ -206,6 +206,8 @@ export function createMatchState(mode, athlete, arena, aiProfile, tournamentRoun
     sets: { player: 0, ai: 0 },
     tieBreak: false,
     tieBreakPoints: { player: 0, ai: 0 },
+    // I game di ogni set concluso: "6-4, 7-5". Vedi `finishSet`.
+    setScores: [],
     playerScore: "0",
     aiScore: "0",
     combo: 1,
@@ -1941,6 +1943,12 @@ function matchFormat(state) {
 
 function finishSet(state, winner) {
   state.sets[winner] += 1;
+  // Il punteggio del set va salvato prima di azzerare i game, altrimenti a fine
+  // partita non esiste piu': `endMatch` registrava i set, e con i formati a un
+  // set solo ogni partita finiva in archivio come "1-0" — che sia stata 2-0 o
+  // 6-4. Un tabellone di padel e' fatto di game, non di set.
+  state.setScores = state.setScores ?? [];
+  state.setScores.push({ player: state.games.player, ai: state.games.ai });
   state.games = { player: 0, ai: 0 };
   state.tieBreak = false;
   state.tieBreakPoints = { player: 0, ai: 0 };

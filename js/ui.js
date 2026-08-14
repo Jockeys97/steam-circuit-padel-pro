@@ -1,4 +1,4 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture } from "./data.js?v=20260814-arena-safe-zones-v37";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture, VERSION, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-arena-safe-zones-v37";
 import { getMatchInfo } from "./game.js?v=20260814-arena-safe-zones-v37";
 import { getVolume, isMuted } from "./audio.js?v=20260814-arena-safe-zones-v37";
 import { getLang, t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
@@ -7,6 +7,7 @@ import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-s
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
 const DRILL_KEY = "padel.drill";
+const FEEDBACK_KEY = "padel.feedback";
 const CAREER_KEY = "padel.career";
 const DEFAULT_CAREER = {
   season: 1,
@@ -228,6 +229,164 @@ export function saveDrillRecord(exerciseId, score) {
   return score;
 }
 
+/**
+ * Feedback dei giocatori.
+ *
+ * Il valore non sta nel testo libero: sta in cio' che gli si allega. "Lo smash e'
+ * troppo forte" non si puo' usare senza sapere con quale atleta, in quale arena, a
+ * quale difficolta' e — soprattutto — con quale taratura di `BALANCE` in vigore.
+ * Quei dati il gioco li ha gia' tutti; qui vengono solo raccolti.
+ *
+ * La coda locale e' la rete di sicurezza: si scrive **prima** di qualunque
+ * tentativo di invio, perche' su Steam si gioca anche offline e una POST fallita
+ * perderebbe il messaggio senza che nessuno se ne accorga.
+ */
+export function loadFeedbackQueue() {
+  try {
+    const raw = localStorage.getItem(FEEDBACK_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFeedbackQueue(list) {
+  try {
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list.slice(0, FEEDBACK.maxQueued)));
+  } catch {
+    // persistenza non disponibile: il messaggio vale per questa sessione
+  }
+}
+
+/**
+ * Il contesto tecnico che accompagna il messaggio.
+ *
+ * Niente qui viene inventato o dedotto dall'utente: sono lo stato del gioco e le
+ * capacita' del browser. Il giocatore puo' rifiutarlo — `renderFeedback` mostra
+ * esattamente questo oggetto prima dell'invio, perche' allegare dati senza farli
+ * vedere non e' accettabile e su Steam richiederebbe un'informativa a parte.
+ */
+export function feedbackDiagnostics() {
+  const history = loadHistory();
+  const career = ui.career;
+  return {
+    version: VERSION.build,
+    balance: VERSION.balance,
+    lang: getLang(),
+    demo: IS_DEMO,
+    // Utile per i reclami su prestazioni e input, che senza questi sono ciechi.
+    platform: typeof navigator === "undefined" ? null : navigator.platform ?? null,
+    screen: typeof window === "undefined" ? null : `${window.innerWidth}x${window.innerHeight}`,
+    gamepad: ui.lastGamepadId ?? null,
+    controlMode: ui.controlMode ?? null,
+    reduceMotion: Boolean(ui.reduceMotion),
+    settings: {
+      difficulty: ui.aiDifficulty ?? null,
+      matchLength: ui.matchLength ?? null,
+      drillDifficulty: ui.drillDifficulty ?? null,
+    },
+    career: {
+      season: career?.season ?? null,
+      trophies: career?.trophies ?? null,
+      stars: career?.stars ?? null,
+      wins: career?.wins ?? null,
+      losses: career?.losses ?? null,
+    },
+    drillRecords: loadDrillRecords(),
+    // Le ultime partite: e' il contesto che rende leggibile un reclamo di
+    // bilanciamento. Tre bastano — la coda deve restare una casella di posta.
+    recentMatches: history.slice(0, 3).map((m) => ({
+      mode: m.mode,
+      winner: m.winner,
+      score: m.score,
+      athlete: m.athlete,
+      opponent: m.opponent,
+      arena: m.arena,
+      difficulty: m.difficulty,
+    })),
+    matchesPlayed: history.length,
+  };
+}
+
+/**
+ * Accoda un feedback. Ritorna la voce salvata, cosi' chi chiama puo' copiarla
+ * negli appunti o tentare l'invio senza ricostruirla.
+ */
+export function queueFeedback({ topic, message, contact = "", attach = true }) {
+  const scelto = FEEDBACK_TOPICS.includes(topic) ? topic : "other";
+  const entry = {
+    id: `fb-${Date.now().toString(36)}`,
+    ts: new Date().toISOString(),
+    topic: scelto,
+    message: String(message ?? "").slice(0, FEEDBACK.maxMessage),
+    // Il contatto e' facoltativo e resta come l'ha scritto il giocatore: serve
+    // solo se vuole una risposta.
+    contact: String(contact ?? "").slice(0, 120),
+    diagnostics: attach ? feedbackDiagnostics() : null,
+    sent: false,
+  };
+  const list = loadFeedbackQueue();
+  list.unshift(entry);
+  saveFeedbackQueue(list);
+  return entry;
+}
+
+/** Segna come inviate le voci indicate, senza cancellarle. */
+export function markFeedbackSent(ids) {
+  const da = new Set(ids);
+  const list = loadFeedbackQueue().map((e) => (da.has(e.id) ? { ...e, sent: true } : e));
+  saveFeedbackQueue(list);
+  return list;
+}
+
+/**
+ * Prova a spedire le voci non ancora inviate.
+ *
+ * Senza `endpoint` configurato non fallisce e non finge: dichiara che non c'e'
+ * nulla da spedire, e il messaggio resta in coda per la copia manuale. Cosi' il
+ * giorno in cui l'endpoint esistera' bastera' riempire quel campo.
+ */
+export async function flushFeedback(
+  fetchImpl = typeof fetch === "function" ? fetch : null,
+  endpoint = FEEDBACK.endpoint,
+) {
+  const pending = loadFeedbackQueue().filter((e) => !e.sent);
+  // `endpoint` e `fetchImpl` sono parametri e non costanti lette qui dentro
+  // perche' altrimenti, con l'endpoint ancora da configurare, i rami "rifiutato"
+  // e "offline" sarebbero irraggiungibili: si scoprirebbe se funzionano il giorno
+  // in cui vanno in produzione. E' lo stesso difetto del servizio che non poteva
+  // fallire — un percorso che il documento prevede e che nessuna prova esegue.
+  if (!endpoint || !fetchImpl) {
+    return { ok: false, reason: "no-endpoint", pending: pending.length };
+  }
+  if (!pending.length) return { ok: true, sent: 0, pending: 0 };
+  try {
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entries: pending }),
+    });
+    if (!response?.ok) return { ok: false, reason: "rejected", pending: pending.length };
+    markFeedbackSent(pending.map((e) => e.id));
+    return { ok: true, sent: pending.length, pending: 0 };
+  } catch {
+    // La rete puo' mancare: la coda resta intatta e si riprova alla prossima.
+    return { ok: false, reason: "offline", pending: pending.length };
+  }
+}
+
+/** Il testo da incollare in una discussione, quando l'invio non c'e'. */
+export function feedbackAsText(entry) {
+  const righe = [
+    `[${entry.topic}] ${VERSION.build} · balance ${VERSION.balance}`,
+    entry.message,
+  ];
+  if (entry.contact) righe.push(`contatto: ${entry.contact}`);
+  if (entry.diagnostics) righe.push("", "--- contesto tecnico ---", JSON.stringify(entry.diagnostics, null, 2));
+  return righe.join("\n");
+}
+
 export function loadPrefs() {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -277,6 +436,7 @@ const screens = {
   challenges: document.getElementById("screen-challenges"),
   profile: document.getElementById("screen-profile"),
   drill: document.getElementById("screen-drill"),
+  feedback: document.getElementById("screen-feedback"),
   settings: document.getElementById("screen-settings"),
   game: document.getElementById("screen-game"),
   result: document.getElementById("screen-result"),
@@ -418,8 +578,15 @@ export function resolveLineup(athlete) {
 }
 
 export function showScreen(name) {
+  // Un nome non registrato spegneva tutte le schermate senza accenderne nessuna:
+  // pagina bianca, nessun errore, e nulla che dicesse dove guardare. Meglio
+  // restare dove si e' e lasciare una traccia leggibile.
+  if (!screens[name]) {
+    console.warn(`showScreen: schermata "${name}" non registrata in screens`);
+    return;
+  }
   Object.entries(screens).forEach(([key, el]) => {
-    el.classList.toggle("screen--active", key === name);
+    el?.classList.toggle("screen--active", key === name);
   });
   window.scrollTo(0, 0);
 }
@@ -1278,8 +1445,13 @@ export function showResult(state, winner) {
     document.getElementById("resultPlayer").textContent = String(state.points.player);
     document.getElementById("resultAi").textContent = String(state.points.ai);
   } else {
-    document.getElementById("resultPlayer").textContent = String(state.sets.player);
-    document.getElementById("resultAi").textContent = String(state.sets.ai);
+    // Una partita a un set solo si racconta con i game — 6-4 — non con i set,
+    // che varrebbero "1-0" per qualunque risultato. Con piu' set il conteggio
+    // dei set torna a essere l'informazione giusta.
+    const unSetSolo = (state.setsToWin ?? 1) === 1 && (state.setScores ?? []).length === 1;
+    const finale = unSetSolo ? state.setScores[0] : state.sets;
+    document.getElementById("resultPlayer").textContent = String(finale.player);
+    document.getElementById("resultAi").textContent = String(finale.ai);
   }
 
   if (winner === "player") {
@@ -1458,6 +1630,12 @@ export function applyLanguage() {
   document.querySelectorAll("[data-i18n-title]").forEach((el) => {
     const key = el.dataset.i18nTitle;
     if (key) el.title = t(key);
+  });
+  // I segnaposto dei campi di testo: senza questo ramo il modulo di feedback
+  // resterebbe con i suggerimenti in italiano anche passando all'inglese.
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.dataset.i18nPlaceholder;
+    if (key) el.placeholder = t(key);
   });
   document.querySelectorAll("[data-i18n-alt]").forEach((el) => {
     const key = el.dataset.i18nAlt;

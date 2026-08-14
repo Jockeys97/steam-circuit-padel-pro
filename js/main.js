@@ -1,4 +1,4 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260814-arena-safe-zones-v37";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-arena-safe-zones-v37";
 import {
   createMatchState,
   resetReplayBuffer,
@@ -30,6 +30,11 @@ import {
   collectPrefs,
   currentFixture,
   drillRecord,
+  feedbackAsText,
+  feedbackDiagnostics,
+  flushFeedback,
+  loadFeedbackQueue,
+  queueFeedback,
   saveDrillRecord,
   ensureSeasonObjectives,
   getAiForMatch,
@@ -335,6 +340,9 @@ function resetTransientInput({ awaitRelease = false, resetButtons = false } = {}
 }
 
 function updateGamepadIndicator(connected, id = "") {
+  // Il modello di controller viaggia con i feedback: un reclamo sull'input senza
+  // sapere che pad c'era sotto non si puo' riprodurre.
+  ui.lastGamepadId = connected ? (id || "sconosciuto") : null;
   const el = document.getElementById("gamepadIndicator");
   if (!el) return;
   el.hidden = !connected;
@@ -1137,9 +1145,14 @@ function endMatch(winner) {
   matchState.running = false;
   music.stop();
 
+  // Con il punteggio a game l'archivio riceve il tabellone vero — "6-4" o
+  // "6-4, 3-6, 7-5" — e non il conteggio dei set, che nei formati a un set solo
+  // valeva "1-0" per qualunque partita.
   const score = matchState.pointsToWin
     ? `${matchState.points.player}-${matchState.points.ai}`
-    : `${matchState.sets.player}-${matchState.sets.ai}`;
+    : (matchState.setScores ?? []).length
+      ? matchState.setScores.map((s) => `${s.player}-${s.ai}`).join(", ")
+      : `${matchState.sets.player}-${matchState.sets.ai}`;
   const careerWin = winner === "player" && ui.selectedMode === "career";
   const careerSeasonWon = careerWin && ui.career.seasonWins + 1 >= CAREER_MATCHES
     && ui.career.matchIndex + 1 >= CAREER_MATCHES;
@@ -1615,6 +1628,119 @@ function drawScene(c, cvs, state, now) {
  * chiudere, scambio pieno — e riusare lo stato precedente lascerebbe in campo
  * una palla che appartiene a un altro esercizio.
  */
+
+/* ---- Feedback dei giocatori ------------------------------------------------
+   Il modulo scrive **sempre** in coda locale prima di provare a spedire: su Steam
+   si gioca anche offline, e una POST fallita perderebbe il messaggio senza che
+   nessuno se ne accorga. L'invio, quando esiste un endpoint, e' un extra. */
+
+let feedbackTopic = "bug";
+
+function feedbackEl(id) {
+  return document.getElementById(id);
+}
+
+/** Aggiorna il modulo: argomento scelto, contatore, contesto mostrato. */
+function renderFeedback() {
+  document.querySelectorAll("#feedbackTopics button").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.value === feedbackTopic);
+  });
+  const testo = feedbackEl("feedbackMessage");
+  const contatore = feedbackEl("feedbackCount");
+  if (testo && contatore) contatore.textContent = `${testo.value.length} / ${FEEDBACK.maxMessage}`;
+  // Il contesto tecnico si vede prima di allegarlo: allegare dati senza mostrarli
+  // non e' accettabile, e su Steam richiederebbe un'informativa a parte.
+  const diag = feedbackEl("feedbackDiag");
+  if (diag) diag.textContent = JSON.stringify(feedbackDiagnostics(), null, 2);
+  const steam = feedbackEl("feedbackSteam");
+  if (steam) steam.hidden = !FEEDBACK.steamUrl && !FEEDBACK.discordUrl;
+  const stato = feedbackEl("feedbackStatus");
+  if (stato) {
+    const inCoda = loadFeedbackQueue().filter((e) => !e.sent).length;
+    stato.textContent = inCoda ? t("feedbackQueued", { n: inCoda }) : "";
+  }
+}
+
+function feedbackStatus(key, params = {}) {
+  const stato = feedbackEl("feedbackStatus");
+  if (stato) stato.textContent = t(key, params);
+}
+
+/** Raccoglie il modulo in una voce di coda, o `null` se manca il messaggio. */
+function collectFeedback() {
+  const testo = feedbackEl("feedbackMessage");
+  const messaggio = (testo?.value ?? "").trim();
+  if (!messaggio) {
+    feedbackStatus("feedbackEmpty");
+    testo?.focus();
+    return null;
+  }
+  const entry = queueFeedback({
+    topic: feedbackTopic,
+    message: messaggio,
+    contact: feedbackEl("feedbackContact")?.value ?? "",
+    attach: Boolean(feedbackEl("feedbackAttach")?.checked),
+  });
+  if (testo) testo.value = "";
+  const contatto = feedbackEl("feedbackContact");
+  if (contatto) contatto.value = "";
+  return entry;
+}
+
+function bindFeedback() {
+  document.querySelectorAll("#feedbackTopics button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const value = button.dataset.value;
+      if (!FEEDBACK_TOPICS.includes(value)) return;
+      feedbackTopic = value;
+      renderFeedback();
+    });
+  });
+
+  feedbackEl("feedbackMessage")?.addEventListener("input", () => {
+    const testo = feedbackEl("feedbackMessage");
+    const contatore = feedbackEl("feedbackCount");
+    if (testo && contatore) contatore.textContent = `${testo.value.length} / ${FEEDBACK.maxMessage}`;
+  });
+
+  feedbackEl("feedbackForm")?.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    const entry = collectFeedback();
+    if (!entry) return;
+    // Salvato: da qui in poi nulla puo' andare perduto.
+    feedbackStatus("feedbackSaved");
+    renderFeedback();
+    const esito = await flushFeedback();
+    if (esito.ok && esito.sent) feedbackStatus("feedbackSent");
+    else if (esito.reason === "offline") feedbackStatus("feedbackOffline");
+    else if (esito.reason === "no-endpoint") feedbackStatus("feedbackLocalOnly");
+    renderFeedback();
+  });
+
+  // `data-action` e' riservato alla tabella di navigazione: usarlo per un'azione
+  // di modulo faceva sembrare il pulsante non collegato all'audit che verifica
+  // che ogni azione dichiarata abbia una destinazione.
+  feedbackEl("feedbackCopyBtn")?.addEventListener("click", async () => {
+    const entry = collectFeedback();
+    if (!entry) return;
+    const testo = feedbackAsText(entry);
+    try {
+      await navigator.clipboard.writeText(testo);
+      feedbackStatus("feedbackCopied");
+    } catch {
+      // Senza permesso sugli appunti il messaggio resta comunque in coda: si
+      // dice dove trovarlo invece di far finta che sia andata bene.
+      feedbackStatus("feedbackCopyFailed");
+    }
+    renderFeedback();
+  });
+
+  feedbackEl("feedbackSteam")?.addEventListener("click", () => {
+    const url = FEEDBACK.steamUrl ?? FEEDBACK.discordUrl;
+    if (url) window.open(url, "_blank", "noopener");
+  });
+}
+
 function bindDrillSelector() {
   document.querySelectorAll("#drillSeg button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1682,6 +1808,10 @@ bindNavigation({
   "to-history": () => {
     showScreen("history");
     renderHistory();
+  },
+  "to-feedback": () => {
+    showScreen("feedback");
+    renderFeedback();
   },
   "to-challenges": () => {
     showScreen("challenges");
@@ -1763,6 +1893,7 @@ if (["it", "en"].includes(prefs.lang)) {
 }
 applyAccessibility();
 bindDrillSelector();
+bindFeedback();
 applyLanguage();
 // Allinea documento e selettore alla lingua effettiva: il markup parte in
 // inglese, ma una preferenza salvata puo' averla gia' cambiata.
