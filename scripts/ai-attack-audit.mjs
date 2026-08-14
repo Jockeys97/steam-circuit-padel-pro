@@ -97,7 +97,60 @@ assert.ok(tassoProfondo < 0.2,
 assert.ok(tassoAttacco > tassoProfondo + 0.4,
   `La differenza fra corto e profondo deve essere netta: ${(tassoAttacco * 100).toFixed(0)}% contro ${(tassoProfondo * 100).toFixed(0)}%`);
 
+// --- prendere il campo deve costare ---------------------------------------
+//
+// L'altra meta' della stessa promessa. Se avanzare non viene pallonettato,
+// esiste una strategia che vince sempre: smash, prendi la rete, ripeti. Era
+// cosi': contro un giocatore incollato alla rete la Leggenda alzava la palla nel
+// 45% dei casi, contro uno a meta' campo nello 0%, perche' il test sulla
+// posizione era una soglia secca. Bastava staccarsi di venti pixel per non
+// essere piu' pallonettati, e il centro del campo era terra libera.
+
+function quantoPallonetta(aiIndex, yGiocatore, quanti = 240) {
+  let lob = 0;
+  for (let i = 0; i < quanti; i += 1) {
+    const state = createMatchState("quick", ATHLETES[0], ARENAS[0], AI_OPPONENTS[aiIndex]);
+    state.rngState = i * 7919 + 7;
+    Object.assign(state, {
+      running: true, serving: false, pointPause: 0, lastHitterSide: "player", rallyHits: 4,
+      aiServiceReceiverKey: null, serviceReceiverKey: null, aiReceiverLocked: false,
+    });
+    Object.assign(state.player, { x: 430, y: yGiocatore, controlled: true, isPlayer: true, hitCooldown: 0 });
+    Object.assign(state.playerMate, { x: 620, y: yGiocatore + 10, hitCooldown: 0 });
+    Object.assign(state.opponent, { x: 480, y: 150, hitCooldown: 0 });
+    Object.assign(state.opponentMate, { x: 600, y: 220, hitCooldown: 0 });
+    Object.assign(state.ball, { x: 480, y: 170, z: 60, vx: 0, vy: -80, vz: 0, bounces: { player: 0, ai: 0 }, crossedNet: true });
+    hitBall(state, state.opponent, 1, false, true);
+    if (state.ball.shotType === "lob") lob += 1;
+  }
+  return lob / quanti;
+}
+
+const DURISSIMO = AI_OPPONENTS.length - 1;
+const aRete = quantoPallonetta(DURISSIMO, COURT.netY + 70);
+const aMeta = quantoPallonetta(DURISSIMO, COURT.netY + 150);
+const alFondo = quantoPallonetta(DURISSIMO, COURT.bottom - 60);
+
+assert.ok(aRete > 0.4,
+  `Chi sta a rete deve essere pallonettato spesso: ${(aRete * 100).toFixed(0)}%`);
+// E' il numero che rompe la strategia dominante: senza questo, guadagnare il
+// centro del campo non costa niente.
+assert.ok(aMeta > 0.15,
+  `Anche a meta' campo si deve rischiare il pallonetto: ${(aMeta * 100).toFixed(0)}%`);
+assert.ok(aRete > aMeta && aMeta > alFondo,
+  `Il rischio deve crescere avanzando, senza salti: rete ${(aRete * 100).toFixed(0)}%, `
+  + `meta' ${(aMeta * 100).toFixed(0)}%, fondo ${(alFondo * 100).toFixed(0)}%`);
+// Chi resta sul fondo non va pallonettato di continuo: li' e' un colpo di
+// varieta', non una risposta.
+assert.ok(alFondo < 0.25,
+  `Sul fondo il pallonetto deve restare raro: ${(alFondo * 100).toFixed(0)}%`);
+
+const piuFacile = quantoPallonetta(0, COURT.netY + 70);
+assert.ok(aRete > piuFacile + 0.1,
+  `Il livello piu' duro deve pallonettare piu' del piu' facile: ${(aRete * 100).toFixed(0)}% contro ${(piuFacile * 100).toFixed(0)}%`);
+
 console.log(JSON.stringify({
   corto: { attacchiPercento: Math.round(tassoAttacco * 100), avanzataPx: Math.round(corto.avanzata), colpi: corto.colpi },
   profondo: { attacchiPercento: Math.round(tassoProfondo * 100), colpi: profondo.colpi },
+  pallonettaContro: { rete: Math.round(aRete * 100), meta: Math.round(aMeta * 100), fondo: Math.round(alFondo * 100) },
 }, null, 2));

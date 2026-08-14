@@ -1079,6 +1079,25 @@ function opponentsNearNet(opponentSide, opponents) {
     : averageY < COURT.netY + 132;
 }
 
+/**
+ * Quanto e' avanti la coppia avversaria: 0 sul proprio fondo, 1 sotto rete.
+ *
+ * `opponentsNearNet` risponde si' o no, con la soglia a meta' campo, e da quel
+ * si' o no dipendeva se pallonettare. Misurato: contro un giocatore incollato
+ * alla rete la Leggenda alzava la palla nel 45% dei casi, contro uno a meta'
+ * campo nello 0%. Bastava staccarsi di venti pixel dalla soglia per non essere
+ * mai piu' pallonettati — e prendere il centro del campo diventava gratis, che
+ * e' il contrario di come si gioca a padel.
+ */
+function opponentsForwardness(opponentSide, opponents) {
+  const averageY = (opponents[0].y + opponents[1].y) / 2;
+  const profondita = COURT.bottom - COURT.netY - 40;
+  const distanzaDallaRete = opponentSide === "ai"
+    ? COURT.netY - averageY
+    : averageY - COURT.netY;
+  return clamp(1 - distanzaDallaRete / profondita, 0, 1);
+}
+
 function paddleUnderPressure(paddle) {
   return paddle.isPlayer
     ? paddle.y > COURT.netY + 168
@@ -1133,6 +1152,21 @@ function chooseComputerShot(state, paddle, profile, contactHeight = 0, aiTiming 
     : paddle.y > COURT.netY - 126;
   const pressured = paddleUnderPressure(paddle) || state.ball.z < 38;
   const opponentsAreForward = opponentsNearNet(opponentSide, opponents);
+  // Quanto conviene alzarla: cresce con quanto sono avanti gli avversari e con
+  // la bravura di chi tira. Prima era una soglia secca sulla posizione e una
+  // probabilita' fissa, quindi il pallonetto spariva del tutto appena il
+  // giocatore arretrava di poco. Un avversario sotto pressione la alza comunque:
+  // e' la palla di emergenza.
+  const avanzamento = Math.max(
+    opponentsForwardness(opponentSide, opponents),
+    pressured ? BALANCE.aiLobPressure : 0,
+  );
+  const lobChance = clamp(
+    BALANCE.aiLobBase
+      + avanzamento * (BALANCE.aiLobForward + profile.skill * BALANCE.aiLobSkill),
+    0,
+    0.85,
+  );
   const choice = nextRandom(state);
   const overheadReady = atNet && contactHeight >= 58 && state.rallyHits > 0;
   // Su una palla attaccabile la frequenza dello smash sale, e sale di piu' con
@@ -1160,9 +1194,8 @@ function chooseComputerShot(state, paddle, profile, contactHeight = 0, aiTiming 
   if (overheadReady && choice < smashChance) {
     const x3Chance = clamp((profile.skill - 0.48) * 0.55, 0.02, 0.16);
     kind = nextRandom(state) < x3Chance ? "smash-x3" : "smash-x2";
-  } else if ((pressured || opponentsAreForward)
-    && !(atNet && contactHeight >= 46)
-    && choice < 0.28 + profile.skill * 0.18) {
+  } else if (!(atNet && contactHeight >= 46)
+    && choice < lobChance) {
     // Pallonettare stando a rete su una palla alta e' gioco sbagliato.
     kind = "lob";
   } else if (atNet && state.ball.z > 42 && choice < 0.78 + attack * BALANCE.attackReadVolleyGain) {

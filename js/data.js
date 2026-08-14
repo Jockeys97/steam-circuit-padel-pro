@@ -159,6 +159,12 @@ export const BALANCE = {
   sprintSpeedBonus: 0.34,
   sprintEnergyDrain: 0.105,
   sprintAccuracyPenalty: 0.12,
+  // Quando l'IA alza la palla. Cresce con quanto sono avanti gli avversari e
+  // con la difficolta': prendere il centro del campo deve costare.
+  aiLobBase: 0.05,
+  aiLobForward: 0.15,
+  aiLobSkill: 0.62,
+  aiLobPressure: 0.55,
   smashNetWindow: 190,
   // La vibora e' un colpo da rete: senza una finestra propria ereditava quella
   // dello smash, larga il 75% del proprio campo, e cancellava lo slice puro.
