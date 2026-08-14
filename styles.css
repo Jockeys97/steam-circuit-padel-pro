@@ -3547,3 +3547,22 @@ body.mode-colorblind .hero-preview {
     font-size: 0.8rem;
   }
 }
+
+/* Riepilogo dei contenuti nel Profilo: un numero e la porta per gli Obiettivi,
+   non un secondo elenco che diverge dal primo. */
+.profile-unlocks__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(8, 22, 48, 0.6);
+}
+
+.profile-unlocks__summary span {
+  font-weight: 700;
+  color: var(--cyan);
+}

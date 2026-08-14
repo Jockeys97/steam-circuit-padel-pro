@@ -1630,24 +1630,25 @@ export function renderProfile() {
   }
 
   if (unlockEl) {
-    const items = [
-      ...ATHLETES.filter((a) => a.unlock).map((a) => ({ name: t(`athlete_${a.id}_name`), item: a, kind: t("profileKindAthlete") })),
-      ...ARENAS.filter((a) => a.unlock).map((a) => ({ name: t(`arena_${a.id}_name`), item: a, kind: t("profileKindArena") })),
-      ...ATHLETES.flatMap((athlete) => outfitsForAthlete(athlete.id)
-        .filter((outfit) => outfit.unlock)
-        .map((outfit) => ({ name: `${t(`athlete_${athlete.id}_name`)} · ${t(outfit.nameKey)}`, item: outfit, kind: t("profileKindOutfit") }))),
-    ];
-    unlockEl.innerHTML = items.length
-      ? items.map(({ name, item, kind }) => {
-        const unlocked = isUnlocked(item, career);
-        return `
-        <div class="result-objectives__row${unlocked ? " is-done" : ""}">
-          <span class="result-objectives__check">${unlocked ? "🔓" : "🔒"}</span>
-          <span class="result-objectives__label">${name} <em class="profile-kind">${kind}</em></span>
-          <span class="result-objectives__cat">${unlocked ? t("profileUnlockedYes") : lockLabel(item.unlock)}</span>
-        </div>`;
-      }).join("")
-      : "";
+    // Qui c'era l'elenco dei contenuti sbloccabili, e si era rotto in silenzio:
+    // filtrava i completi su `outfit.unlock`, campo che non esiste piu' da
+    // quando i completi si vincono con una sfida invece di comprarli. Il
+    // risultato era un Profilo che mostrava 8 voci mentre gli Obiettivi ne
+    // mostravano 28, senza che niente segnalasse i venti costumi mancanti.
+    //
+    // Non lo rimetto: duplicava una schermata che ora possiede l'argomento per
+    // intero — personaggi, costumi e arene, con le tre economie separate. Due
+    // elenchi della stessa cosa divergono, e questo aveva gia' divergato.
+    const atleti = ATHLETES.filter((a) => a.unlock);
+    const arene = ARENAS.filter((a) => a.unlock);
+    const completi = ATHLETES.flatMap((a) => outfitsForAthlete(a.id).filter((o) => o.challenge));
+    const tutti = [...atleti, ...arene, ...completi];
+    const presi = tutti.filter((item) => isUnlocked(item, career)).length;
+    unlockEl.innerHTML = `
+      <div class="profile-unlocks__summary">
+        <span>${t("profileUnlocksCount", { done: presi, total: tutti.length })}</span>
+        <button class="btn btn--secondary" type="button" data-action="to-challenges">${t("challenges")}</button>
+      </div>`;
   }
 }
 

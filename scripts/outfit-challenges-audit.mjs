@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   ATHLETE_OUTFITS,
@@ -136,6 +137,15 @@ assert.ok(isUnlocked(esempio, { outfitsWon: { [esempio.unlockKey]: true } }),
   "La sfida vinta deve sbloccare il completo");
 assert.ok(isUnlocked(esempio, { unlockAll: true }),
   "Il codice di sblocco deve continuare a valere");
+
+// Nessun filtro puo' piu' cercare i completi per `unlock`: quel campo non esiste
+// da quando si vincono con una sfida, quindi un `.filter(o => o.unlock)` non
+// sbaglia — restituisce zero, in silenzio. E' successo nel Profilo Carriera, che
+// per questo elencava 8 contenuti mentre gli Obiettivi ne elencavano 28.
+const sorgentiUi = await readFile(new URL("../js/ui.js", import.meta.url), "utf8");
+const filtriMorti = [...sorgentiUi.matchAll(/outfitsForAthlete\([^)]*\)\s*\n?\s*\.filter\(\(?(\w+)\)?\s*=>\s*\1\.unlock\b/g)];
+assert.equal(filtriMorti.length, 0,
+  "In ui.js c'e' un filtro sui completi per `unlock`: quel campo non esiste piu' e il filtro restituisce sempre zero");
 
 console.log(JSON.stringify({
   completiConSfida: conSfida.length,
