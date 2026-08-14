@@ -123,7 +123,22 @@ export const BALANCE = {
   smashBufferWindow: 0.9,
   smashDoubleTapWindow: 0.7,
   smashContactGrace: 0.18,
-  smashTimingAgeCap: 0.11,
+  // Ritardo massimo accreditato a uno smash prenotato col doppio tap. E' il
+  // prezzo del buffer: 110 ms erano tarati sulla vecchia discesa del timing,
+  // dove valevano ancora qualita' 0,80. Con la discesa attuale varrebbero 0,66
+  // e il prenotato degraderebbe sempre a piatto: 75 ms lo tengono da x2 — il
+  // doppio tap costa lo x3, non lo smash.
+  smashTimingAgeCap: 0.075,
+  // Quanto conta il tempo del contatto per il giocatore. `timingDecaySpan`
+  // governa quanto in fretta la qualita' scende oltre la finestra perfetta (era
+  // 1,7: a 60 ms di ritardo un colpo valeva ancora 0,925), `qualityTimingWeight`
+  // il peso del timing nel voto (era 0,34), e la coppia `qualityPace*` quanto il
+  // voto arriva alla velocita' della palla (era 0,88 + 0,14: il 4% fra perfetto
+  // e mediocre).
+  timingDecaySpan: 0.9,
+  qualityTimingWeight: 0.44,
+  qualityPaceBase: 0.78,
+  qualityPaceSpan: 0.26,
   perfectTimingWindow: 0.055,
   goodTimingWindow: 0.13,
   timingWindowRunPenalty: 0.018,

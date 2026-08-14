@@ -941,7 +941,7 @@ function evaluateShotQuality(
     : BALANCE.perfectTimingWindow;
   const windowRatio = perfectWindow / BALANCE.perfectTimingWindow;
   const earlyMiss = Math.max(0, timingAge - perfectWindow)
-    / Math.max(0.01, BALANCE.goodTimingWindow * 1.7 * windowRatio);
+    / Math.max(0.01, BALANCE.goodTimingWindow * BALANCE.timingDecaySpan * windowRatio);
   const lateMiss = passedDistance / (paddle.reach * BALANCE.lateGraceFactor * 4.6);
   const timing = aiTiming ?? clamp(1 - earlyMiss - lateMiss, 0.18, 1);
   // Lo scarto oltre il corpo era una costante di 12 px: circa un decimo della
@@ -963,13 +963,17 @@ function evaluateShotQuality(
     : state.pvp && paddle.controlled
       ? clamp((state.pvpAthlete?.stats.control ?? 1) / 1.22, 0.72, 1.05)
       : clamp((0.72 + state.ai.skill * 0.34) * paddleRatio(state, paddle, "control", 0.6), 0.72, 1.02);
+  // Il timing e' la voce dominante, e deve esserlo: e' l'unica interamente in
+  // mano al giocatore in quel decimo di secondo. Pesava 0,34 con posizione,
+  // equilibrio e altezza a 0,51 sommati — si compensava un contatto in ritardo
+  // stando semplicemente fermi nel posto giusto, e la bravura non si sentiva.
   const quality = clamp(
-    timing * 0.34
-      + position * 0.25
-      + balance * 0.16
+    timing * BALANCE.qualityTimingWeight
+      + position * 0.21
+      + balance * 0.12
       + height * 0.1
-      + energy * 0.09
-      + control * 0.06
+      + energy * 0.08
+      + control * 0.05
       + splitStepBonus,
     0,
     1,
@@ -1635,7 +1639,10 @@ export function hitBall(
     const targetY = shotError?.type === "long"
       ? (opponentSide === "ai" ? COURT.top - 30 : COURT.bottom + 30)
       : targetYForSide(opponentSide, targetDepth);
-    const qualityPace = 0.88 + assessment.quality * 0.14;
+    // Da 0,88 + 0,14: fra un contatto perfetto e uno mediocre correvano quattro
+    // punti percentuali di velocita' — sotto la soglia del percettibile. La
+    // qualita' deve arrivare alla palla, non solo al voto sull'HUD.
+    const qualityPace = BALANCE.qualityPaceBase + assessment.quality * BALANCE.qualityPaceSpan;
     // L'apice dipende solo dal tempo di volo, quindi un colpo piu' lento e'
     // per forza piu' alto: il taglio non puo' comprare tempo restando basso.
     // La sua moneta e' un'altra: rimbalzo schiacciato e poca spesa, in cambio
