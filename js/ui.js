@@ -856,6 +856,50 @@ export function renderAthletes(onSelect, selectedId = null) {
     ?? ATHLETES[0]);
 }
 
+/**
+ * Tutti gli obiettivi del guardaroba in un posto solo.
+ *
+ * La sfida era gia' scritta sulla card di ogni completo bloccato, ma dentro il
+ * guardaroba del suo atleta: per vederle tutte e venti bisognava aprire sei
+ * guardaroba, e nessuno lo fa. Un elenco spuntabile invece si legge in dieci
+ * secondi ed e' quello che fa venire voglia di rigiocare — si vede cosa manca.
+ *
+ * Gli atleti non ancora sbloccati restano visibili con le loro sfide: sapere
+ * cosa c'e' dopo vale piu' che nasconderlo.
+ */
+export function renderChallenges() {
+  const board = document.getElementById("challengeBoard");
+  if (!board) return;
+  const vinti = ui.career.outfitsWon ?? {};
+  const tutti = ATHLETES.flatMap((atleta) => outfitsForAthlete(atleta.id).filter((o) => o.challenge));
+  const fatti = tutti.filter((o) => vinti[o.unlockKey] || ui.career.unlockAll).length;
+
+  board.innerHTML = `
+    <p class="challenge-board__count">${t("challengeCount", { done: fatti, total: tutti.length })}</p>
+    ${ATHLETES.map((atleta) => {
+      const completi = outfitsForAthlete(atleta.id).filter((o) => o.challenge);
+      if (!completi.length) return "";
+      const bloccato = !isUnlocked(atleta, ui.career);
+      return `
+        <section class="challenge-group">
+          <h3 style="color:${atleta.color}">${t(`athlete_${atleta.id}_name`)}
+            <small>${bloccato ? t("challengeLockedAthlete") : t(`athlete_${atleta.id}_role`)}</small>
+          </h3>
+          ${completi.map((completo) => {
+            const fatto = Boolean(vinti[completo.unlockKey]) || ui.career.unlockAll;
+            return `
+              <div class="challenge-row${fatto ? " is-done" : ""}">
+                <span class="challenge-row__mark">${fatto ? "🏅" : "🎯"}</span>
+                <span class="challenge-row__name">${t(completo.nameKey)}</span>
+                <span class="challenge-row__what">${challengeLabel(completo.challenge)}</span>
+                <span class="challenge-row__state">${fatto ? t("challengeDone") : t("challengeTodo")}</span>
+              </div>`;
+          }).join("")}
+        </section>`;
+    }).join("")}
+  `;
+}
+
 export function renderArenas(onSelect) {
   const grid = document.getElementById("arenaGrid");
   grid.innerHTML = "";

@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260813-outfit-alpha-v30" />
+    <link rel="stylesheet" href="styles.css?v=20260813-arena-expansion-v32" />
   </head>
   <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -61,6 +61,7 @@
               <button class="btn btn--secondary" type="button" data-action="to-drill" data-i18n="training">ALLENAMENTO</button>
               <button class="btn btn--secondary" type="button" data-action="to-help" data-i18n="howTo">COME SI GIOCA</button>
               <button class="btn btn--secondary" type="button" data-action="to-history" data-i18n="history">ALBO D'ORO</button>
+              <button class="btn btn--secondary" type="button" data-action="to-challenges" data-i18n="challenges">OBIETTIVI</button>
             </div>
           </div>
           <div class="hero-preview">
@@ -104,25 +105,19 @@
         </header>
         <div class="mode-grid">
           <article class="mode-card" data-mode="quick">
-            <div class="mode-card__icon mode-card__icon--cyan">
-              <svg viewBox="0 0 24 24" width="40" height="40"><polygon points="5,3 19,12 5,21" fill="currentColor" /></svg>
-            </div>
+            <div class="mode-card__art mode-card__art--quick" role="img" aria-label="Scambio rapido in un campo da padel steampunk" data-i18n-aria="ariaQuickModeArt"></div>
             <h3 data-i18n="quickMode">PARTITA RAPIDA</h3>
             <p data-i18n="quickModeDesc">Scendi in campo subito contro l'IA.</p>
             <span class="mode-card__tag mode-card__tag--ready" data-i18n="available">Disponibile</span>
           </article>
           <article class="mode-card" data-mode="tournament">
-            <div class="mode-card__icon mode-card__icon--gold">
-              <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor" /></svg>
-            </div>
+            <div class="mode-card__art mode-card__art--tournament" role="img" aria-label="Finale di torneo davanti al trofeo del circuito" data-i18n-aria="ariaTournamentModeArt"></div>
             <h3 data-i18n="tournamentMode">TORNEO CAMPIONATO</h3>
             <p data-i18n="tournamentModeDesc">3 match con difficoltà crescente. Conquista il trofeo del circuito.</p>
             <span class="mode-card__tag mode-card__tag--ready" data-i18n="available">Disponibile</span>
           </article>
           <article class="mode-card" data-mode="career">
-            <div class="mode-card__icon mode-card__icon--red">
-              <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08s5.97 1.09 6 3.08c-1.29 1.94-3.5 3.22-6 3.22z" fill="currentColor" /></svg>
-            </div>
+            <div class="mode-card__art mode-card__art--career" role="img" aria-label="Atleta davanti al lungo percorso della carriera" data-i18n-aria="ariaCareerModeArt"></div>
             <h3 data-i18n="careerMode">CARRIERA</h3>
             <p data-i18n="careerModeDesc">Crea il tuo campione e scala i vertici del circuito nel lungo percorso verso la gloria.</p>
             <span class="mode-card__tag mode-card__tag--ready" id="careerTag">Stagione 1 · 0/3</span>
@@ -274,6 +269,18 @@
         <ul class="history-list" id="historyList"></ul>
       </section>
 
+      <!-- SFIDE DEI COMPLETI -->
+      <section class="screen" id="screen-challenges" aria-label="Sfide dei completi" data-i18n-aria="ariaChallenges">
+        <header class="screen-header">
+          <button class="btn btn--ghost" type="button" data-action="to-menu" data-i18n="back">← Indietro</button>
+          <div>
+            <h2 data-i18n="challengesTitle">OBIETTIVI DEL GUARDAROBA</h2>
+            <p data-i18n="outfitChallengeHint">I completi si vincono con le sfide, non si comprano: gioca quell'atleta e centrala.</p>
+          </div>
+        </header>
+        <div class="challenge-board" id="challengeBoard"></div>
+      </section>
+
       <!-- PROFILO CARRIERA -->
       <section class="screen" id="screen-profile" aria-label="Profilo carriera" data-i18n-aria="ariaProfile">
         <header class="screen-header">
@@ -296,11 +303,20 @@
           <button class="btn btn--ghost" type="button" data-action="to-menu" data-i18n="back">← Indietro</button>
           <div>
             <h2 data-i18n="drillTitle">ALLENAMENTO</h2>
-            <p data-i18n="drillSub">Colpi di precisione: bersagli nella metà avversaria.</p>
+            <p id="drillSub">Bersagli nella metà avversaria: il corto chiede il taglio, il profondo la spinta.</p>
           </div>
         </header>
+        <div class="segmented drill-seg" id="drillSeg" role="group" aria-label="Esercizio" data-i18n-aria="drillExercise">
+          <button type="button" data-value="precision" data-i18n="drill_precision_name">Precisione</button>
+          <button type="button" data-value="smash" data-i18n="drill_smash_name">Smash</button>
+          <button type="button" data-value="rally" data-i18n="drill_rally_name">Scambio</button>
+        </div>
         <div class="drill-hud">
-          <div class="drill-hud__box"><span data-i18n="drillScore">Punti</span><b id="drillScore">0</b></div>
+          <div class="drill-hud__box"><span id="drillLabel0">Punti</span><b id="drillValue0">0</b></div>
+          <div class="drill-hud__box"><span id="drillLabel1">Record</span><b id="drillValue1">0</b></div>
+          <div class="drill-hud__box"><span id="drillLabel2">Precisione</span><b id="drillValue2">0/0</b></div>
+          <div class="drill-hud__box drill-hud__box--streak"><span id="drillLabel3">Streak</span><b id="drillValue3">0</b></div>
+        </div>
           <div class="drill-hud__box"><span data-i18n="drillBest">Record</span><b id="drillBest">0</b></div>
           <div class="drill-hud__box"><span data-i18n="drillHits">Precisione</span><b id="drillHits">0/0</b></div>
           <div class="drill-hud__box drill-hud__box--streak"><span data-i18n="drillStreak">Streak</span><b id="drillStreak">0</b></div>
@@ -308,7 +324,7 @@
         <div class="drill-canvas-wrap">
           <canvas id="drillCanvas" width="960" height="700" aria-label="Campo di allenamento" data-i18n-aria="ariaDrillCourt"></canvas>
         </div>
-        <p class="drill-instructions" data-i18n="drillHint2">Tieni premuto, rilascia al picco del misuratore e mira con ←/→.</p>
+        <p class="drill-instructions" id="drillHint">Carica, rilascia nella finestra verde e mira. X per il taglio.</p>
       </section>
 
       <!-- IMPOSTAZIONI -->
@@ -601,6 +617,6 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js?v=20260813-outfit-alpha-v30"></script>
+    <script type="module" src="js/main.js?v=20260813-arena-expansion-v32"></script>
   </body>
 </html>

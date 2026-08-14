@@ -6,7 +6,7 @@ import {
 } from "./game.js?v=20260813-arena-expansion-v32";
 import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-arena-expansion-v32";
 import { setReduceMotion } from "./fx.js?v=20260813-arena-expansion-v32";
-import { createDrill, updateDrill } from "./drill.js?v=20260813-arena-expansion-v32";
+import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260813-arena-expansion-v32";
 import { getLang, setLang, t } from "./i18n.js?v=20260813-arena-expansion-v32";
 import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-arena-expansion-v32";
 import {
@@ -36,6 +36,7 @@ import {
   renderArenas,
   awardOutfitChallenges,
   renderAthletes,
+  renderChallenges,
   resolveLineup,
   renderHistory,
   renderProfile,
@@ -139,6 +140,7 @@ let replayAccum = 0;
 let drillState = null;
 let drillLoopGen = 0;
 let drillLastTime = 0;
+let drillAccumulator = 0;
 
 const GAMEPAD_MENU_DEADZONE = 0.28;
 const gamepad = {
@@ -967,84 +969,7 @@ function gameLoop(now, generation) {
   let replayApplied = null;
   if (replayActive) replayApplied = applyReplayFrame();
 
-    drawArena(ctx, canvas, matchState.arena, now / 1000);
-  drawServeBox(ctx, matchState, now / 1000);
-  drawLandingMarker(ctx, matchState.ball, now / 1000);
-  drawTeamGeometry(ctx, matchState);
-  drawHitZone(ctx, matchState[matchState.activePlayerKey], "#fff36a");
-  drawPaddle(ctx, matchState.opponent, matchState.opponentAthlete.color, false, matchState.opponent.swing,
-    matchState.humanMode === "pvp" && matchState.pvpActiveKey === "opponent" ? matchState.opponent.charge : 0,
-    matchState.opponentAthlete, athleteSprites.get(athleteSpriteKey(matchState.opponentAthlete)),
-    athleteActionSprites.get(athleteSpriteKey(matchState.opponentAthlete)),
-    athleteRunSprites.get(athleteSpriteKey(matchState.opponentAthlete)), now / 1000);
-  drawPaddle(ctx, matchState.opponentMate, matchState.opponentMateAthlete.color, false, matchState.opponentMate.swing,
-    matchState.humanMode === "pvp" && matchState.pvpActiveKey === "opponentMate" ? matchState.opponentMate.charge : 0,
-    matchState.opponentMateAthlete, athleteSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)),
-    athleteActionSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)),
-    athleteRunSprites.get(athleteSpriteKey(matchState.opponentMateAthlete)), now / 1000);
-  drawPaddle(ctx, matchState.playerMate, matchState.playerMateAthlete.color, true, matchState.playerMate.swing,
-    matchState.humanMode === "coop" ? matchState.playerMate.charge
-      : matchState.activePlayerKey === "playerMate" ? matchState.shotCharge : 0,
-    matchState.playerMateAthlete, athleteBackSprites.get(athleteSpriteKey(matchState.playerMateAthlete)),
-    athleteBackActionSprites.get(athleteSpriteKey(matchState.playerMateAthlete)),
-    athleteBackRunSprites.get(athleteSpriteKey(matchState.playerMateAthlete)), now / 1000);
-  drawPaddle(ctx, matchState.player, matchState.athlete.color, true, matchState.player.swing,
-    matchState.humanMode === "coop" ? matchState.player.charge
-      : matchState.activePlayerKey === "player" ? matchState.shotCharge : 0, matchState.athlete,
-    athleteBackSprites.get(athleteSpriteKey(matchState.athlete)),
-    athleteBackActionSprites.get(athleteSpriteKey(matchState.athlete)),
-    athleteBackRunSprites.get(athleteSpriteKey(matchState.athlete)), now / 1000);
-  const activeSprite = matchState.activePlayerKey === "player"
-    ? athleteBackSprites.get(athleteSpriteKey(matchState.athlete))
-    : athleteBackSprites.get(athleteSpriteKey(matchState.playerMateAthlete));
-  const smashChargeThreshold = Math.max(
-    0,
-    Math.min(1, (BALANCE.smashMinPower / matchState.athlete.stats.power - 0.4) / 0.95),
-  );
-  const activePaddle = matchState[matchState.activePlayerKey];
-  const ballToPaddleY = activePaddle.y - matchState.ball.y;
-  const smashImpactEta = matchState.ball.vy > 30
-    ? ballToPaddleY / matchState.ball.vy
-    : Number.POSITIVE_INFINITY;
-  const smashImpactX = matchState.ball.x + matchState.ball.vx * Math.max(0, smashImpactEta);
-  const smashImpactZ = Number.isFinite(smashImpactEta) && smashImpactEta >= 0
-    ? matchState.ball.z
-      + matchState.ball.vz * smashImpactEta
-      - 0.5 * BALANCE.ballGravity * smashImpactEta * smashImpactEta
-    : matchState.ball.z;
-  const smashContactGeometry = smashImpactEta >= -0.04
-    && smashImpactEta <= 0.2
-    && Math.abs(smashImpactX - activePaddle.x) <= activePaddle.w * 0.9;
-  const smashHeightReady = (smashContactGeometry ? smashImpactZ : matchState.ball.z)
-    >= BALANCE.smashMinHeight;
-  const smashPrimedActive = Boolean(matchState.smashPrimed || activePaddle.smashPrimed);
-  const smashIntentActive = matchState.shotIntent === "smash" || smashPrimedActive;
-  const smashStatus = !smashIntentActive
-    ? ""
-    : activePaddle.y > COURT.netY + BALANCE.smashNetWindow
-      ? t("smashCueNet")
-      : !smashHeightReady
-        ? t("smashCueHigh")
-        : !smashPrimedActive && matchState.shotCharge < smashChargeThreshold
-          ? t("smashCueCharge")
-          : smashContactGeometry
-            ? t("smashCueSecondTap")
-            : t("smashCuePrimed");
-  drawActiveIndicator(
-    ctx,
-    matchState[matchState.activePlayerKey],
-    Boolean(activeSprite?.complete),
-    matchState.shotCharge,
-    smashChargeThreshold,
-    smashIntentActive,
-    matchState.rallyEnergy.player,
-    smashStatus,
-  );
-  drawTimingHud(ctx, matchState, now / 1000);
-  drawShotFeedback(ctx, matchState);
-  drawBall(ctx, matchState.ball, matchState.flash);
-  drawFx(ctx, matchState);
-  drawMiniMap(matchState);
+  drawScene(ctx, canvas, matchState, now);
 
   if (matchState.flash > 0) {
     ctx.fillStyle = `rgba(255, 209, 102, ${matchState.flash * 0.14})`;
@@ -1424,29 +1349,56 @@ function syncSegmented(container, value) {
 const drillCanvas = document.getElementById("drillCanvas");
 const drillCtx = drillCanvas ? drillCanvas.getContext("2d") : null;
 
+/**
+ * L'allenamento usa lo stesso input della partita. Prima ne aveva uno ridotto a
+ * destra/sinistra/carica: con tre comandi non si possono nemmeno tentare taglio,
+ * pallonetto, smash a due tocchi, split-step o sprint — cioe' proprio le
+ * meccaniche che si dovrebbero allenare.
+ */
 function drillInput() {
-  const hit = hitQueued;
-  hitQueued = false;
-  return {
-    left: keys.has("arrowleft") || keys.has("a"),
-    right: keys.has("arrowright") || keys.has("d") || keys.has("l"),
-    hold: keys.has(" ") || keys.has("enter"),
-    hit,
-  };
+  return getInput();
 }
 
 function startDrill() {
   if (matchState?.running) quitMatch();
   drillLoopGen += 1;
-  drillState = createDrill();
-  drillState.running = true;
-  drillState.paddle.x = COURT.right / 2;
-  drillState.paddle.y = COURT.netY + 88;
-  drillState.ball.x = COURT.right / 2;
-  drillState.ball.y = COURT.netY + 88;
+  const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
+  // La formazione la risolve l'interfaccia e arriva da qui: `drill.js` deve
+  // restare eseguibile senza DOM, quindi non se la va a prendere da solo.
+  const lineup = resolveLineup(athlete);
+  drillState = createDrill(
+    ui.drillExercise ?? DRILL_EXERCISES[0].id,
+    athlete,
+    ui.selectedArena ?? ARENAS[0],
+    getAiForMatch("quick", 0, ui.aiDifficulty),
+    {
+      playerMate: lineup.playerMate,
+      opponent: lineup.opponent,
+      opponentMate: lineup.opponentMate,
+    },
+  );
   drillLastTime = performance.now();
+  drillAccumulator = 0;
+  syncDrillChrome();
   showScreen("drill");
   requestAnimationFrame((now) => drillLoop(now, drillLoopGen));
+}
+
+/** Titoli, etichette dell'HUD e selettore, che cambiano con l'esercizio. */
+function syncDrillChrome() {
+  const id = drillState?.exercise?.id ?? ui.drillExercise ?? DRILL_EXERCISES[0].id;
+  const sub = document.getElementById("drillSub");
+  if (sub) sub.textContent = t(`drill_${id}_desc`);
+  const hint = document.getElementById("drillHint");
+  if (hint) hint.textContent = t(`drill_${id}_hint`);
+  document.querySelectorAll("#drillSeg button").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.value === id);
+  });
+  const labels = drillState ? drillMetrics(drillState) : [];
+  labels.forEach((metric, index) => {
+    const box = document.getElementById(`drillLabel${index}`);
+    if (box) box.textContent = t(metric.key);
+  });
 }
 
 function stopDrill() {
@@ -1455,9 +1407,10 @@ function stopDrill() {
 }
 
 function drawDrillOverlay(now) {
-  if (!drillCtx) return;
+  if (!drillCtx || !drillState) return;
   const d = drillState;
   const c = drillCtx;
+  const cx = drillCanvas.width / 2;
 
   if (d.phase === "ready") {
     c.fillStyle = "rgba(6, 12, 30, 0.5)";
@@ -1465,52 +1418,27 @@ function drawDrillOverlay(now) {
     c.fillStyle = "#ffcc00";
     c.font = "30px 'Lilita One', sans-serif";
     c.textAlign = "center";
-    c.fillText(t("drillReady"), drillCanvas.width / 2, 430);
+    c.fillText(t("drillReady"), cx, 430);
     c.fillStyle = "rgba(255,255,255,0.85)";
     c.font = "15px 'Lilita One', sans-serif";
-    c.fillText(t("drillHint1"), drillCanvas.width / 2, 466);
+    c.fillText(t(`drill_${d.exercise.id}_hint`), cx, 466);
   }
 
-  if (d.phase === "charge") {
-    c.fillStyle = "rgba(6, 12, 30, 0.38)";
-    c.fillRect(300, 596, 360, 22);
-    c.fillStyle = "#123d68";
-    c.fillRect(304, 600, 352, 14);
-    const perfectLeft = 300 + 352 * 0.5;
-    const perfectWidth = 352 * 0.24;
-    c.fillStyle = "rgba(26, 255, 138, 0.45)";
-    c.fillRect(perfectLeft, 600, perfectWidth, 14);
-    c.fillStyle = "#ffcc00";
-    c.fillRect(300 + 352 * Math.min(1, Math.max(0, d.meter)), 596, 5, 22);
-    c.fillStyle = "rgba(255,255,255,0.9)";
-    c.font = "13px 'Lilita One', sans-serif";
-    c.textAlign = "center";
-    c.fillText(t("drillMeter"), drillCanvas.width / 2, 588);
-  }
+  // Il misuratore di carica e la finestra di timing non si disegnano piu' qui:
+  // li porta `drawScene` con lo stesso HUD della partita, che e' il punto —
+  // l'allenamento mostrava un misuratore inventato, con un "perfetto" che nel
+  // gioco non esisteva.
 
   if (d.phase === "result" && d.grade) {
+    const colori = { perfect: "#1aff8a", good: "#ffcc00", early: "#ff9f43", late: "#ff6d70" };
+    const testi = { perfect: "PERFECT ⭐", good: "GOOD", early: "EARLY", late: "LATE" };
     c.font = "28px 'Lilita One', sans-serif";
     c.textAlign = "center";
-    c.fillStyle = d.grade === "perfect" ? "#1aff8a" : d.grade === "good" ? "#ffcc00" : "#ff6d70";
-    c.fillText(
-      d.grade === "perfect" ? "PERFECT ⭐" : d.grade === "good" ? "GOOD" : "EARLY",
-      drillCanvas.width / 2,
-      380,
-    );
+    c.fillStyle = colori[d.grade] ?? "#ffffff";
+    c.fillText(testi[d.grade] ?? "", cx, 380);
     c.fillStyle = "#ffffff";
     c.font = "18px 'Lilita One', sans-serif";
-    c.fillText(`${t("drillPoints")} +${d.points}`, drillCanvas.width / 2, 414);
-  }
-
-  if (d.phase === "flight" || d.phase === "result") {
-    c.fillStyle = "rgba(255,255,255,0.9)";
-    c.strokeStyle = "rgba(255,204,0,0.9)";
-    c.lineWidth = 2;
-    const gp = c.__padelProject ? c.__padelProject(d.goal.x, d.goal.y) : { x: d.goal.x, y: d.goal.y, scale: 1 };
-    c.beginPath();
-    c.ellipse(gp.x, gp.y, d.goal.r * gp.scale, d.goal.r * 0.55 * gp.scale, 0, 0, Math.PI * 2);
-    c.stroke();
-    c.setLineDash([]);
+    c.fillText(`${t("drillPoints")} +${d.points}`, cx, 414);
   }
 }
 
@@ -1518,66 +1446,177 @@ function drawDrill(now) {
   if (!drillCtx || !drillState) return;
   const d = drillState;
   const c = drillCtx;
-  // Con il completo applicato, come in partita: l'atleta deve essere lo stesso
-  // che si vede scendere in campo.
-  const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
 
-  drawArena(c, drillCanvas, ui.selectedArena ?? ARENAS[0], now / 1000);
+  // La stessa scena della partita: i quattro atleti con i loro completi, la zona
+  // di colpo, il misuratore di timing. Prima l'allenamento disegnava una sola
+  // racchetta senza sprite, e si vedeva un omino generico su un campo vuoto.
+  drawScene(c, drillCanvas, d.state, now);
 
-  c.setLineDash([6, 6]);
-  c.strokeStyle = "rgba(255,204,0,0.95)";
-  c.lineWidth = 2;
-  const rp = c.__padelProject(d.reticle.x, d.reticle.y);
-  c.beginPath();
-  c.moveTo(rp.x - 12, rp.y); c.lineTo(rp.x + 12, rp.y);
-  c.moveTo(rp.x, rp.y - 12); c.lineTo(rp.x, rp.y + 12);
-  c.stroke();
-  c.setLineDash([]);
-
-  if (d.phase === "charge") {
-    const perfect = 0.5 + 0.24 * 0.5;
-    const spread = Math.abs(d.meter - 0.62);
-    const radius = 20 + spread * 60;
-    c.strokeStyle = spread < 0.28 ? "rgba(26,255,138,0.85)" : "rgba(255,204,0,0.7)";
-    c.lineWidth = 3;
-    const pp = c.__padelProject(d.paddle.x, d.paddle.y);
-    c.beginPath();
-    c.ellipse(pp.x, pp.y - 30, radius, radius * 0.6, 0, 0, Math.PI * 2);
-    c.stroke();
-  }
-
-  if (d.ball.active) {
-    drawBall(c, d.ball, 0);
-  }
-  c.fillStyle = "rgba(255,255,255,0.16)";
+  if (d.target.active) drawDrillTarget(c, d.target, now / 1000);
   if (d.landing) {
     const lp = c.__padelProject(d.landing.x, d.landing.y);
+    c.fillStyle = "rgba(255,255,255,0.22)";
     c.beginPath();
     c.ellipse(lp.x, lp.y, 16, 8, 0, 0, Math.PI * 2);
     c.fill();
   }
-
-  // Gli stessi fogli sprite del match: passando `null` si cadeva sulla figura
-  // vettoriale di riserva, quindi l'allenamento mostrava un omino generico
-  // invece dell'atleta scelto col suo completo.
-  const chiave = athleteSpriteKey(athlete);
-  drawPaddle(c, d.paddle, athlete.color, true, d.paddle.swing,
-    d.phase === "charge" ? d.meter : 0, athlete,
-    athleteBackSprites.get(chiave),
-    athleteBackActionSprites.get(chiave),
-    athleteBackRunSprites.get(chiave), now / 1000);
   drawDrillOverlay(now);
+}
+
+/**
+ * Il bersaglio. Il colore dice quale colpo chiede: corto vuole un rimbalzo
+ * schiacciato (taglio), profondo vuole spinta (piatto). Senza questa distinzione
+ * i due bersagli sarebbero indistinguibili e l'esercizio non insegnerebbe nulla.
+ */
+function drawDrillTarget(c, target, time) {
+  const p = c.__padelProject(target.x, target.y);
+  const corto = target.kind === "short";
+  const tinta = corto ? "26,255,138" : "255,204,0";
+  const pulse = 0.72 + Math.sin(time * 3.4) * 0.16;
+  const rx = target.r * (p.scale ?? 1);
+  const ry = rx * 0.52;
+  c.save();
+  c.lineWidth = 3;
+  c.strokeStyle = `rgba(${tinta},${pulse})`;
+  c.fillStyle = `rgba(${tinta},0.13)`;
+  c.beginPath();
+  c.ellipse(p.x, p.y, rx, ry, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+  // Il centro vale il doppio: va visto.
+  c.beginPath();
+  c.ellipse(p.x, p.y, rx * 0.42, ry * 0.42, 0, 0, Math.PI * 2);
+  c.stroke();
+  c.fillStyle = `rgba(${tinta},0.95)`;
+  c.font = "700 12px Nunito, sans-serif";
+  c.textAlign = "center";
+  c.fillText(t(corto ? "drillTargetShort" : "drillTargetDeep"), p.x, p.y - ry - 8);
+  c.restore();
+}
+
+function drawScene(c, cvs, state, now) {
+      drawArena(c, cvs, state.arena, now / 1000);
+    drawServeBox(c, state, now / 1000);
+    drawLandingMarker(c, state.ball, now / 1000);
+    drawTeamGeometry(c, state);
+    drawHitZone(c, state[state.activePlayerKey], "#fff36a");
+    drawPaddle(c, state.opponent, state.opponentAthlete.color, false, state.opponent.swing,
+      state.humanMode === "pvp" && state.pvpActiveKey === "opponent" ? state.opponent.charge : 0,
+      state.opponentAthlete, athleteSprites.get(athleteSpriteKey(state.opponentAthlete)),
+      athleteActionSprites.get(athleteSpriteKey(state.opponentAthlete)),
+      athleteRunSprites.get(athleteSpriteKey(state.opponentAthlete)), now / 1000);
+    drawPaddle(c, state.opponentMate, state.opponentMateAthlete.color, false, state.opponentMate.swing,
+      state.humanMode === "pvp" && state.pvpActiveKey === "opponentMate" ? state.opponentMate.charge : 0,
+      state.opponentMateAthlete, athleteSprites.get(athleteSpriteKey(state.opponentMateAthlete)),
+      athleteActionSprites.get(athleteSpriteKey(state.opponentMateAthlete)),
+      athleteRunSprites.get(athleteSpriteKey(state.opponentMateAthlete)), now / 1000);
+    drawPaddle(c, state.playerMate, state.playerMateAthlete.color, true, state.playerMate.swing,
+      state.humanMode === "coop" ? state.playerMate.charge
+        : state.activePlayerKey === "playerMate" ? state.shotCharge : 0,
+      state.playerMateAthlete, athleteBackSprites.get(athleteSpriteKey(state.playerMateAthlete)),
+      athleteBackActionSprites.get(athleteSpriteKey(state.playerMateAthlete)),
+      athleteBackRunSprites.get(athleteSpriteKey(state.playerMateAthlete)), now / 1000);
+    drawPaddle(c, state.player, state.athlete.color, true, state.player.swing,
+      state.humanMode === "coop" ? state.player.charge
+        : state.activePlayerKey === "player" ? state.shotCharge : 0, state.athlete,
+      athleteBackSprites.get(athleteSpriteKey(state.athlete)),
+      athleteBackActionSprites.get(athleteSpriteKey(state.athlete)),
+      athleteBackRunSprites.get(athleteSpriteKey(state.athlete)), now / 1000);
+    const activeSprite = state.activePlayerKey === "player"
+      ? athleteBackSprites.get(athleteSpriteKey(state.athlete))
+      : athleteBackSprites.get(athleteSpriteKey(state.playerMateAthlete));
+    const smashChargeThreshold = Math.max(
+      0,
+      Math.min(1, (BALANCE.smashMinPower / state.athlete.stats.power - 0.4) / 0.95),
+    );
+    const activePaddle = state[state.activePlayerKey];
+    const ballToPaddleY = activePaddle.y - state.ball.y;
+    const smashImpactEta = state.ball.vy > 30
+      ? ballToPaddleY / state.ball.vy
+      : Number.POSITIVE_INFINITY;
+    const smashImpactX = state.ball.x + state.ball.vx * Math.max(0, smashImpactEta);
+    const smashImpactZ = Number.isFinite(smashImpactEta) && smashImpactEta >= 0
+      ? state.ball.z
+        + state.ball.vz * smashImpactEta
+        - 0.5 * BALANCE.ballGravity * smashImpactEta * smashImpactEta
+      : state.ball.z;
+    const smashContactGeometry = smashImpactEta >= -0.04
+      && smashImpactEta <= 0.2
+      && Math.abs(smashImpactX - activePaddle.x) <= activePaddle.w * 0.9;
+    const smashHeightReady = (smashContactGeometry ? smashImpactZ : state.ball.z)
+      >= BALANCE.smashMinHeight;
+    const smashPrimedActive = Boolean(state.smashPrimed || activePaddle.smashPrimed);
+    const smashIntentActive = state.shotIntent === "smash" || smashPrimedActive;
+    const smashStatus = !smashIntentActive
+      ? ""
+      : activePaddle.y > COURT.netY + BALANCE.smashNetWindow
+        ? t("smashCueNet")
+        : !smashHeightReady
+          ? t("smashCueHigh")
+          : !smashPrimedActive && state.shotCharge < smashChargeThreshold
+            ? t("smashCueCharge")
+            : smashContactGeometry
+              ? t("smashCueSecondTap")
+              : t("smashCuePrimed");
+    drawActiveIndicator(
+      c,
+      state[state.activePlayerKey],
+      Boolean(activeSprite?.complete),
+      state.shotCharge,
+      smashChargeThreshold,
+      smashIntentActive,
+      state.rallyEnergy.player,
+      smashStatus,
+    );
+    drawTimingHud(c, state, now / 1000);
+    drawShotFeedback(c, state);
+    drawBall(c, state.ball, state.flash);
+    drawFx(c, state);
+  // La minimappa disegna sul proprio canvas nell'HUD di partita, che
+  // l'allenamento non ha: chiamarla da qui scriverebbe su un elemento fuori
+  // schermo per tutta la durata dell'esercizio.
+  if (state.mode !== "drill") drawMiniMap(state);
+}
+
+/**
+ * Il selettore di esercizio. Cambiare esercizio ricostruisce lo stato: sono
+ * situazioni di partenza diverse — bersagli con avversari fermi, pallonetti da
+ * chiudere, scambio pieno — e riusare lo stato precedente lascerebbe in campo
+ * una palla che appartiene a un altro esercizio.
+ */
+function bindDrillSelector() {
+  document.querySelectorAll("#drillSeg button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.value;
+      if (!id || id === (drillState?.exercise?.id ?? ui.drillExercise)) return;
+      ui.drillExercise = id;
+      if (drillState) startDrill();
+      else syncDrillChrome();
+    });
+  });
 }
 
 function drillLoop(now, generation) {
   if (generation !== drillLoopGen) return;
-  const dt = Math.min((now - drillLastTime) / 1000, 0.033);
+  const frame = Math.min((now - drillLastTime) / 1000, 0.25);
   drillLastTime = now;
-  updateDrill(drillState, dt, drillInput());
-  document.getElementById("drillScore").textContent = String(drillState.score);
-  document.getElementById("drillBest").textContent = String(drillState.best);
-  document.getElementById("drillHits").textContent = `${drillState.hits}/${drillState.attempts}`;
-  document.getElementById("drillStreak").textContent = String(drillState.streak);
+  // Stesso passo fisso della partita: la fisica e' la stessa, e a passo
+  // variabile darebbe risultati diversi dal gioco a parita' di comando.
+  drillAccumulator += frame;
+  let input = drillInput();
+  let steps = 0;
+  while (drillAccumulator >= FIXED_STEP && steps < MAX_SIM_STEPS) {
+    updateDrill(drillState, FIXED_STEP, input);
+    drillAccumulator -= FIXED_STEP;
+    steps += 1;
+    // I comandi a colpo singolo valgono un passo solo, altrimenti lo stesso
+    // colpo si accoda piu' volte nello stesso fotogramma.
+    if (steps === 1) input = consumeOneShot(input);
+  }
+  drillMetrics(drillState).forEach((metric, index) => {
+    const box = document.getElementById(`drillValue${index}`);
+    if (box) box.textContent = metric.value;
+  });
   drawDrill(now);
   requestAnimationFrame((nextNow) => drillLoop(nextNow, generation));
 }
@@ -1597,6 +1636,10 @@ bindNavigation({
   "to-history": () => {
     showScreen("history");
     renderHistory();
+  },
+  "to-challenges": () => {
+    showScreen("challenges");
+    renderChallenges();
   },
   "to-drill": startDrill,
   "to-profile": () => {
@@ -1673,6 +1716,7 @@ if (["it", "en"].includes(prefs.lang)) {
   setLang(prefs.lang);
 }
 applyAccessibility();
+bindDrillSelector();
 applyLanguage();
 // Allinea documento e selettore alla lingua effettiva: il markup parte in
 // inglese, ma una preferenza salvata puo' averla gia' cambiata.
@@ -1769,6 +1813,9 @@ function setLanguage(lang) {
   document.documentElement.lang = lang;
   langToggle.textContent = getLang() === "it" ? "EN" : "IT";
   applyLanguage();
+  // `syncDrillChrome` possiede i testi dinamici dell'allenamento (descrizione e
+  // suggerimento dell'esercizio in corso), che `applyLanguage` non conosce.
+  syncDrillChrome();
   updateMuteButton();
   updateGamepadIndicator(gamepad.connected, gamepad.id);
   applyControllerLayout(gamepad.id);

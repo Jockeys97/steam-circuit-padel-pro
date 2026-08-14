@@ -1305,6 +1305,14 @@ kbd {
   margin-left: 6px;
 }
 
+/* Selettore di esercizio: riusa il segmentato delle impostazioni di partita,
+   perche' e' lo stesso gesto — scegliere fra alternative esclusive — e imparare
+   due controlli diversi per la stessa cosa non ha motivo. */
+.drill-seg {
+  max-width: 460px;
+  margin: 0 auto 14px;
+}
+
 .drill-hud {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -3107,4 +3115,90 @@ body.mode-colorblind .hero-preview {
 .challenge-line {
   display: block;
   line-height: 1.5;
+}
+
+/* Bacheca degli obiettivi del guardaroba: un elenco spuntabile, non card —
+   venti card avrebbero chiesto di scorrere per sapere cosa manca. */
+.challenge-board {
+  padding: 24px 64px 64px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.challenge-board__count {
+  margin: 0 0 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--cyan);
+}
+
+.challenge-group {
+  margin-bottom: 26px;
+}
+
+.challenge-group h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.challenge-group h3 small {
+  margin-left: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.challenge-row {
+  display: grid;
+  grid-template-columns: 28px minmax(150px, 1fr) minmax(0, 2fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 200, 255, 0.16);
+  background: rgba(8, 16, 44, 0.5);
+  margin-bottom: 6px;
+}
+
+.challenge-row.is-done {
+  border-color: rgba(255, 210, 120, 0.4);
+  background: rgba(60, 42, 8, 0.28);
+}
+
+.challenge-row__name {
+  font-weight: 700;
+}
+
+.challenge-row__what {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.challenge-row__state {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.challenge-row.is-done .challenge-row__state {
+  color: #ffd98a;
+}
+
+@media (max-width: 900px) {
+  .challenge-board {
+    padding: 20px 24px 48px;
+  }
+
+  .challenge-row {
+    grid-template-columns: 24px 1fr;
+  }
+
+  .challenge-row__what,
+  .challenge-row__state {
+    grid-column: 2;
+  }
 }
