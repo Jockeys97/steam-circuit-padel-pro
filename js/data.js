@@ -9,6 +9,67 @@ export const COURT = {
 
 export const WIN_SCORE = 11;
 
+/**
+ * Versione del gioco che accompagna ogni feedback.
+ *
+ * `balance` non e' un numero decorativo: e' il riferimento della taratura in
+ * vigore. Senza, un "lo smash e' troppo forte" arrivato oggi resta indistinguibile
+ * da uno arrivato dopo la prossima ritaratura, e non si sa piu' a quale gioco si
+ * riferisse. Va incrementata quando si sposta un valore di `BALANCE`.
+ */
+export const VERSION = { build: "alpha-0.2", balance: "b7" };
+
+/**
+ * Dove finisce il feedback dei giocatori.
+ *
+ * Tutti e tre i campi sono volutamente vuoti: il gioco non e' ancora pubblicato,
+ * quindi l'URL delle discussioni Steam non esiste. Finche' restano `null` il
+ * feedback viene comunque raccolto e conservato in locale, e il giocatore lo copia
+ * negli appunti — nulla va perso e non serve alcun server.
+ *
+ * `endpoint`: se un giorno esistera' una funzione serverless che accetta POST, si
+ * scrive qui e l'invio diventa automatico. Il resto del sistema non cambia: la
+ * coda locale rimane la rete di sicurezza, perche' su Steam si gioca anche
+ * offline e una POST fallita perderebbe il messaggio.
+ */
+export const FEEDBACK = {
+  /**
+   * La funzione serverless in `api/feedback.js`.
+   *
+   * Percorso relativo: funziona sul sito, dove pagina e funzione stanno sullo
+   * stesso dominio. In un pacchetto per Steam la pagina non e' servita da un
+   * dominio, quindi qui va messo l'URL assoluto del deploy — altrimenti la POST
+   * parte verso un'origine che non esiste e il messaggio resta in coda.
+   *
+   * Se la funzione non e' ancora configurata risponde 503 e il gioco ripiega sul
+   * client di posta: nessun messaggio va perduto in nessuno dei due casi.
+   */
+  endpoint: "/api/feedback",
+  /**
+   * Indirizzo a cui il giocatore puo' spedire il messaggio con `mailto:`, cioe'
+   * col proprio client di posta. E' l'unico recapito possibile senza un server:
+   * dal browser non si spedisce posta, e una credenziale SMTP nel codice del
+   * client sarebbe pubblica per definizione.
+   *
+   * Sta in chiaro nel sorgente e finira' raccolto dagli spider: conviene un alias
+   * dedicato (`...+padel@gmail.com`) per poterlo filtrare, o una casella apposita,
+   * invece dell'indirizzo personale principale.
+   */
+  email: "alessiofant17@gmail.com",
+  steamUrl: null,
+  discordUrl: null,
+  // `mailto:` passa dalla barra degli indirizzi e alcuni client tagliano i corpi
+  // lunghi: il testo pieno resta comunque in coda e negli appunti.
+  maxMailBody: 1800,
+  // Oltre questa soglia la coda locale smette di crescere: e' una casella di
+  // posta in uscita, non un archivio.
+  maxQueued: 40,
+  maxMessage: 1200,
+};
+
+/** Le categorie: il testo libero da solo non si riesce a smistare. */
+export const FEEDBACK_TOPICS = ["bug", "balance", "controls", "performance", "idea", "other"];
+
 /** Parametri globali di bilanciamento — unico punto di tuning */
 export const BALANCE = {
   gravity: 38,
@@ -120,6 +181,17 @@ export const BALANCE = {
   aiTimingSkill: 0.46,
   aiTimingSpread: 0.95,
   aiTimingSpreadSkill: 0.85,
+  // Raggio entro cui il difensore recupera l'uscita di uno smash x3 dal vetro,
+  // in multipli del proprio allungo. Scala con la difficolta': era fisso a 2,05
+  // per tutti e rendeva lo x3 indifendibile allo stesso modo a ogni livello.
+  // Recupero dell'uscita di uno smash x3 dal vetro. Il raggio dice se il
+  // difensore e' abbastanza vicino da provarci, la probabilita' se ci riesce, e
+  // solo quest'ultima scala con la difficolta'. Tenere tutto nel raggio lo
+  // rendeva un interruttore: la distanza si concentra attorno ai 230 px, quindi
+  // pochi pixel di raggio in piu' portavano la Leggenda dal 51% allo 0%.
+  x3RecoveryReach: 5.5,
+  x3RecoveryChanceBase: -0.40,
+  x3RecoveryChanceSkill: 0.95,
   playerX3RecoveryWindow: 1.05,
   lateGraceFactor: 0.3,
   smashCounterSplitStep: 0.45,

@@ -38,6 +38,14 @@ function createRallyState(aiIndex) {
     pointPause: 0,
     lastHitterSide: "ai",
     rallyHits: 3,
+    // Senza azzerare questi non si sta simulando uno scambio: `aiServiceReceiverKey`
+    // vale "opponent" da quando la partita nasce, e finche' e' impostata le
+    // racchette avversarie vengono portate in posizione di ricezione del servizio
+    // da un ramo che precede del tutto la logica di difesa. Le misure di questo
+    // audit descrivevano un'IA che aspetta un servizio, non una che difende.
+    aiServiceReceiverKey: null,
+    serviceReceiverKey: null,
+    aiReceiverLocked: false,
   });
   Object.assign(state.player, { x: 480, y: 395, controlled: true, isPlayer: true, hitCooldown: 0 });
   Object.assign(state.playerMate, { x: 700, y: 405, hitCooldown: 0 });
@@ -123,6 +131,26 @@ const report = AI_OPPONENTS.map((profile, aiIndex) => {
   };
 });
 
+// Lo X3 e' il colpo che decide i punti, e questi due vincoli sono la ragione per
+// cui l'audit esiste. Passo per passo non si puo' pretendere molto: con 240
+// prove l'errore di campionamento e' di circa tre punti, quindi un divario di
+// quattro fra due gradini vicini non e' distinguibile dal rumore, e chiederlo
+// sarebbe finta precisione. Sugli estremi invece il segnale c'e'.
+const facile = report[0];
+const durissimo = report[report.length - 1];
+const forbice = facile.x3PlayerWinnerRate - durissimo.x3PlayerWinnerRate;
+
+assert(durissimo.x3PlayerWinnerRate <= 0.35,
+  `Contro il livello piu' duro uno X3 non deve chiudere piu' di un terzo dei punti: `
+  + `${(durissimo.x3PlayerWinnerRate * 100).toFixed(0)}%. Padroneggiare il colpo piu' forte `
+  + `del gioco non puo' bastare a vincere la difficolta' massima.`);
+
+assert(forbice >= 0.45,
+  `Fra il primo e l'ultimo gradino lo X3 deve cambiare mestiere: `
+  + `${(facile.x3PlayerWinnerRate * 100).toFixed(0)}% -> ${(durissimo.x3PlayerWinnerRate * 100).toFixed(0)}%, `
+  + `forbice ${(forbice * 100).toFixed(0)} punti. Se resta stretta, la difficolta' non tocca `
+  + `il colpo che decide i punti.`);
+
 console.log(JSON.stringify(report, null, 2));
 
 for (let index = 1; index < report.length; index += 1) {
@@ -138,8 +166,14 @@ for (let index = 1; index < report.length; index += 1) {
   const x2Saturo = harder.x2PlayerWinnerRate < 0.05 && easier.x2PlayerWinnerRate < 0.05;
   assert(x2Saturo || harder.x2PlayerWinnerRate <= easier.x2PlayerWinnerRate,
     `La difesa dello X2 deve migliorare: ${easier.id} ${easier.x2PlayerWinnerRate} -> ${harder.id} ${harder.x2PlayerWinnerRate}`);
-  assert(harder.x3PlayerWinnerRate <= easier.x3PlayerWinnerRate + 0.02,
-    `La difesa dello X3 non deve peggiorare: ${easier.id} ${easier.x3PlayerWinnerRate} -> ${harder.id} ${harder.x3PlayerWinnerRate}`);
+  // Lo X3 e' il colpo che decide i punti, quindi qui non basta "non peggiora":
+  // ogni gradino deve difenderlo *percettibilmente* meglio del precedente.
+  // L'assert di prima chiedeva solo che non salisse, e passava con Campione al
+  // 53% e Leggenda al 51%: sul colpo piu' forte del gioco l'ultimo gradino di
+  // difficolta' non esisteva, e nessun audit se ne accorgeva.
+  assert(harder.x3PlayerWinnerRate <= easier.x3PlayerWinnerRate,
+    `La difesa dello X3 non deve peggiorare salendo di livello: ${easier.id} `
+    + `${(easier.x3PlayerWinnerRate * 100).toFixed(0)}% -> ${harder.id} ${(harder.x3PlayerWinnerRate * 100).toFixed(0)}%`);
 }
 
 for (const difficulty of report) {

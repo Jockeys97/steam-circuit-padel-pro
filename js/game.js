@@ -2168,7 +2168,28 @@ function handleWalls(state) {
     const inBack = side === "ai"
       ? recovery.paddle.y < backLimit
       : recovery.paddle.y > backLimit;
-    const recovered = read && recovery.distance <= recovery.paddle.reach * 2.05 && inBack;
+    // Il recupero era irraggiungibile: raggio 111 px contro una distanza mediana
+    // di 235. Misurato su 200 tentativi, scattava zero volte — una meccanica
+    // scritta e mai tarata. Ne seguiva che uno x3 arrivato al vetro fosse punto
+    // garantito a ogni livello: Campione 53%, Leggenda 51%, cioe' sul colpo che
+    // decide i punti l'ultimo gradino di difficolta' non esisteva.
+    //
+    // Allargare il raggio da solo non basta: la distanza si concentra attorno ai
+    // 230 px, quindi il raggio si comporta da interruttore — provato, e la
+    // Leggenda passava da 51% a 0% mentre Difficile restava a 53%. E' lo stesso
+    // effetto a gradino che questo progetto ha gia' corretto altre due volte.
+    //
+    // Quindi: la geometria dice se il recupero e' *possibile*, la bravura se
+    // riesce. Un solo tiro di dado per colpo, da `nextRandom`, quindi
+    // riproducibile come tutto il resto.
+    const raggio = recovery.paddle.reach * BALANCE.x3RecoveryReach;
+    const inRaggio = recovery.distance <= raggio;
+    // Solo il lato IA scala con la difficolta': la difesa del giocatore sta
+    // nelle sue mani, non in un numero.
+    const abilita = side === "ai"
+      ? clamp(BALANCE.x3RecoveryChanceBase + state.ai.skill * BALANCE.x3RecoveryChanceSkill, 0, 0.95)
+      : 1;
+    const recovered = read && inBack && inRaggio && nextRandom(state) < abilita;
     if (!recovered) {
       scorePoint(state, state.lastHitterSide, t("msgSmashX3Wall"), POINT_WINNER);
       return true;

@@ -38,6 +38,14 @@ function createRallyState(athlete = ATHLETES[0], aiIndex = 1) {
     pointPause: 0,
     lastHitterSide: "ai",
     rallyHits: 3,
+    // Senza azzerare questi non si sta simulando uno scambio: `aiServiceReceiverKey`
+    // vale "opponent" da quando la partita nasce, e finche' e' impostata le
+    // racchette avversarie vengono portate in posizione di ricezione del servizio
+    // da un ramo che precede del tutto la logica di difesa. Le misure di questo
+    // audit descrivevano un'IA che aspetta un servizio, non una che difende.
+    aiServiceReceiverKey: null,
+    serviceReceiverKey: null,
+    aiReceiverLocked: false,
   });
   Object.assign(state.player, { x: 480, y: 395, controlled: true, isPlayer: true, hitCooldown: 0 });
   Object.assign(state.playerMate, { x: 700, y: 405, hitCooldown: 0 });
