@@ -3248,7 +3248,6 @@ body.mode-colorblind .hero-preview {
 #lengthSeg {
   grid-auto-flow: row;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-self: start;
 }
 
 @media (max-width: 720px) {
