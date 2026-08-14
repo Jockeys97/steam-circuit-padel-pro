@@ -45,6 +45,12 @@ export const DEMO_CONTENT = {
   arenas: ["clockwork"],
   modes: ["quick"],
   difficulty: "medium",
+  // Le sfide dei completi valgono in partita rapida, quindi funzionano anche
+  // qui: otto completi da vincere per i due atleti concessi. Non era stato
+  // progettato — e' una conseguenza dell'aver legato i completi a una prova sul
+  // campo invece che alla progressione — ma e' cio' che da' alla demo qualcosa
+  // da inseguire, quindi va dichiarato invece di restare un incidente.
+  outfitChallenges: true,
   wishlistUrl: "https://store.steampowered.com/",
 };
 
@@ -52,4 +58,18 @@ export const DEMO_CONTENT = {
 export function demoFilter(items, allowed) {
   if (!IS_DEMO) return items;
   return items.filter((item) => allowed.includes(item.id));
+}
+
+/**
+ * Se un contenuto esiste ma la demo non lo concede.
+ *
+ * Serve a mostrarlo bloccato invece di farlo sparire, che e' la regola gia'
+ * scritta per le modalita' — "vedere cosa manca vende piu' che nasconderlo" — e
+ * che atleti e arene non seguivano. Il risultato era una demo che si
+ * contraddiceva: la schermata Obiettivi elencava nove arene e sei atleti, la
+ * partita ne schierava in campo di non giocabili, e la griglia di selezione ne
+ * mostrava una e due.
+ */
+export function demoLocked(item, allowed) {
+  return IS_DEMO && !allowed.includes(item?.id);
 }

@@ -2,7 +2,7 @@ import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, 
 import { getMatchInfo } from "./game.js?v=20260814-feedback-confirm-v39";
 import { getVolume, isMuted } from "./audio.js?v=20260814-feedback-confirm-v39";
 import { getLang, t } from "./i18n.js?v=20260814-feedback-confirm-v39";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-feedback-confirm-v39";
+import { IS_DEMO, DEMO_CONTENT, demoFilter, demoLocked } from "./build.js?v=20260814-feedback-confirm-v39";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -1030,11 +1030,16 @@ export function renderAthletes(onSelect, selectedId = null) {
       header.hidden = false;
       header.querySelector("[data-team-pick-back]")?.addEventListener("click", () => showTeam(giocatore));
     }
-    demoFilter(ATHLETES, DEMO_CONTENT.athletes).forEach((candidato) => {
+    // Tutti gli atleti, anche quelli che la demo non concede: si mostrano
+    // bloccati invece di sparire. Farli sparire lasciava una demo che si
+    // contraddiceva — la schermata Obiettivi ne elencava sei e la partita ne
+    // schierava in campo di non selezionabili.
+    ATHLETES.forEach((candidato) => {
       // Per le caselle avversarie e per il secondo giocatore l'atleta del
       // giocatore non compare: si sposta cambiando "Tu", non da qui.
       if (!perGiocatore && candidato.id === giocatore.id) return;
-      const locked = !isUnlocked(candidato, ui.career);
+      const fuoriDemo = demoLocked(candidato, DEMO_CONTENT.athletes);
+      const locked = fuoriDemo || !isUnlocked(candidato, ui.career);
       const attivo = perGiocatore
         ? candidato.id === giocatore.id
         : ui.lineup[ruolo] === candidato.id;
@@ -1050,16 +1055,22 @@ export function renderAthletes(onSelect, selectedId = null) {
         candidato.color,
         t(`athlete_${candidato.id}_name`),
         t(`athlete_${candidato.id}_role`),
-        locked ? lockLabel(candidato.unlock) : `<span class="slot-desc">${t(`athlete_${candidato.id}_desc`)}</span>${statLine(candidato)}`,
+        fuoriDemo
+          ? t("demoOnlyFull")
+          : locked
+            ? lockLabel(candidato.unlock)
+            : `<span class="slot-desc">${t(`athlete_${candidato.id}_desc`)}</span>${statLine(candidato)}`,
         locked ? "" : `⚡ ${t(`athlete_${candidato.id}_special`)}`,
         locked,
       );
       if (locked) {
         // Niente `disabled`: un bottone disabilitato non emette click e il
-        // triplo tocco per il codice di sblocco non arriverebbe mai.
+        // triplo tocco per il codice di sblocco non arriverebbe mai. Sui
+        // bloccati dalla demo il codice non deve valere: quello sblocca la
+        // progressione, non il contenuto che la demo non contiene.
         card.setAttribute("aria-disabled", "true");
         card.addEventListener("click", () => {
-          if (promptUnlockCode()) showPicker(giocatore, ruolo);
+          if (!fuoriDemo && promptUnlockCode()) showPicker(giocatore, ruolo);
         });
       } else if (perGiocatore) {
         card.addEventListener("click", () => {
@@ -1182,10 +1193,17 @@ export function renderChallenges() {
     colore: arena.palette?.accent,
   })).join("");
 
+  // In demo personaggi e arene si sbloccano con stelle e trofei, che vengono
+  // solo dalla Carriera: senza dirlo quelle due sezioni restano "0 su N" per
+  // sempre e sembrano un muro invece di un invito.
+  const notaDemo = IS_DEMO
+    ? `<p class="challenge-section__nota">${t("demoCareerNote")}</p>`
+    : "";
+
   board.innerHTML =
-    sezione(t("sectionAthletes"), atletiFatti, atletiSbloccabili.length, bloccoAtleti)
+    sezione(t("sectionAthletes"), atletiFatti, atletiSbloccabili.length, notaDemo + bloccoAtleti)
     + sezione(t("sectionOutfits"), completiFatti, completi.length, bloccoCompleti)
-    + sezione(t("sectionArenas"), areneFatte, areneSbloccabili.length, bloccoArene);
+    + sezione(t("sectionArenas"), areneFatte, areneSbloccabili.length, notaDemo + bloccoArene);
 }
 
 export function renderArenas(onSelect) {
@@ -1203,8 +1221,9 @@ export function renderArenas(onSelect) {
       ? currentTournamentFixture().arena
       : null;
 
-  demoFilter(ARENAS, DEMO_CONTENT.arenas).forEach((arena) => {
-    const locked = !isUnlocked(arena, ui.career);
+  ARENAS.forEach((arena) => {
+    const fuoriDemo = demoLocked(arena, DEMO_CONTENT.arenas);
+    const locked = fuoriDemo || !isUnlocked(arena, ui.career);
     const fuoriGiornata = Boolean(dettata) && arena.id !== dettata.id;
     const card = document.createElement("button");
     card.type = "button";
@@ -1220,8 +1239,10 @@ export function renderArenas(onSelect) {
       </div>
       <div class="arena-card__body">
         <h3>${t(`arena_${arena.id}_name`)}</h3>
-        <p>${locked
-          ? lockLabel(arena.unlock)
+        <p>${fuoriDemo
+          ? t("demoOnlyFull")
+          : locked
+            ? lockLabel(arena.unlock)
           : fuoriGiornata
             ? t(ui.selectedMode === "tournament" ? "arenaOtherRound" : "arenaOtherMatchday")
             : t(`arena_${arena.id}_desc`)}</p>

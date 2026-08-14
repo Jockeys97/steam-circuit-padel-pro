@@ -3418,3 +3418,132 @@ body.mode-colorblind .hero-preview {
 .feedback__note:empty {
   display: none;
 }
+
+/* Nota della demo dentro le sezioni degli Obiettivi che richiedono la Carriera. */
+.challenge-section__nota {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-left: 2px solid var(--cyan);
+  border-radius: 0 8px 8px 0;
+  background: rgba(0, 229, 255, 0.06);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---- Tastiera su schermo ---------------------------------------------------
+   Esiste perche' col solo controller non si poteva scrivere. I tasti sono veri
+   pulsanti, quindi ereditano l'anello di fuoco `.menu-focus` della navigazione
+   con il pad senza stili dedicati. */
+.osk {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 8, 24, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.osk[hidden] {
+  display: none;
+}
+
+.osk__panel {
+  width: min(760px, 100%);
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(0, 229, 255, 0.32);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(11, 36, 68, 0.97), rgba(6, 20, 38, 0.98));
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.12);
+}
+
+.osk__head {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.osk__label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ef8ff;
+}
+
+/* Quello che si sta scrivendo, visibile qui: il campo vero e' coperto dal
+   pannello, e scrivere senza vedere il testo non e' scrivere. */
+.osk__preview {
+  min-height: 2.6em;
+  padding: 8px 12px;
+  border: 1px solid #28567d;
+  border-radius: 8px;
+  background: #091d39;
+  font: 500 0.9rem "Nunito", sans-serif;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.osk__preview:empty::after {
+  content: "…";
+  color: var(--muted);
+}
+
+.osk__grid {
+  display: grid;
+  gap: 6px;
+}
+
+.osk__row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.osk__key {
+  height: 44px;
+  border: 1px solid #28567d;
+  border-radius: 8px;
+  background: #0d2646;
+  color: var(--ink);
+  font: 800 0.9rem "Nunito", sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.osk__key:hover {
+  background: rgba(0, 229, 255, 0.16);
+}
+
+.osk__key--shift.is-active {
+  background: linear-gradient(180deg, #22d5ee, #16bed7);
+  color: #061426;
+}
+
+.osk__row--actions .osk__key {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Lo spazio e' il tasto piu' usato: gli si da' il posto che merita. */
+.osk__row--actions {
+  grid-template-columns: 1fr 2.4fr 1fr 1fr;
+  grid-auto-flow: row;
+}
+
+.osk__key--done {
+  background: linear-gradient(180deg, #22d5ee, #16bed7);
+  color: #061426;
+}
+
+@media (max-width: 560px) {
+  .osk__key {
+    height: 38px;
+    font-size: 0.8rem;
+  }
+}
