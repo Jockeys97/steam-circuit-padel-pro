@@ -16,7 +16,7 @@ import {
   emptySeasonProgress,
   matchObjective,
   seasonObjectives,
-} from "../js/data.js?v=20260814-arena-safe-zones-v37";
+} from "../js/data.js?v=20260814-feedback-v38";
 
 /**
  * Audit della modalita' carriera. Non verifica che il codice girri: verifica che

@@ -7,9 +7,9 @@ import {
   drillMetrics,
   exerciseById,
   updateDrill,
-} from "../js/drill.js?v=20260814-arena-safe-zones-v37";
-import { ARENAS, ATHLETES, AI_OPPONENTS } from "../js/data.js?v=20260814-arena-safe-zones-v37";
-import { setLang, t } from "../js/i18n.js?v=20260814-arena-safe-zones-v37";
+} from "../js/drill.js?v=20260814-feedback-v38";
+import { ARENAS, ATHLETES, AI_OPPONENTS } from "../js/data.js?v=20260814-feedback-v38";
+import { setLang, t } from "../js/i18n.js?v=20260814-feedback-v38";
 
 /**
  * Audit dell'allenamento.

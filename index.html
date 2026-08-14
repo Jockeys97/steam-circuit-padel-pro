@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260814-arena-safe-zones-v37" />
+    <link rel="stylesheet" href="styles.css?v=20260814-feedback-v38" />
   </head>
   <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -62,6 +62,7 @@
               <button class="btn btn--secondary" type="button" data-action="to-help" data-i18n="howTo">COME SI GIOCA</button>
               <button class="btn btn--secondary" type="button" data-action="to-history" data-i18n="history">ALBO D'ORO</button>
               <button class="btn btn--secondary" type="button" data-action="to-challenges" data-i18n="challenges">OBIETTIVI</button>
+              <button class="btn btn--secondary" type="button" data-action="to-feedback" data-i18n="feedback">DAI UN FEEDBACK</button>
             </div>
           </div>
           <div class="hero-preview">
@@ -301,6 +302,57 @@
       </section>
 
       <!-- ALLENAMENTO / DRILL -->
+      <!-- FEEDBACK -->
+      <section class="screen" id="screen-feedback" aria-label="Feedback" data-i18n-aria="ariaFeedback">
+        <header class="screen-header">
+          <button class="btn btn--ghost" type="button" data-action="to-menu" data-i18n="back">← Indietro</button>
+          <div>
+            <h2 data-i18n="feedbackTitle">DAI UN FEEDBACK</h2>
+            <p data-i18n="feedbackSub">Cosa non torna, cosa manca, cosa ti ha fatto smettere. Serve tutto.</p>
+          </div>
+        </header>
+        <form class="feedback" id="feedbackForm">
+          <div class="setup-group">
+            <span class="setup-group__label" data-i18n="feedbackTopic">Di cosa si tratta</span>
+            <div class="segmented feedback-topics" id="feedbackTopics" role="group" aria-label="Argomento" data-i18n-aria="feedbackTopic">
+              <button type="button" data-value="bug" data-i18n="fbTopicBug">Bug</button>
+              <button type="button" data-value="balance" data-i18n="fbTopicBalance">Bilanciamento</button>
+              <button type="button" data-value="controls" data-i18n="fbTopicControls">Controlli</button>
+              <button type="button" data-value="performance" data-i18n="fbTopicPerformance">Prestazioni</button>
+              <button type="button" data-value="idea" data-i18n="fbTopicIdea">Idea</button>
+              <button type="button" data-value="other" data-i18n="fbTopicOther">Altro</button>
+            </div>
+          </div>
+          <div class="setup-group">
+            <label class="setup-group__label" for="feedbackMessage" data-i18n="feedbackMessage">Il tuo messaggio</label>
+            <textarea id="feedbackMessage" class="feedback__text" rows="6" maxlength="1200"
+              data-i18n-placeholder="feedbackPlaceholder"
+              placeholder="Racconta cosa è successo: dove eri, cosa hai premuto, cosa ti aspettavi."></textarea>
+            <span class="feedback__count" id="feedbackCount">0 / 1200</span>
+          </div>
+          <div class="setup-group">
+            <label class="setup-group__label" for="feedbackContact" data-i18n="feedbackContact">Contatto (facoltativo)</label>
+            <input id="feedbackContact" class="feedback__input" type="text" maxlength="120"
+              data-i18n-placeholder="feedbackContactHint" placeholder="Solo se vuoi una risposta" />
+          </div>
+          <label class="feedback__attach">
+            <input type="checkbox" id="feedbackAttach" checked />
+            <span data-i18n="feedbackAttach">Allega il contesto tecnico</span>
+          </label>
+          <details class="feedback__details">
+            <summary data-i18n="feedbackWhatIsAttached">Cosa viene allegato</summary>
+            <pre class="feedback__diag" id="feedbackDiag"></pre>
+          </details>
+          <div class="feedback__actions">
+            <button class="btn btn--primary" type="submit" data-i18n="feedbackSend">Invia</button>
+            <button class="btn btn--secondary" type="button" id="feedbackCopyBtn" data-i18n="feedbackCopy">Copia negli appunti</button>
+            <button class="btn btn--secondary" type="button" id="feedbackSteam" data-i18n="feedbackSteam" hidden>Apri le discussioni</button>
+          </div>
+          <p class="feedback__note" id="feedbackNote"></p>
+          <p class="feedback__status" id="feedbackStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
       <section class="screen" id="screen-drill" aria-label="Allenamento" data-i18n-aria="ariaDrill">
         <header class="screen-header">
           <button class="btn btn--ghost" type="button" data-action="to-menu" data-i18n="back">← Indietro</button>
@@ -623,6 +675,6 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js?v=20260814-arena-safe-zones-v37"></script>
+    <script type="module" src="js/main.js?v=20260814-feedback-v38"></script>
   </body>
 </html>

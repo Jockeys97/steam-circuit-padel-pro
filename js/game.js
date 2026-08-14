@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260814-arena-safe-zones-v37";
-import { clamp } from "./render.js?v=20260814-arena-safe-zones-v37";
-import { sfx } from "./audio.js?v=20260814-arena-safe-zones-v37";
-import { t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
+import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260814-feedback-v38";
+import { clamp } from "./render.js?v=20260814-feedback-v38";
+import { sfx } from "./audio.js?v=20260814-feedback-v38";
+import { t } from "./i18n.js?v=20260814-feedback-v38";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260814-arena-safe-zones-v37";
+} from "./fx.js?v=20260814-feedback-v38";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la

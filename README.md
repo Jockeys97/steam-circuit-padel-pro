@@ -261,6 +261,46 @@ La persistenza vive in `ui.js` e non in `drill.js`: quel file deve restare
 eseguibile senza DOM, perche' l'audit lo importa in Node dove `localStorage` non
 esiste.
 
+### 13. Un modulo di feedback che perde e' peggio di nessun modulo
+
+Il menu ha ora un pulsante per il feedback dei giocatori, in vista della
+pubblicazione. La parte difficile non era il modulo: era decidere **cosa** gli si
+allega e **cosa** succede quando l'invio non riesce.
+
+Il testo libero da solo non si usa. "Lo smash x2 e' troppo forte" non dice con
+quale atleta, in quale arena, a quale difficolta' e — soprattutto — con quale
+taratura in vigore. Per questo `VERSION.balance` accompagna ogni messaggio: senza,
+un reclamo arrivato oggi diventa indistinguibile da uno arrivato dopo la prossima
+ritaratura, e non si sa piu' a quale gioco si riferisse. Il resto del contesto il
+gioco lo ha gia' in `localStorage`: impostazioni, stato di carriera, record
+d'allenamento, le ultime tre partite.
+
+Il contesto e' **mostrato e rifiutabile**: il modulo lo stampa per intero prima
+dell'invio. Allegare dati senza farli vedere non e' accettabile, e su Steam
+richiederebbe un'informativa a parte.
+
+La coda locale si scrive **prima** di qualunque tentativo di rete, perche' su Steam
+si gioca offline e una POST fallita perderebbe il messaggio senza che nessuno se
+ne accorga. `endpoint` e' volutamente `null`: finche' resta cosi' il feedback si
+raccoglie e si copia negli appunti, senza alcun server da mantenere. Il giorno che
+un endpoint esistera', si riempie quel campo e il resto non cambia.
+
+Scriverlo ha prodotto due difetti, entrambi trovati da una prova e non da una
+rilettura:
+
+**Il ramo di invio era irraggiungibile.** `flushFeedback` controllava l'endpoint
+per primo, quindi con `endpoint: null` i casi "rifiutato" e "offline" non si
+potevano eseguire: si sarebbe scoperto se funzionano il giorno della messa in
+produzione. E' lo stesso difetto del servizio che non poteva fallire. Ora endpoint
+e `fetch` sono parametri, e l'audit li esercita davvero — compreso il caso in cui
+un secondo invio non deve nemmeno toccare la rete.
+
+**La schermata nuova dava una pagina bianca.** `showScreen` spegne tutte le
+schermate e accende quella richiesta: un nome non presente nel registro `screens`
+le spegneva tutte e non ne accendeva nessuna. Nessun errore in console, niente che
+dicesse dove guardare. Ora un nome non registrato lascia la schermata dov'e' e
+lascia una traccia leggibile.
+
 ---
 
 ## Quando il banco di prova mente
@@ -305,6 +345,8 @@ node scripts/difficulty-audit.mjs        # scala dei tre livelli
 node scripts/controller-tactics-audit.mjs # colpi tecnici, movimento, tattiche
 node scripts/career-audit.mjs            # stelle raggiungibili, rampa, farm, finale
 node scripts/drill-audit.mjs             # l'allenamento gira sul motore del gioco
+node scripts/feedback-audit.mjs          # nessun feedback si perde, nulla si allega di nascosto
+node scripts/api-feedback-audit.mjs      # le guardie dell'endpoint, senza deploy e senza chiavi
 node scripts/module-contract-audit.mjs   # ogni import trova il suo export
 node scripts/modules-audit.mjs           # ogni modulo si valuta senza esplodere
 ```
@@ -343,6 +385,69 @@ una riga di gioco.
 
 ---
 
+## Il feedback dei giocatori
+
+Il menu ha un pulsante che raccoglie i messaggi dei giocatori. La consegna passa
+da `api/feedback.js`, una funzione serverless su Vercel: dal browser non si
+spedisce posta, e una chiave nel codice del client sarebbe pubblica per
+definizione.
+
+Il gioco resta a **zero dipendenze**: la funzione usa `fetch`, che il runtime Node
+di Vercel ha di suo.
+
+### Configurazione
+
+Variabili d'ambiente da impostare su Vercel (Settings → Environment Variables).
+Serve **una** delle due vie:
+
+```bash
+# via email (Resend)
+FEEDBACK_TO=tua@casella.it
+RESEND_API_KEY=re_...
+FEEDBACK_FROM=onboarding@resend.dev     # o un mittente del tuo dominio verificato
+
+# oppure via webhook (Discord/Slack) — nessun servizio di posta da configurare
+FEEDBACK_WEBHOOK_URL=https://discord.com/api/webhooks/...
+
+# facoltativo: restringe le origini ammesse
+FEEDBACK_ALLOWED_ORIGINS=https://tuo-dominio.vercel.app
+```
+
+Finche' non e' configurato niente la funzione risponde **503**, non 200. E' una
+scelta: un endpoint che risponde 200 senza consegnare farebbe svuotare la coda del
+gioco, e il messaggio sparirebbe convinto di essere arrivato.
+
+### Le tre reti di sicurezza
+
+Il messaggio si salva in `localStorage` **prima** di ogni tentativo di rete, quindi
+non si perde in nessuno dei casi che vanno storti:
+
+| cosa va storto | cosa fa il gioco |
+|---|---|
+| nessuna rete | resta in coda e riparte al prossimo avvio |
+| funzione non configurata (503) | apre il client di posta del giocatore |
+| endpoint assente (pacchetto Steam senza URL assoluto) | apre il client di posta |
+| appunti negati | il messaggio resta in coda, e lo dice |
+
+### Attenzione per il pacchetto Steam
+
+`endpoint` e' un percorso relativo (`/api/feedback`): funziona sul sito, dove
+pagina e funzione stanno sullo stesso dominio. In un pacchetto per Steam la pagina
+non e' servita da un dominio, quindi in `js/data.js` va messo l'**URL assoluto** del
+deploy. Senza, la POST parte verso un'origine che non esiste — e il ripiego sulla
+posta la copre, ma la consegna automatica no.
+
+### Cosa viaggia col messaggio
+
+Il testo libero da solo non si usa: "lo smash x2 e' troppo forte" non dice con
+quale atleta, in quale arena, a quale difficolta'. Per questo ogni messaggio porta
+`VERSION.balance`, il riferimento della **taratura in vigore** — va incrementato
+quando si sposta un valore di `BALANCE`, altrimenti un reclamo di oggi diventa
+indistinguibile da uno di dopo la prossima ritaratura. Il contesto e' mostrato per
+intero nel modulo e il giocatore puo' rifiutarlo.
+
+---
+
 ## Come si esegue
 
 Serve un server statico qualsiasi, perché il gioco usa moduli ES:
@@ -358,7 +463,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260814-arena-safe-zones-v37" index.html js/*.js styles.css   # deve dare 25 in totale
+grep -c "20260814-feedback-v38" index.html js/*.js styles.css   # deve dare 25 in totale
 ```
 
 ---

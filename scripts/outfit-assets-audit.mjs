@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-arena-safe-zones-v37";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-feedback-v38";
 
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");

@@ -3268,3 +3268,124 @@ body.mode-colorblind .hero-preview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---- Feedback dei giocatori ------------------------------------------------
+   Un modulo, non una schermata di gioco: riusa il segmentato e le etichette
+   delle impostazioni partita, perche' scegliere un argomento e' lo stesso gesto
+   di scegliere una difficolta' e imparare due controlli per la stessa cosa non
+   ha motivo. */
+.feedback {
+  display: grid;
+  gap: 18px;
+  width: min(720px, 100%);
+  margin: 24px auto 48px;
+  padding: 0 24px;
+}
+
+.feedback-topics {
+  /* Sei argomenti: due righe da tre restano leggibili, una sola li strizza. */
+  grid-auto-flow: row;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feedback__text,
+.feedback__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #28567d;
+  border-radius: 10px;
+  background: #091d39;
+  color: var(--ink);
+  font: 500 0.9rem "Nunito", sans-serif;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.32);
+}
+
+.feedback__text {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.feedback__text:focus-visible,
+.feedback__input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.feedback__count {
+  justify-self: end;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.feedback__attach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #bdeeff;
+  cursor: pointer;
+}
+
+.feedback__details {
+  border: 1px solid rgba(0, 229, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 20, 38, 0.55);
+}
+
+.feedback__details summary {
+  padding: 10px 14px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ef8ff;
+  cursor: pointer;
+}
+
+/* Il contesto tecnico e' lungo: scorre nel proprio riquadro invece di allungare
+   la pagina, e resta leggibile come i dati che e'. */
+.feedback__diag {
+  max-height: 220px;
+  margin: 0;
+  padding: 0 14px 14px;
+  overflow: auto;
+  font: 400 0.72rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.feedback__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.feedback__status {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+@media (max-width: 560px) {
+  .feedback-topics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* La nota spiega cosa fara' il pulsante principale: senza, "Invia per email" non
+   dice che si aprira' il programma di posta del giocatore. */
+.feedback__note {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.feedback__note:empty {
+  display: none;
+}

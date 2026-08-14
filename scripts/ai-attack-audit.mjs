@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, updateMatch, hitBall } from "../js/game.js?v=20260814-arena-safe-zones-v37";
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT } from "../js/data.js?v=20260814-arena-safe-zones-v37";
+import { createMatchState, updateMatch, hitBall } from "../js/game.js?v=20260814-feedback-v38";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT } from "../js/data.js?v=20260814-feedback-v38";
 
 /**
  * L'IA deve punire un pallonetto mal riuscito, e lasciar stare quello buono.

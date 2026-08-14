@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture, VERSION, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-arena-safe-zones-v37";
-import { getMatchInfo } from "./game.js?v=20260814-arena-safe-zones-v37";
-import { getVolume, isMuted } from "./audio.js?v=20260814-arena-safe-zones-v37";
-import { getLang, t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-safe-zones-v37";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture, VERSION, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-feedback-v38";
+import { getMatchInfo } from "./game.js?v=20260814-feedback-v38";
+import { getVolume, isMuted } from "./audio.js?v=20260814-feedback-v38";
+import { getLang, t } from "./i18n.js?v=20260814-feedback-v38";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-feedback-v38";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -374,6 +374,21 @@ export async function flushFeedback(
     // La rete puo' mancare: la coda resta intatta e si riprova alla prossima.
     return { ok: false, reason: "offline", pending: pending.length };
   }
+}
+
+/**
+ * Il `mailto:` con cui il giocatore spedisce il messaggio dal proprio client.
+ *
+ * E' l'unico recapito raggiungibile senza un server: dal browser non si spedisce
+ * posta. Il corpo viene troncato perche' `mailto:` passa dalla barra degli
+ * indirizzi e alcuni client tagliano i testi lunghi — la copia intera resta in
+ * coda, quindi nulla va perduto comunque.
+ */
+export function feedbackMailto(entry, email = FEEDBACK.email) {
+  if (!email) return null;
+  const oggetto = `[padel] ${entry.topic} · ${VERSION.build} · balance ${VERSION.balance}`;
+  const corpo = feedbackAsText(entry).slice(0, FEEDBACK.maxMailBody);
+  return `mailto:${email}?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(corpo)}`;
 }
 
 /** Il testo da incollare in una discussione, quando l'invio non c'e'. */

@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-arena-safe-zones-v37";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-feedback-v38";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260814-arena-safe-zones-v37";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-arena-safe-zones-v37";
-import { setReduceMotion } from "./fx.js?v=20260814-arena-safe-zones-v37";
-import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-arena-safe-zones-v37";
-import { getLang, setLang, t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-safe-zones-v37";
+} from "./game.js?v=20260814-feedback-v38";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-feedback-v38";
+import { setReduceMotion } from "./fx.js?v=20260814-feedback-v38";
+import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-feedback-v38";
+import { getLang, setLang, t } from "./i18n.js?v=20260814-feedback-v38";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-feedback-v38";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260814-arena-safe-zones-v37";
+} from "./render.js?v=20260814-feedback-v38";
 import {
   applyLanguage,
   awardObjectives,
@@ -31,6 +31,7 @@ import {
   currentFixture,
   drillRecord,
   feedbackAsText,
+  feedbackMailto,
   feedbackDiagnostics,
   flushFeedback,
   loadFeedbackQueue,
@@ -55,7 +56,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260814-arena-safe-zones-v37";
+} from "./ui.js?v=20260814-feedback-v38";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1654,6 +1655,26 @@ function renderFeedback() {
   if (diag) diag.textContent = JSON.stringify(feedbackDiagnostics(), null, 2);
   const steam = feedbackEl("feedbackSteam");
   if (steam) steam.hidden = !FEEDBACK.steamUrl && !FEEDBACK.discordUrl;
+  // Senza endpoint "Invia" sarebbe una bugia gentile: il giocatore cliccherebbe,
+  // se ne andrebbe e crederebbe di aver segnalato qualcosa. L'azione principale
+  // diventa quindi quella che serve davvero — salvare e copiare in un colpo — e
+  // il pulsante di sola copia sparisce, perche' farebbe la stessa cosa.
+  const invia = document.querySelector('#feedbackForm button[type="submit"]');
+  if (invia) {
+    invia.textContent = FEEDBACK.endpoint
+      ? t("feedbackSend")
+      : FEEDBACK.email ? t("feedbackSendMail") : t("feedbackSaveAndCopy");
+  }
+  // La copia resta come via alternativa quando esiste un recapito: serve a chi non
+  // ha un client di posta configurato, che su un PC da gioco e' un caso normale.
+  const copia = feedbackEl("feedbackCopyBtn");
+  if (copia) copia.hidden = false;
+  const nota = feedbackEl("feedbackNote");
+  if (nota) {
+    nota.textContent = FEEDBACK.endpoint
+      ? ""
+      : FEEDBACK.email ? t("feedbackMailNote") : t("feedbackNoServer");
+  }
   const stato = feedbackEl("feedbackStatus");
   if (stato) {
     const inCoda = loadFeedbackQueue().filter((e) => !e.sent).length;
@@ -1687,6 +1708,20 @@ function collectFeedback() {
   return entry;
 }
 
+/**
+ * Copia il messaggio negli appunti. Ritorna se ci e' riuscita: senza il permesso
+ * il messaggio resta comunque in coda, e si dice dov'e' invece di far finta che
+ * sia andata bene.
+ */
+async function copyFeedback(entry) {
+  try {
+    await navigator.clipboard.writeText(feedbackAsText(entry));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function bindFeedback() {
   document.querySelectorAll("#feedbackTopics button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1711,9 +1746,33 @@ function bindFeedback() {
     feedbackStatus("feedbackSaved");
     renderFeedback();
     const esito = await flushFeedback();
-    if (esito.ok && esito.sent) feedbackStatus("feedbackSent");
-    else if (esito.reason === "offline") feedbackStatus("feedbackOffline");
-    else if (esito.reason === "no-endpoint") feedbackStatus("feedbackLocalOnly");
+    if (esito.ok && esito.sent) {
+      feedbackStatus("feedbackSent");
+    } else if (esito.reason === "offline" || esito.reason === "rejected") {
+      // L'endpoint c'e' ma non ha consegnato: rete assente, funzione non ancora
+      // configurata, quota esaurita. Il giocatore non deve restare a mani vuote,
+      // quindi si offre la via che funziona sempre. La voce resta in coda e
+      // ripartira' al prossimo avvio.
+      const ripiego = feedbackMailto(entry);
+      if (ripiego) {
+        window.location.href = ripiego;
+        feedbackStatus("feedbackMailOpened");
+      } else {
+        feedbackStatus(esito.reason === "offline" ? "feedbackOffline" : "feedbackLocalOnly");
+      }
+    } else if (esito.reason === "no-endpoint") {
+      // Nessun server a cui parlare. Con un recapito configurato si apre il client
+      // di posta del giocatore, che e' l'unico modo di far arrivare il messaggio
+      // senza infrastruttura; senza recapito si ripiega sugli appunti. In entrambi
+      // i casi la voce e' gia' salvata, quindi non si perde comunque.
+      const mailto = feedbackMailto(entry);
+      if (mailto) {
+        window.location.href = mailto;
+        feedbackStatus("feedbackMailOpened");
+      } else {
+        feedbackStatus(await copyFeedback(entry) ? "feedbackCopied" : "feedbackLocalOnly");
+      }
+    }
     renderFeedback();
   });
 
@@ -1723,15 +1782,7 @@ function bindFeedback() {
   feedbackEl("feedbackCopyBtn")?.addEventListener("click", async () => {
     const entry = collectFeedback();
     if (!entry) return;
-    const testo = feedbackAsText(entry);
-    try {
-      await navigator.clipboard.writeText(testo);
-      feedbackStatus("feedbackCopied");
-    } catch {
-      // Senza permesso sugli appunti il messaggio resta comunque in coda: si
-      // dice dove trovarlo invece di far finta che sia andata bene.
-      feedbackStatus("feedbackCopyFailed");
-    }
+    feedbackStatus(await copyFeedback(entry) ? "feedbackCopied" : "feedbackCopyFailed");
     renderFeedback();
   });
 
@@ -1894,6 +1945,12 @@ if (["it", "en"].includes(prefs.lang)) {
 applyAccessibility();
 bindDrillSelector();
 bindFeedback();
+// I messaggi rimasti in coda — scritti offline, o quando la funzione non era
+// ancora configurata — ripartono all'avvio. Senza questo la coda sarebbe solo un
+// cassetto: si accumulerebbe e non consegnerebbe mai.
+flushFeedback().then((esito) => {
+  if (esito.sent) console.info(`feedback: ${esito.sent} in coda consegnati`);
+});
 applyLanguage();
 // Allinea documento e selettore alla lingua effettiva: il markup parte in
 // inglese, ma una preferenza salvata puo' averla gia' cambiata.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import path from "node:path";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-arena-safe-zones-v37";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-feedback-v38";
 
 const unlockables = ["oracolo", "colosso"];
 const states = ["idle", "action", "run"];

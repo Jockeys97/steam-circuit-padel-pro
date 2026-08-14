@@ -255,6 +255,44 @@ double faults — the path that was unreachable before execution spread existed.
 Persistence lives in `ui.js`, not `drill.js`: that file must stay runnable without
 a DOM, because the audit imports it in Node where `localStorage` doesn't exist.
 
+### 13. A feedback form that loses messages is worse than none
+
+The menu now has a player-feedback button, ahead of release. The hard part wasn't
+the form: it was deciding **what** gets attached and **what happens** when sending
+fails.
+
+Free text alone is unusable. "The x2 smash is too strong" doesn't say with which
+athlete, in which arena, at what difficulty and — above all — under which tuning.
+That's why `VERSION.balance` travels with every message: without it, a complaint
+that arrives today becomes indistinguishable from one that arrives after the next
+retune, and you no longer know which game it referred to. The rest of the context
+the game already has in `localStorage`: settings, career state, training records,
+the last three matches.
+
+The context is **shown and refusable**: the form prints it in full before sending.
+Attaching data without showing it isn't acceptable, and on Steam it would require
+a separate privacy notice.
+
+The local queue is written **before** any network attempt, because on Steam people
+play offline and a failed POST would lose the message with nobody noticing.
+`endpoint` is deliberately `null`: while it stays that way, feedback is collected
+and copied to the clipboard, with no server to maintain. The day an endpoint
+exists, you fill that field in and nothing else changes.
+
+Writing it produced two defects, both found by a test rather than by re-reading:
+
+**The send branch was unreachable.** `flushFeedback` checked the endpoint first, so
+with `endpoint: null` the "rejected" and "offline" cases couldn't run: you'd learn
+whether they work on the day you ship. It's the same defect as the serve that
+couldn't fail. Endpoint and `fetch` are now parameters, and the audit exercises
+them for real — including the case where a second send must not even touch the
+network.
+
+**The new screen rendered blank.** `showScreen` turns every screen off and the
+requested one on: a name missing from the `screens` registry turned them all off
+and none on. No console error, nothing pointing at the cause. An unregistered name
+now leaves the screen where it is and logs something readable.
+
 ---
 
 ## When the test harness lies
@@ -299,6 +337,8 @@ node scripts/difficulty-audit.mjs         # the three-difficulty ladder
 node scripts/controller-tactics-audit.mjs # technical shots, movement, tactics
 node scripts/career-audit.mjs             # reachable stars, ramp, farming, finale
 node scripts/drill-audit.mjs              # training runs on the game engine
+node scripts/feedback-audit.mjs           # no feedback is lost, nothing is attached silently
+node scripts/api-feedback-audit.mjs       # the endpoint's guards, with no deploy and no keys
 node scripts/module-contract-audit.mjs    # every import finds its export
 node scripts/modules-audit.mjs            # every module evaluates without throwing
 ```
@@ -337,6 +377,68 @@ a line of gameplay.
 
 ---
 
+## Player feedback
+
+The menu has a button that collects player messages. Delivery goes through
+`api/feedback.js`, a serverless function on Vercel: you cannot send mail from the
+browser, and a key in client code would be public by definition.
+
+The game stays at **zero dependencies**: the function uses `fetch`, which Vercel's
+Node runtime provides.
+
+### Configuration
+
+Environment variables to set on Vercel (Settings → Environment Variables). You need
+**one** of the two routes:
+
+```bash
+# by email (Resend)
+FEEDBACK_TO=your@inbox.com
+RESEND_API_KEY=re_...
+FEEDBACK_FROM=onboarding@resend.dev     # or a sender on your verified domain
+
+# or by webhook (Discord/Slack) — no mail provider to configure
+FEEDBACK_WEBHOOK_URL=https://discord.com/api/webhooks/...
+
+# optional: restrict accepted origins
+FEEDBACK_ALLOWED_ORIGINS=https://your-domain.vercel.app
+```
+
+While nothing is configured the function answers **503**, not 200. That is a
+choice: an endpoint answering 200 without delivering would make the game drain its
+queue, and the message would vanish believing it had arrived.
+
+### The three safety nets
+
+The message is saved to `localStorage` **before** any network attempt, so nothing is
+lost in any of the ways this can go wrong:
+
+| what goes wrong | what the game does |
+|---|---|
+| no network | stays queued and retries on next launch |
+| function not configured (503) | opens the player's mail app |
+| no endpoint (Steam package without an absolute URL) | opens the player's mail app |
+| clipboard denied | the message stays queued, and it says so |
+
+### Watch out for the Steam package
+
+`endpoint` is a relative path (`/api/feedback`): fine on the site, where page and
+function share a domain. In a Steam package the page isn't served from a domain, so
+`js/data.js` needs the **absolute URL** of the deployment. Without it the POST goes
+to an origin that doesn't exist — the mail fallback covers the player, but automatic
+delivery doesn't happen.
+
+### What travels with the message
+
+Free text alone is unusable: "the x2 smash is too strong" doesn't say with which
+athlete, in which arena, at what difficulty. That's why every message carries
+`VERSION.balance`, the reference of the **tuning in force** — bump it when you move
+a `BALANCE` value, otherwise today's complaint becomes indistinguishable from one
+that arrives after the next retune. The context is shown in full in the form and
+the player can refuse it.
+
+---
+
 ## Running it
 
 Any static server will do, since the game uses ES modules:
@@ -352,7 +454,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260814-arena-safe-zones-v37" index.html js/*.js styles.css   # must total 25
+grep -c "20260814-feedback-v38" index.html js/*.js styles.css   # must total 25
 ```
 
 ---
