@@ -417,7 +417,141 @@ function togglePause() {
   else pauseGame();
 }
 
+
+/* ---- Tastiera su schermo ---------------------------------------------------
+   Serve perche' col solo controller non si poteva scrivere: il modulo di feedback
+   e il codice di sblocco erano decorativi per chi gioca col pad. Non si puo'
+   contare sulla tastiera di Steam — in Big Picture e su Deck compare in base al
+   wrapper e alla configurazione di Steam Input, e sul sito non compare affatto.
+
+   I tasti sono veri `<button>` dentro un overlay che diventa il contesto di fuoco:
+   la navigazione geometrica dei menu li raggiunge senza una riga di codice nuova. */
+
+const OSK_ROWS = [
+  "1234567890",
+  "qwertyuiop",
+  "asdfghjkl",
+  "zxcvbnm",
+  // Accentate italiane e i simboli che servono a un indirizzo email.
+  "àèéìòù@._-+",
+];
+
+const oskEl = document.getElementById("osk");
+const oskGrid = document.getElementById("oskGrid");
+let oskTarget = null;
+let oskShift = false;
+
+function oskOpen() {
+  return Boolean(oskEl && !oskEl.hidden);
+}
+
+function oskRefresh() {
+  const preview = document.getElementById("oskPreview");
+  if (preview) preview.textContent = oskTarget?.value ?? "";
+  oskGrid?.querySelectorAll("[data-char]").forEach((key) => {
+    const ch = key.dataset.char;
+    key.textContent = oskShift ? ch.toUpperCase() : ch;
+  });
+  oskGrid?.querySelector('[data-osk="shift"]')?.classList.toggle("is-active", oskShift);
+}
+
+/** Scrive nel campo e avvisa chi ascolta: il contatore di caratteri sta in ascolto. */
+function oskInsert(text) {
+  if (!oskTarget) return;
+  const max = Number(oskTarget.maxLength) > 0 ? Number(oskTarget.maxLength) : Infinity;
+  if (oskTarget.value.length + text.length > max) return;
+  oskTarget.value += text;
+  oskTarget.dispatchEvent(new Event("input", { bubbles: true }));
+  oskRefresh();
+}
+
+function oskDelete() {
+  if (!oskTarget) return;
+  oskTarget.value = oskTarget.value.slice(0, -1);
+  oskTarget.dispatchEvent(new Event("input", { bubbles: true }));
+  oskRefresh();
+}
+
+function buildOsk() {
+  if (!oskGrid || oskGrid.childElementCount) return;
+  OSK_ROWS.forEach((row) => {
+    const riga = document.createElement("div");
+    riga.className = "osk__row";
+    [...row].forEach((ch) => {
+      const key = document.createElement("button");
+      key.type = "button";
+      key.className = "osk__key";
+      key.dataset.char = ch;
+      key.textContent = ch;
+      key.addEventListener("click", () => oskInsert(oskShift ? ch.toUpperCase() : ch));
+      riga.appendChild(key);
+    });
+    oskGrid.appendChild(riga);
+  });
+  const azioni = document.createElement("div");
+  azioni.className = "osk__row osk__row--actions";
+  const comandi = [
+    ["shift", "oskShift", () => { oskShift = !oskShift; oskRefresh(); }],
+    ["space", "oskSpace", () => oskInsert(" ")],
+    ["backspace", "oskBackspace", () => oskDelete()],
+    ["done", "oskDone", () => closeOsk()],
+  ];
+  comandi.forEach(([nome, chiave, azione]) => {
+    const key = document.createElement("button");
+    key.type = "button";
+    key.className = `osk__key osk__key--${nome}`;
+    key.dataset.osk = nome;
+    key.dataset.i18n = chiave;
+    key.textContent = t(chiave);
+    key.addEventListener("click", azione);
+    azioni.appendChild(key);
+  });
+  oskGrid.appendChild(azioni);
+}
+
+function openOsk(field) {
+  if (!oskEl || !field) return;
+  buildOsk();
+  oskTarget = field;
+  oskShift = false;
+  const etichetta = document.getElementById("oskLabel");
+  if (etichetta) {
+    // L'etichetta del campo, se c'e': senza, non si sa cosa si sta scrivendo.
+    const label = field.labels?.[0]?.textContent
+      ?? field.closest(".setup-group")?.querySelector(".setup-group__label")?.textContent
+      ?? "";
+    etichetta.textContent = `${label} · ${t("oskHint")}`.trim();
+  }
+  oskEl.hidden = false;
+  oskRefresh();
+  // Il fuoco passa alla tastiera: `menuContext` la mette davanti a tutto, quindi
+  // la navigazione geometrica lavora sui tasti e non piu' sulla schermata sotto.
+  setMenuFocus(null);
+  ensureMenuFocus();
+}
+
+function closeOsk() {
+  if (!oskEl || oskEl.hidden) return;
+  oskEl.hidden = true;
+  const tornaA = oskTarget;
+  oskTarget = null;
+  setMenuFocus(null);
+  ensureMenuFocus();
+  // Si torna sul campo appena chiuso, non all'inizio della schermata.
+  if (tornaA && collectMenuTargets().includes(tornaA)) setMenuFocus(tornaA);
+}
+
+/** Un campo di testo: col pad si scrive con la tastiera su schermo. */
+function isTextField(el) {
+  if (el instanceof HTMLTextAreaElement) return true;
+  if (!(el instanceof HTMLInputElement)) return false;
+  return ["text", "search", "email", "url", "tel", "password", ""].includes(el.type);
+}
+
 function menuContext() {
+  // La tastiera su schermo viene prima di tutto: mentre e' aperta il pad deve
+  // muoversi fra i tasti, non fra i pulsanti della schermata sotto.
+  if (oskOpen()) return oskEl;
   if (matchState?.running && !matchState?.paused) return null;
   return pauseOverlay.hidden ? document.querySelector(".screen--active") : pauseOverlay;
 }
@@ -425,7 +559,12 @@ function menuContext() {
 function collectMenuTargets() {
   const root = menuContext();
   if (!root) return [];
-  return [...root.querySelectorAll("button, input, .mode-card, .athlete-card, .arena-card")].filter((el) => {
+  // `textarea` e `summary` mancavano: il campo del messaggio nel modulo di
+  // feedback non riceveva mai il fuoco, e il riquadro "cosa viene allegato" non si
+  // apriva col pad. `select` non e' usato oggi, ma costa niente prevederlo.
+  return [...root.querySelectorAll(
+    "button, input, textarea, select, summary, .mode-card, .athlete-card, .arena-card",
+  )].filter((el) => {
     if (el.disabled) return false;
     if (el.closest("[hidden]")) return false;
     if (el.classList.contains("mode-card--locked")) return false;
@@ -452,21 +591,40 @@ function ensureMenuFocus() {
   if (!menuFocusEl || !targets.includes(menuFocusEl)) setMenuFocus(targets[0]);
 }
 
-function moveMenuFocus(dir) {
+/**
+ * Il contenitore che scorre davvero: puo' essere un riquadro interno — il contesto
+ * tecnico del feedback ha il proprio — oppure la pagina.
+ */
+function scrollContainer() {
+  let el = menuFocusEl;
+  while (el && el !== document.body) {
+    const stile = getComputedStyle(el);
+    if (/(auto|scroll)/.test(stile.overflowY) && el.scrollHeight > el.clientHeight + 2) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Scorre la vista.
+ *
+ * Serve perche' lo scorrimento era solo un effetto collaterale di `scrollIntoView`
+ * quando il fuoco si spostava: nelle schermate di sola lettura — obiettivi, albo
+ * d'oro, profilo — l'unico bersaglio e' il pulsante Indietro, quindi col pad non
+ * si poteva vedere il resto della pagina.
+ */
+function scrollMenu(delta) {
+  const el = scrollContainer();
+  if (el) el.scrollTop += delta;
+  else window.scrollBy(0, delta);
+}
+
+/** Il prossimo bersaglio in quella direzione, senza spostare il fuoco. */
+function findMenuTarget(dir) {
   const targets = collectMenuTargets();
-  if (!targets.length) return;
+  if (!targets.length) return null;
   const cur = menuFocusEl && targets.includes(menuFocusEl) ? menuFocusEl : null;
-  if (!cur) {
-    setMenuFocus(targets[0]);
-    return;
-  }
-  if (cur.matches('input[type="range"]') && (dir === "left" || dir === "right")) {
-    const step = Number(cur.step) || 0.01;
-    const direction = dir === "left" ? -1 : 1;
-    cur.value = String(Math.min(Number(cur.max), Math.max(Number(cur.min), Number(cur.value) + step * direction)));
-    cur.dispatchEvent(new Event("input", { bubbles: true }));
-    return;
-  }
+  if (!cur) return targets[0];
   const curRect = cur.getBoundingClientRect();
   const curCx = curRect.left + curRect.width / 2;
   const curCy = curRect.top + curRect.height / 2;
@@ -483,21 +641,68 @@ function moveMenuFocus(dir) {
     else if (dir === "up") ok = dy < -8;
     else ok = dy > 8;
     if (!ok) continue;
-    const score = dir === "left" || dir === "right" ? Math.abs(dy) * 3 + Math.abs(dx) : Math.abs(dx) * 3 + Math.abs(dy);
+    // Chi si sovrappone sull'asse trasversale sta *davvero* in quella direzione, e
+    // vince sulla sola distanza fra i centri.
+    //
+    // Prima il punteggio confrontava i centri penalizzando lo scostamento per
+    // tre: un elemento largo — la textarea del feedback — ha il centro in mezzo
+    // alla riga, quindi partendo dalla colonna di sinistra perdeva contro una
+    // casella di spunta piccola e piu' allineata che stava molto piu' in basso.
+    // Veniva saltata del tutto: era nella lista dei bersagli e restava
+    // irraggiungibile.
+    const verticale = dir === "up" || dir === "down";
+    const sovrapposizione = verticale
+      ? Math.min(curRect.right, r.right) - Math.max(curRect.left, r.left)
+      : Math.min(curRect.bottom, r.bottom) - Math.max(curRect.top, r.top);
+    const lungoAsse = verticale ? Math.abs(dy) : Math.abs(dx);
+    const trasversale = verticale ? Math.abs(dx) : Math.abs(dy);
+    const score = sovrapposizione > 0 ? lungoAsse : lungoAsse + trasversale * 3 + 600;
     if (score < bestScore) {
       bestScore = score;
       best = el;
     }
   }
+  return best;
+}
+
+function moveMenuFocus(dir) {
+  const targets = collectMenuTargets();
+  if (!targets.length) return false;
+  const cur = menuFocusEl && targets.includes(menuFocusEl) ? menuFocusEl : null;
+  if (!cur) {
+    setMenuFocus(targets[0]);
+    return true;
+  }
+  if (cur.matches('input[type="range"]') && (dir === "left" || dir === "right")) {
+    const step = Number(cur.step) || 0.01;
+    const direction = dir === "left" ? -1 : 1;
+    cur.value = String(Math.min(Number(cur.max), Math.max(Number(cur.min), Number(cur.value) + step * direction)));
+    cur.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+  }
+  const best = findMenuTarget(dir);
   if (best) setMenuFocus(best);
+  // Il valore di ritorno dice a chi chiama se il fuoco si e' mosso: quando non si
+  // muove, il pad deve scorrere la pagina invece di non fare niente.
+  return Boolean(best);
 }
 
 function activateMenuFocus() {
   ensureMenuFocus();
+  // Con un pad collegato, confermare su un campo di testo apre la tastiera su
+  // schermo: cliccarlo darebbe il fuoco a un campo in cui non si puo' digitare.
+  if (isTextField(menuFocusEl) && ui.lastGamepadId && !oskOpen()) {
+    openOsk(menuFocusEl);
+    return;
+  }
   menuFocusEl?.click();
 }
 
 function menuBack() {
+  if (oskOpen()) {
+    closeOsk();
+    return;
+  }
   if (!pauseOverlay.hidden) {
     if (smashTutorialOpen) {
       hideSmashTutorial(true);
@@ -511,7 +716,12 @@ function menuBack() {
     return;
   }
   const active = document.querySelector(".screen--active");
-  const back = active?.querySelector('[data-action^="to-"]');
+  // Il pulsante di ritorno si dichiara con `data-back`. Prima si prendeva il primo
+  // `[data-action^="to-"]` della schermata: nel menu principale la barra in alto
+  // viene prima dell'hero, quindi "indietro" apriva il Profilo — andava avanti
+  // invece di tornare. La ricaduta sul vecchio criterio copre le schermate che
+  // non hanno un ritorno dichiarato.
+  const back = active?.querySelector("[data-back]") ?? active?.querySelector('[data-action^="to-"]');
   if (back) back.click();
 }
 
@@ -734,8 +944,23 @@ function pollGamepadMenu(pad, b) {
           ? "right"
           : null;
 
+  // La levetta destra scorre sempre, come nei giochi: e' il gesto che si prova per
+  // leggere il resto di una pagina lunga.
+  const scorrimento = gamepadAxis(pad, 3);
+  if (scorrimento) scrollMenu(scorrimento * 24);
+
   const now = performance.now();
-  if (dir) {
+  const verticale = dir === "up" || dir === "down";
+  // Se in quella direzione non c'e' nessun bersaglio, la levetta sinistra scorre.
+  // Prima non faceva niente: negli obiettivi, nell'albo d'oro e nel profilo
+  // l'unico bersaglio e' il pulsante Indietro, quindi la pagina era bloccata e il
+  // resto del contenuto irraggiungibile col solo pad.
+  const nessunBersaglio = verticale && !findMenuTarget(dir);
+  if (dir && nessunBersaglio) {
+    // Ogni fotogramma, non a scatti: lo scorrimento deve essere continuo.
+    scrollMenu((dir === "down" ? 1 : -1) * 15);
+    gamepad.menuDir = dir;
+  } else if (dir) {
     if (dir !== gamepad.menuDir) {
       gamepad.menuDir = dir;
       gamepad.menuRepeatAt = now + 400;
@@ -754,9 +979,15 @@ function pollGamepadMenu(pad, b) {
   }
   gamepad.prevButtons[0] = b(0);
 
-  if (b(2) && !gamepad.prevButtons[2]) {
+  // Indietro su entrambi: `b(1)` e' B su Xbox e Cerchio su PlayStation — cioe' il
+  // tasto che tutti provano per tornare indietro, e che qui non era mappato a
+  // niente. `b(2)` (X / Quadrato) resta per chi ci si e' abituato.
+  const indietro = b(1) || b(2);
+  if (indietro && !gamepad.prevMenuBack) {
     menuBack();
   }
+  gamepad.prevMenuBack = indietro;
+  gamepad.prevButtons[1] = b(1);
   gamepad.prevButtons[2] = b(2);
 }
 
@@ -2273,7 +2504,11 @@ window.addEventListener("keydown", (event) => {
   if (menuActive) {
     if (key === "arrowup" || key === "arrowdown" || key === "arrowleft" || key === "arrowright") {
       event.preventDefault();
-      moveMenuFocus(key.replace("arrow", ""));
+      const dir = key.replace("arrow", "");
+      // Stessa regola del pad: dove il fuoco non puo' andare, si scorre.
+      if (!moveMenuFocus(dir) && (dir === "up" || dir === "down")) {
+        scrollMenu((dir === "down" ? 1 : -1) * 90);
+      }
       return;
     }
     if (key === "enter" || key === " ") {

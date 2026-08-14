@@ -301,6 +301,67 @@ le spegneva tutte e non ne accendeva nessuna. Nessun errore in console, niente c
 dicesse dove guardare. Ora un nome non registrato lascia la schermata dov'e' e
 lascia una traccia leggibile.
 
+### 14. Col controller mezzo gioco era un vicolo cieco
+
+Verificando la navigazione col pad in vista di Steam sono usciti quattro difetti,
+tre banali e uno che il codice nascondeva bene.
+
+**Indietro non era dove lo cerca chiunque.** Era su `b(2)` — X su Xbox, Quadrato su
+PlayStation. `b(1)`, cioe' B/Cerchio, nei menu non era mappato a niente. E l'aiuto
+del gioco, in entrambe le lingue, prometteva `"A conferma · B indietro"`: un
+comando che non esisteva. Tre cose diverse — cosa si prova, cosa promette la
+guida, cosa fa il codice.
+
+**Dal menu principale "indietro" andava avanti.** `menuBack` cliccava il primo
+`[data-action^="to-"]` della schermata attiva; nel menu la barra in alto viene
+prima dell'hero, quindi apriva il Profilo. Ora il ritorno si dichiara con
+`data-back` e il menu, che e' la radice, non ne ha.
+
+**Il campo del messaggio non riceveva il fuoco**, perche' il selettore dei
+bersagli elencava `button, input, .mode-card…` e non `textarea` — ne' `summary`,
+quindi il riquadro "cosa viene allegato" non si apriva col pad.
+
+Il quarto e' quello che conta. Aggiunto `textarea` al selettore, **la textarea
+restava comunque irraggiungibile**. La causa era nel punteggio di
+`moveMenuFocus`, che confrontava i soli centri penalizzando lo scostamento
+trasversale per tre. Un elemento largo ha il centro in mezzo alla riga: partendo
+dalla colonna di sinistra dei sei argomenti, la casella di spunta — piccola e piu'
+allineata — vinceva pur stando molto piu' in basso, e la textarea veniva saltata.
+Il percorso del fuoco, tracciato nel browser, lo diceva senza appello:
+
+```
+percorso: BUTTON -> BUTTON -> BUTTON -> BUTTON#feedbackCopyBtn
+textarea raggiunta: false
+```
+
+Ora chi si sovrappone sull'asse trasversale vince sulla distanza fra i centri,
+perche' e' quello che sta *davvero* in quella direzione. Vale per ogni elemento
+largo, non solo per questo.
+
+### 15. Senza tastiera su schermo il modulo di feedback era decorativo
+
+Col solo controller non si poteva scrivere: nessuna tastiera digitale esisteva nel
+progetto. Non si puo' contare su quella di Steam — in Big Picture e su Deck compare
+in base al wrapper e alla configurazione di Steam Input, e sul sito non compare
+affatto.
+
+I tasti sono veri `<button>` dentro un overlay che diventa il contesto di fuoco:
+la navigazione geometrica dei menu li raggiunge **senza una riga di codice nuova**,
+e funzionano anche col mouse. Confermare su un campo di testo la apre, indietro la
+chiude, e il testo scritto si vede in un'anteprima perche' il pannello copre il
+campo vero.
+
+Provata pilotando un pad finto — sostituendo `navigator.getGamepads`, cosi' gira
+il percorso reale, rilevamento incluso:
+
+```
+percorso: BUTTON -> BUTTON -> BUTTON -> TEXTAREA#feedbackMessage
+tastiera aperta: true      scritto nel campo: 'ciao qui'      contatore: 8 / 1200
+```
+
+Il contatore che si muove e' la prova che l'evento `input` arriva: senza, il campo
+si riempirebbe e il resto del modulo non se ne accorgerebbe.
+
 ---
 
 ## Quando il banco di prova mente
@@ -347,6 +408,7 @@ node scripts/career-audit.mjs            # stelle raggiungibili, rampa, farm, fi
 node scripts/drill-audit.mjs             # l'allenamento gira sul motore del gioco
 node scripts/feedback-audit.mjs          # nessun feedback si perde, nulla si allega di nascosto
 node scripts/api-feedback-audit.mjs      # le guardie dell'endpoint, senza deploy e senza chiavi
+node scripts/gamepad-nav-audit.mjs       # tutto raggiungibile col pad, campi di testo compresi
 node scripts/module-contract-audit.mjs   # ogni import trova il suo export
 node scripts/modules-audit.mjs           # ogni modulo si valuta senza esplodere
 ```

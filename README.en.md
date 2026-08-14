@@ -293,6 +293,63 @@ requested one on: a name missing from the `screens` registry turned them all off
 and none on. No console error, nothing pointing at the cause. An unregistered name
 now leaves the screen where it is and logs something readable.
 
+### 14. On a controller, half the game was a dead end
+
+Checking pad navigation ahead of Steam surfaced four defects: three trivial, and one
+the code hid well.
+
+**Back wasn't where anyone looks for it.** It was on `b(2)` — X on Xbox, Square on
+PlayStation. `b(1)`, that is B/Circle, wasn't mapped to anything in menus. And the
+in-game help, in both languages, promised `"A confirm · B back"`: a binding that did
+not exist. Three different things — what you try, what the guide promises, what the
+code does.
+
+**From the main menu, "back" went forward.** `menuBack` clicked the first
+`[data-action^="to-"]` in the active screen; on the menu the top bar comes before the
+hero, so it opened the Profile. The back control is now declared with `data-back`, and
+the menu — being the root — doesn't have one.
+
+**The message field never received focus**, because the target selector listed
+`button, input, .mode-card…` and not `textarea` — nor `summary`, so the "what gets
+attached" disclosure wouldn't open on a pad.
+
+The fourth is the one that matters. With `textarea` added to the selector, **the
+textarea was still unreachable**. The cause was in `moveMenuFocus`, which compared
+centres only and penalised cross-axis offset threefold. A wide element has its centre
+in the middle of the row: starting from the left column of the six topics, the small,
+better-aligned checkbox won despite sitting much further down, and the textarea was
+skipped. The focus path, traced in the browser, said it plainly:
+
+```
+path: BUTTON -> BUTTON -> BUTTON -> BUTTON#feedbackCopyBtn
+textarea reached: false
+```
+
+Now whatever overlaps on the cross axis beats centre distance, because that is what
+actually lies in that direction. It holds for every wide element, not just this one.
+
+### 15. Without an on-screen keyboard the feedback form was decorative
+
+On a controller alone you couldn't type: no virtual keyboard existed in the project.
+You can't rely on Steam's — in Big Picture and on Deck it appears depending on the
+wrapper and Steam Input configuration, and on the web it doesn't appear at all.
+
+The keys are real `<button>`s inside an overlay that becomes the focus context: the
+menus' geometric navigation reaches them **without a single new line of code**, and
+they work with a mouse too. Confirming on a text field opens it, back closes it, and
+what you type shows in a preview because the panel covers the real field.
+
+Tested by driving a fake pad — replacing `navigator.getGamepads`, so the real path
+runs, detection included:
+
+```
+path: BUTTON -> BUTTON -> BUTTON -> TEXTAREA#feedbackMessage
+keyboard open: true      typed into field: 'ciao qui'      counter: 8 / 1200
+```
+
+The counter moving is the proof the `input` event fires: without it the field would
+fill up and the rest of the form wouldn't notice.
+
 ---
 
 ## When the test harness lies
@@ -339,6 +396,7 @@ node scripts/career-audit.mjs             # reachable stars, ramp, farming, fina
 node scripts/drill-audit.mjs              # training runs on the game engine
 node scripts/feedback-audit.mjs           # no feedback is lost, nothing is attached silently
 node scripts/api-feedback-audit.mjs       # the endpoint's guards, with no deploy and no keys
+node scripts/gamepad-nav-audit.mjs        # everything reachable on a pad, text fields included
 node scripts/module-contract-audit.mjs    # every import finds its export
 node scripts/modules-audit.mjs            # every module evaluates without throwing
 ```
