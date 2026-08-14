@@ -36,15 +36,22 @@ export const FEEDBACK = {
   /**
    * La funzione serverless in `api/feedback.js`.
    *
-   * Percorso relativo: funziona sul sito, dove pagina e funzione stanno sullo
-   * stesso dominio. In un pacchetto per Steam la pagina non e' servita da un
-   * dominio, quindi qui va messo l'URL assoluto del deploy — altrimenti la POST
-   * parte verso un'origine che non esiste e il messaggio resta in coda.
+   * URL **assoluto** e non percorso relativo, perche' il gioco gira in almeno
+   * quattro contesti e solo uno di questi ha la funzione sotto la stessa origine:
    *
-   * Se la funzione non e' ancora configurata risponde 503 e il gioco ripiega sul
-   * client di posta: nessun messaggio va perduto in nessuno dei due casi.
+   *   - il sito su Vercel        → stessa origine, l'assoluto va bene comunque
+   *   - dentro un iframe (itch.io) → l'origine e' di itch, un relativo punterebbe la'
+   *   - un pacchetto per Steam    → nessun dominio, un relativo non risolve
+   *   - aperto da file://         → idem
+   *
+   * Con un percorso relativo funzionava solo il primo caso, e negli altri tre la
+   * POST partiva verso un'origine sbagliata senza che nulla lo dicesse. La
+   * funzione risponde con gli header CORS e gestisce il preflight, quindi la
+   * chiamata da un'altra origine e' prevista.
+   *
+   * Va aggiornato se il progetto Vercel cambia dominio.
    */
-  endpoint: "/api/feedback",
+  endpoint: "https://steam-circuit-padel-pro.vercel.app/api/feedback",
   /**
    * Indirizzo a cui il giocatore puo' spedire il messaggio con `mailto:`, cioe'
    * col proprio client di posta. E' l'unico recapito possibile senza un server:

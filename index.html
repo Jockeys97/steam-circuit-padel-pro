@@ -348,6 +348,12 @@
             <button class="btn btn--secondary" type="button" id="feedbackCopyBtn" data-i18n="feedbackCopy">Copia negli appunti</button>
             <button class="btn btn--secondary" type="button" id="feedbackSteam" data-i18n="feedbackSteam" hidden>Apri le discussioni</button>
           </div>
+          <!-- Ultima rete: se rete, posta e appunti falliscono tutti, il testo si vede
+               qui gia' selezionato e si copia a mano. Non dipende da niente. -->
+          <div class="feedback__manual" id="feedbackManual" hidden>
+            <label class="setup-group__label" for="feedbackManualText" data-i18n="feedbackManualTitle">Copia questo e incollalo dove vuoi</label>
+            <textarea class="feedback__text feedback__text--manual" id="feedbackManualText" rows="5" readonly></textarea>
+          </div>
           <p class="feedback__note" id="feedbackNote"></p>
           <p class="feedback__status" id="feedbackStatus" role="status" aria-live="polite"></p>
         </form>

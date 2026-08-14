@@ -3566,3 +3566,23 @@ body.mode-colorblind .hero-preview {
   font-weight: 700;
   color: var(--cyan);
 }
+
+/* Il testo da copiare a mano: l'ultimo gradino, quando rete, posta e appunti
+   hanno tutti fallito. Si distingue perche' non e' un campo da compilare. */
+.feedback__manual {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 204, 0, 0.42);
+  border-radius: 12px;
+  background: rgba(40, 30, 6, 0.5);
+}
+
+.feedback__manual[hidden] {
+  display: none;
+}
+
+.feedback__text--manual {
+  font: 400 0.76rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-height: 96px;
+}

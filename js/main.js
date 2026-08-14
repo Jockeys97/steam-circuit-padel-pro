@@ -568,6 +568,13 @@ function collectMenuTargets() {
     if (el.disabled) return false;
     if (el.closest("[hidden]")) return false;
     if (el.classList.contains("mode-card--locked")) return false;
+    // Una card che contiene i propri pulsanti e' un contenitore, non un
+    // bersaglio. Le caselle del pannello squadra hanno dentro "Atleta" e
+    // "Completo", quindi la card faceva da terzo bersaglio in mezzo ai due: per
+    // arrivare a "Completo" servivano due spinte della levetta, e quella di
+    // mezzo riselezionava la casella intera. Nel selettore e nel guardaroba la
+    // card *e'* il bottone, quindi li' resta un bersaglio come prima.
+    if (el.tagName !== "BUTTON" && el.querySelector("button")) return false;
     return el.offsetParent !== null;
   });
 }
@@ -1873,7 +1880,8 @@ function feedbackEl(id) {
 }
 
 /** Aggiorna il modulo: argomento scelto, contatore, contesto mostrato. */
-function renderFeedback() {
+function renderFeedback(nascondiManuale = false) {
+  if (nascondiManuale) hideManualCopy();
   document.querySelectorAll("#feedbackTopics button").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.value === feedbackTopic);
   });
@@ -1948,6 +1956,33 @@ function collectFeedback() {
  * il messaggio resta comunque in coda, e si dice dov'e' invece di far finta che
  * sia andata bene.
  */
+/**
+ * L'ultima rete: mostra il testo e lo seleziona, perche' il giocatore lo copi a
+ * mano.
+ *
+ * Serve perche' su itch.io il gioco gira in un iframe con sandbox, dove la
+ * navigazione a `mailto:` viene bloccata **in silenzio** — nessuna eccezione,
+ * nessun modo di accorgersene — e l'accesso agli appunti puo' essere negato.
+ * Questa via non dipende da niente: ne' dalla rete, ne' da un client di posta, ne'
+ * da un permesso. E' l'unica che non puo' fallire.
+ */
+function showManualCopy(entry) {
+  const box = feedbackEl("feedbackManual");
+  const area = feedbackEl("feedbackManualText");
+  if (!box || !area) return;
+  area.value = feedbackAsText(entry);
+  box.hidden = false;
+  // Gia' selezionato: chi arriva qui deve solo premere Ctrl+C.
+  area.focus();
+  area.select();
+  area.scrollIntoView({ block: "nearest" });
+}
+
+function hideManualCopy() {
+  const box = feedbackEl("feedbackManual");
+  if (box) box.hidden = true;
+}
+
 async function copyFeedback(entry) {
   try {
     await navigator.clipboard.writeText(feedbackAsText(entry));
@@ -1955,6 +1990,23 @@ async function copyFeedback(entry) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Cosa offrire quando la consegna automatica non c'e' stata.
+ *
+ * Si tenta la posta *e* si mostra comunque il testo da copiare, invece di scegliere
+ * fra le due. Il motivo e' che l'esito del `mailto:` non e' osservabile: in un
+ * iframe con sandbox la navigazione viene bloccata senza errori, quindi annunciare
+ * "aperto il client di posta" sarebbe un'affermazione che non possiamo verificare
+ * — e per il giocatore diventerebbe un messaggio dato per spedito e mai arrivato.
+ */
+async function offriRipiego(entry, motivo) {
+  const mailto = feedbackMailto(entry);
+  if (mailto) window.location.href = mailto;
+  await copyFeedback(entry);
+  showManualCopy(entry);
+  return mailto ? "feedbackFallback" : (motivo ?? "feedbackManualHint");
 }
 
 function bindFeedback() {
@@ -1989,25 +2041,13 @@ function bindFeedback() {
       // configurata, quota esaurita. Il giocatore non deve restare a mani vuote,
       // quindi si offre la via che funziona sempre. La voce resta in coda e
       // ripartira' al prossimo avvio.
-      const ripiego = feedbackMailto(entry);
-      if (ripiego) {
-        window.location.href = ripiego;
-        statusKey = "feedbackMailOpened";
-      } else {
-        statusKey = esito.reason === "offline" ? "feedbackOffline" : "feedbackLocalOnly";
-      }
+      statusKey = await offriRipiego(entry, esito.reason === "offline" ? "feedbackOffline" : null);
     } else if (esito.reason === "no-endpoint") {
       // Nessun server a cui parlare. Con un recapito configurato si apre il client
       // di posta del giocatore, che e' l'unico modo di far arrivare il messaggio
       // senza infrastruttura; senza recapito si ripiega sugli appunti. In entrambi
       // i casi la voce e' gia' salvata, quindi non si perde comunque.
-      const mailto = feedbackMailto(entry);
-      if (mailto) {
-        window.location.href = mailto;
-        statusKey = "feedbackMailOpened";
-      } else {
-        statusKey = await copyFeedback(entry) ? "feedbackCopied" : "feedbackLocalOnly";
-      }
+      statusKey = await offriRipiego(entry, null);
     }
     // `renderFeedback` aggiorna normalmente lo stato con la coda residua.
     // La conferma conclusiva va quindi scritta dopo, altrimenti un invio riuscito
@@ -2022,7 +2062,13 @@ function bindFeedback() {
   feedbackEl("feedbackCopyBtn")?.addEventListener("click", async () => {
     const entry = collectFeedback();
     if (!entry) return;
-    feedbackStatus(await copyFeedback(entry) ? "feedbackCopied" : "feedbackCopyFailed");
+    if (await copyFeedback(entry)) {
+      feedbackStatus("feedbackCopied");
+    } else {
+      // Appunti negati: il testo si mostra, non si perde.
+      showManualCopy(entry);
+      feedbackStatus("feedbackManualHint");
+    }
     renderFeedback();
   });
 
@@ -2102,7 +2148,7 @@ bindNavigation({
   },
   "to-feedback": () => {
     showScreen("feedback");
-    renderFeedback();
+    renderFeedback(true);
   },
   "to-challenges": () => {
     showScreen("challenges");
