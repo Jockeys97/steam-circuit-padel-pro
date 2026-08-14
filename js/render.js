@@ -1,5 +1,5 @@
-import { BALANCE, COURT } from "./data.js?v=20260813-outfit-alpha-v30";
-import { t } from "./i18n.js?v=20260813-outfit-alpha-v30";
+import { BALANCE, COURT } from "./data.js?v=20260814-arena-safe-zones-v37";
+import { t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -7,6 +7,17 @@ export function clamp(value, min, max) {
 
 const SERV_LINE = 126;
 const radialTextureCache = new Map();
+const arenaArtworkCache = new Map();
+
+function lazyArenaArtwork(path) {
+  if (!path || typeof Image === "undefined") return null;
+  if (arenaArtworkCache.has(path)) return arenaArtworkCache.get(path);
+  const artwork = new Image();
+  artwork.decoding = "async";
+  artwork.src = path;
+  arenaArtworkCache.set(path, artwork);
+  return artwork;
+}
 
 function getRadialTexture(tint) {
   if (radialTextureCache.has(tint)) return radialTextureCache.get(tint);
@@ -437,6 +448,249 @@ function drawCourtDepth(ctx, topLeft, topRight, bottomLeft, bottomRight) {
   ctx.restore();
 }
 
+function drawArenaArtwork(ctx, canvas, imagePath, time) {
+  const artwork = lazyArenaArtwork(imagePath);
+  if (!artwork?.complete || !artwork.naturalWidth) return;
+  const sourceRatio = artwork.naturalWidth / artwork.naturalHeight;
+  const targetRatio = canvas.width / canvas.height;
+  let sx = 0;
+  let sy = 0;
+  let sw = artwork.naturalWidth;
+  let sh = artwork.naturalHeight;
+  if (sourceRatio > targetRatio) {
+    sw = artwork.naturalHeight * targetRatio;
+    sx = (artwork.naturalWidth - sw) / 2 + Math.sin(time * 0.08) * 10;
+  } else {
+    sh = artwork.naturalWidth / targetRatio;
+    sy = Math.max(0, (artwork.naturalHeight - sh) * 0.32);
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.filter = "saturate(1.2) contrast(1.08) brightness(0.82)";
+  ctx.drawImage(artwork, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  ctx.filter = "none";
+  const veil = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  veil.addColorStop(0, "rgba(2,7,22,0.08)");
+  veil.addColorStop(0.52, "rgba(2,7,22,0.2)");
+  veil.addColorStop(1, "rgba(2,7,22,0.52)");
+  ctx.fillStyle = veil;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
+function clipArenaScenery(ctx) {
+  // Positive safe zones only: the upper proscenium and the two wedges outside
+  // the glass cage. Keeping the playable trapezoid out of the path avoids the
+  // inconsistent inverse/even-odd clipping seen on some Canvas implementations.
+  ctx.beginPath();
+  ctx.rect(0, 0, 960, 96);
+  ctx.moveTo(0, 96);
+  ctx.lineTo(210, 96);
+  ctx.lineTo(48, 700);
+  ctx.lineTo(0, 700);
+  ctx.closePath();
+  ctx.moveTo(750, 96);
+  ctx.lineTo(960, 96);
+  ctx.lineTo(960, 700);
+  ctx.lineTo(912, 700);
+  ctx.closePath();
+  ctx.clip();
+}
+
+function drawFantasyArenaBackdrop(ctx, canvas, scene, time, imagePath) {
+  const themes = {
+    tempesta: { top: "#07142f", bottom: "#287eb0", glow: "#79eeff" },
+    abissale: { top: "#020b1d", bottom: "#086474", glow: "#42fff2" },
+    caldera: { top: "#160b10", bottom: "#7b2817", glow: "#ff7138" },
+    orrery: { top: "#080722", bottom: "#30246a", glow: "#b595ff" },
+  };
+  const theme = themes[scene];
+  if (!theme) return false;
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, theme.top);
+  gradient.addColorStop(1, theme.bottom);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // La locandina entra in memoria soltanto quando quest'arena viene disegnata.
+  // Il campo resta procedurale, ma ambiente, macchinari e profondita' sono gli
+  // stessi promessi dalla card di selezione.
+  drawArenaArtwork(ctx, canvas, imagePath, time);
+  ctx.save();
+  clipArenaScenery(ctx);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = theme.glow;
+  ctx.fillStyle = theme.glow;
+  if (scene === "tempesta") {
+    ctx.globalAlpha = 0.42 + Math.sin(time * 3.7) * 0.08;
+    for (const x of [170, 785]) {
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x - 34, 48); ctx.lineTo(x + 8, 91); ctx.lineTo(x - 22, 145);
+      ctx.stroke();
+    }
+  } else if (scene === "abissale") {
+    ctx.globalAlpha = 0.16;
+    for (let i = 0; i < 18; i += 1) {
+      const x = (i * 157 + time * (8 + i % 4)) % canvas.width;
+      const y = 20 + (i * 47) % 235;
+      ctx.beginPath(); ctx.arc(x, y, 2 + (i % 4), 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (scene === "caldera") {
+    const lava = ctx.createLinearGradient(0, 190, 0, 355);
+    lava.addColorStop(0, "rgba(255,90,30,0)");
+    lava.addColorStop(1, "rgba(255,95,20,0.48)");
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = lava;
+    ctx.fillRect(0, 175, canvas.width, 190);
+  } else {
+    ctx.globalAlpha = 0.44;
+    ctx.lineWidth = 5;
+    for (const radius of [58, 104, 154]) {
+      ctx.beginPath(); ctx.ellipse(480, 116, radius * 1.75, radius * 0.48, time * 0.018, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (let i = 0; i < 34; i += 1) {
+      ctx.globalAlpha = 0.12 + (i % 4) * 0.06;
+      ctx.fillRect((i * 83) % canvas.width, (i * 37) % 230, 2, 2);
+    }
+  }
+  ctx.restore();
+  return true;
+}
+
+function drawFantasyArenaProps(ctx, scene, time) {
+  if (!["tempesta", "abissale", "caldera", "orrery"].includes(scene)) return;
+  ctx.save();
+  // Gli oggetti ambientali vivono oltre la gabbia: nessuna orbita, tubatura o
+  // statua deve attraversare la superficie di gioco e confondersi con la palla.
+  clipArenaScenery(ctx);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (scene === "tempesta") {
+    // Scafi di due dirigibili, eliche e catene sospese oltre i vetri laterali.
+    for (const side of [-1, 1]) {
+      const x = side < 0 ? 72 : 888;
+      const drift = Math.sin(time * 0.32 + side) * 4;
+      ctx.fillStyle = "rgba(23,34,52,0.72)";
+      ctx.strokeStyle = "#b47b35";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(x, 238 + drift, 105, 42, side * 0.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(92,220,255,0.55)";
+      for (let i = -1; i <= 1; i += 1) {
+        ctx.beginPath(); ctx.arc(x + i * 37, 235 + drift, 7, 0, Math.PI * 2); ctx.fill();
+      }
+      drawGear(ctx, x - side * 18, 356, 42, 14, "#a96f2d", time * side * 0.7);
+      ctx.strokeStyle = "rgba(205,151,72,0.75)";
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 3; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(x + side * (22 + i * 18), 274 + drift);
+        ctx.lineTo(x + side * (70 + i * 25), 560);
+        ctx.stroke();
+      }
+    }
+  } else if (scene === "abissale") {
+    // Cupola pressurizzata, oblò e vita abissale oltre il vetro.
+    ctx.strokeStyle = "rgba(193,132,64,0.88)";
+    ctx.lineWidth = 14;
+    ctx.beginPath(); ctx.arc(480, 218, 438, Math.PI, Math.PI * 2); ctx.stroke();
+    for (const x of [78, 882]) {
+      ctx.fillStyle = "rgba(84,53,31,0.72)";
+      roundedRect(ctx, x - 38, 270, 76, 315, 26); ctx.fill();
+      ctx.strokeStyle = "#cf9950";
+      ctx.lineWidth = 6;
+      for (const y of [328, 430, 532]) {
+        ctx.beginPath(); ctx.arc(x, y, 24, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = "rgba(56,235,229,0.18)"; ctx.fill();
+      }
+    }
+    ctx.fillStyle = "rgba(5,18,36,0.72)";
+    ctx.beginPath();
+    ctx.moveTo(280, 64); ctx.quadraticCurveTo(466, 12, 650, 70); ctx.quadraticCurveTo(482, 46, 280, 64); ctx.fill();
+    ctx.strokeStyle = "rgba(62,255,239,0.65)";
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 12; i += 1) {
+      const x = 35 + (i * 83 + time * (5 + i % 3)) % 890;
+      const y = 170 + (i * 47) % 420;
+      ctx.beginPath(); ctx.arc(x, y, 3 + i % 4, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else if (scene === "caldera") {
+    // Canali di lava ai lati, teste dei Titani e pistoni della fonderia.
+    for (const side of [-1, 1]) {
+      const inner = side < 0 ? 150 : 810;
+      const outer = side < 0 ? 0 : 960;
+      const lava = ctx.createLinearGradient(inner, 300, outer, 620);
+      lava.addColorStop(0, "rgba(255,72,22,0.08)");
+      lava.addColorStop(1, "rgba(255,135,35,0.58)");
+      ctx.fillStyle = lava;
+      ctx.beginPath();
+      ctx.moveTo(inner, 292); ctx.lineTo(outer, 265); ctx.lineTo(outer, 700); ctx.lineTo(inner + side * 90, 700); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(33,25,26,0.74)";
+      ctx.strokeStyle = "#a2492c";
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(side < 0 ? 92 : 868, 212, 58, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = `rgba(255,95,35,${0.65 + Math.sin(time * 2.2 + side) * 0.15})`;
+      ctx.fillRect(side < 0 ? 71 : 847, 203, 42, 13);
+      drawGear(ctx, side < 0 ? 76 : 884, 445, 45, 16, "#73321f", time * side * 0.42);
+      ctx.fillStyle = "rgba(18,14,15,0.88)";
+      for (let i = 0; i < 5; i += 1) {
+        const baseX = outer + (inner - outer) * (0.12 + i * 0.16);
+        const baseY = 590 + (i % 2) * 42;
+        ctx.beginPath();
+        ctx.moveTo(baseX - 38, 700); ctx.lineTo(baseX - 22, baseY);
+        ctx.lineTo(baseX, baseY - 48 - (i % 3) * 18); ctx.lineTo(baseX + 26, baseY + 5);
+        ctx.lineTo(baseX + 45, 700); ctx.closePath(); ctx.fill();
+      }
+      ctx.strokeStyle = "rgba(128,70,45,0.9)";
+      ctx.lineWidth = 8;
+      for (let i = 0; i < 3; i += 1) {
+        const chainX = side < 0 ? 22 + i * 38 : 938 - i * 38;
+        ctx.beginPath(); ctx.moveTo(chainX, 272); ctx.lineTo(chainX + side * 55, 635); ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = "rgba(255,120,52,0.65)";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 15; i += 1) {
+      const x = (i * 137 + 41) % 960;
+      const y = 255 + ((i * 83 - time * (25 + i % 5)) % 360 + 360) % 360;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 3, y - 9); ctx.stroke();
+    }
+  } else {
+    // Planetario tridimensionale: colonne, orbite e pianeti davanti al cielo.
+    ctx.strokeStyle = "rgba(225,181,83,0.84)";
+    ctx.lineWidth = 7;
+    for (const radius of [78, 125, 178]) {
+      ctx.beginPath();
+      ctx.ellipse(480, 105, radius * 1.65, radius * 0.48, time * 0.025 + radius * 0.002, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const planets = [
+      [116, 250, 34, "#50d8ff", 0.24],
+      [844, 306, 43, "#d17cff", -0.19],
+      [84, 492, 25, "#e2b653", 0.38],
+      [882, 535, 30, "#6e8dff", -0.31],
+    ];
+    for (const [x, y, radius, color, speed] of planets) {
+      const bob = Math.sin(time * speed + x) * 7;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.arc(x, y + bob, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(228,190,103,0.85)";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(x, y + bob, radius * 1.7, radius * 0.42, 0.3, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (const x of [62, 898]) {
+      ctx.fillStyle = "rgba(43,36,69,0.72)";
+      ctx.strokeStyle = "#c69a49";
+      ctx.lineWidth = 6;
+      roundedRect(ctx, x - 31, 205, 62, 420, 18); ctx.fill(); ctx.stroke();
+      drawGear(ctx, x, 350, 35, 14, "#9b7137", time * (x < 480 ? 0.32 : -0.32));
+    }
+  }
+  ctx.restore();
+}
+
 export function drawArena(ctx, canvas, arena, time) {
   const { palette } = arena;
   const scene = arena.id ?? "officina";
@@ -445,7 +699,9 @@ export function drawArena(ctx, canvas, arena, time) {
     : scene === "forgia"
       ? "clockwork"
       : scene;
-  if (sceneFamily === "locomotive") {
+  if (drawFantasyArenaBackdrop(ctx, canvas, scene, time, arena.image)) {
+    // Le arene finali hanno un fondale proprio; il campo e la gabbia sono comuni.
+  } else if (sceneFamily === "locomotive") {
     drawLocomotiveDepotBackdrop(ctx, canvas, time);
   } else if (sceneFamily === "clockwork") {
     drawClockworkFactoryBackdrop(ctx, canvas, time);
@@ -501,20 +757,33 @@ export function drawArena(ctx, canvas, arena, time) {
   };
 
   // The exterior floor and cage first; the court remains the bright focal plane.
-  const exteriorFloor = scene === "cattedrale" ? "#312b4f"
+  const exteriorFloor = scene === "tempesta" ? "rgba(23,37,60,0.44)"
+    : scene === "abissale" ? "rgba(11,48,56,0.42)"
+      : scene === "caldera" ? "rgba(60,33,29,0.4)"
+        : scene === "orrery" ? "rgba(36,29,75,0.4)"
+          : scene === "cattedrale" ? "#312b4f"
     : scene === "forgia" ? "#42272b"
       : sceneFamily === "locomotive" ? "#4f5552"
         : sceneFamily === "clockwork" ? "#4c344d" : "#e78c68";
-  const courtFloor = scene === "cattedrale" ? "#254c98"
+  const courtFloor = scene === "tempesta" ? "#174d80"
+    : scene === "abissale" ? "#12667a"
+      : scene === "caldera" ? "#303741"
+        : scene === "orrery" ? "#1c3475"
+          : scene === "cattedrale" ? "#254c98"
     : scene === "forgia" ? "#49333e"
       : sceneFamily === "locomotive" ? "#1579a8"
         : sceneFamily === "clockwork" ? "#314d9b" : "#138fd7";
-  const courtStroke = scene === "cattedrale" ? "#574d8e"
+  const courtStroke = scene === "tempesta" ? "#4fbdd8"
+    : scene === "abissale" ? "#208f98"
+      : scene === "caldera" ? "#a24c2f"
+        : scene === "orrery" ? "#7869bd"
+          : scene === "cattedrale" ? "#574d8e"
     : scene === "forgia" ? "#7d3d43"
       : sceneFamily === "clockwork" ? "#181c55" : "#184d79";
   polygon([{ x: 0, y: 282 }, { x: 960, y: 282 }, { x: 960, y: canvas.height }, { x: 0, y: canvas.height }], exteriorFloor);
   polygon([topLeft, topRight, bottomRight, bottomLeft], courtFloor, courtStroke, 8);
   drawCourtDepth(ctx, topLeft, topRight, bottomLeft, bottomRight);
+  drawFantasyArenaProps(ctx, scene, time);
   polygon([{ x: 100, y: 123 }, topLeft, bottomLeft, { x: 0, y: 537 }], "rgba(173,235,255,0.35)", "#173f63", 6);
   polygon([topRight, { x: 860, y: 123 }, { x: 960, y: 537 }, bottomRight], "rgba(173,235,255,0.35)", "#173f63", 6);
 
@@ -558,7 +827,11 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.moveTo(midTop.x, midTop.y); ctx.lineTo(midBottom.x, midBottom.y);
   ctx.stroke();
 
-  const steamTint = scene === "clockwork" ? "196,150,216"
+  const steamTint = scene === "tempesta" ? "145,225,255"
+    : scene === "abissale" ? "80,235,225"
+      : scene === "caldera" ? "255,125,70"
+        : scene === "orrery" ? "190,165,255"
+          : scene === "clockwork" ? "196,150,216"
     : scene === "locomotive" ? "186,200,210"
       : scene === "cattedrale" ? "200,190,255"
         : scene === "forgia" ? "255,165,120" : "205,222,232";
@@ -630,12 +903,7 @@ export function drawArena(ctx, canvas, arena, time) {
   ctx.fillStyle = palette.accent;
   ctx.font = "900 13px Nunito, sans-serif";
   ctx.textAlign = "center";
-  const arenaNameKey = {
-    locomotive: "arena_locomotive_name",
-    clockwork: "arena_clockwork_name",
-    cattedrale: "arena_cattedrale_name",
-    forgia: "arena_forgia_name",
-  }[scene] ?? "arena_officina_name";
+  const arenaNameKey = `arena_${scene}_name`;
   ctx.fillText(t(arenaNameKey).toUpperCase(), 480, 139);
 
   // Store projection for the sprites drawn after the court.

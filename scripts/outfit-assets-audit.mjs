@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-outfit-alpha-v30";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-arena-safe-zones-v37";
 
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
@@ -40,7 +40,10 @@ for (const athleteId of expectedAthletes) {
   assert.equal(outfits[0].id, "base", `${athleteId}: il primo completo deve restare quello base`);
 
   for (const outfit of outfits.slice(1)) {
-    assert.ok(outfit.unlock, `${athleteId}/${outfit.id}: requisito di sblocco mancante`);
+    // I completi ora si ottengono superando una sfida con il rispettivo atleta,
+    // non raggiungendo una soglia generica di stelle o trofei.
+    assert.ok(outfit.challenge, `${athleteId}/${outfit.id}: sfida di sblocco mancante`);
+    assert.equal(outfit.unlockKey, `${athleteId}:${outfit.id}`, `${athleteId}/${outfit.id}: chiave di sblocco errata`);
     assert.ok(outfit.preview, `${athleteId}/${outfit.id}: anteprima mancante`);
     await fs.access(outfit.preview);
     for (const key of spriteKeys) {

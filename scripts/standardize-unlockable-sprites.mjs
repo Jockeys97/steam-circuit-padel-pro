@@ -19,12 +19,18 @@ function masterPath(athlete, view, state) {
     const suffix = state === "idle" ? "" : state === "action" ? "-action" : "-run-v3";
     return path.join(ROOT, directory, `${athlete}${suffix}.png`);
   }
-  return path.join(ROOT, directory, `${athlete}-${state}-unique.png`);
+  const suffix = athlete === "oracolo" && state === "idle"
+    ? "idle-consistent-v2"
+    : `${state}-unique`;
+  return path.join(ROOT, directory, `${athlete}-${suffix}.png`);
 }
 
 function outputPath(athlete, view, state) {
   const directory = view === "back" ? "assets/sprites/back" : "assets/sprites";
-  return path.join(ROOT, directory, `${athlete}-${state}-unique.webp`);
+  const suffix = athlete === "oracolo" && state === "idle"
+    ? "idle-consistent-v2"
+    : `${state}-unique`;
+  return path.join(ROOT, directory, `${athlete}-${suffix}.webp`);
 }
 
 function activeReferencePath(reference, view, state) {
@@ -262,8 +268,14 @@ async function standardize(athlete, reference, view, state) {
   console.log(`${athlete}/${view}/${state}: ${activeWidth}x${activeHeight}, scale frame ${frameScales.map((scale) => scale.toFixed(2)).join("/")}`);
 }
 
+const athleteFilter = process.argv[2];
+const stateFilter = process.argv[3];
 for (const [athlete, contract] of Object.entries(CONTRACTS)) {
+  if (athleteFilter && athlete !== athleteFilter) continue;
   for (const view of VIEWS) {
-    for (const state of STATES) await standardize(athlete, contract.reference, view, state);
+    for (const state of STATES) {
+      if (stateFilter && state !== stateFilter) continue;
+      await standardize(athlete, contract.reference, view, state);
+    }
   }
 }

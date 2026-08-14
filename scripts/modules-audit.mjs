@@ -67,7 +67,7 @@ function stubDom() {
 stubDom();
 
 // La stringa di versione va letta dal codice, non scritta qui: `data.js` e
-// `data.js?v=...` sono due moduli distinti per Node, ed e' una trappola in cui
+// `data.js?v=20260814-arena-safe-zones-v37` sono due moduli distinti per Node, ed e' una trappola in cui
 // questo progetto e' gia' caduto tre volte.
 const mainSource = await readFile(new URL("js/main.js", root), "utf8");
 const versione = mainSource.match(/from "\.\/data\.js(\?v=[^"]*)"/)?.[1] ?? "";

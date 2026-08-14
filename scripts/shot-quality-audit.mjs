@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, hitBall } from "../js/game.js?v=20260813-outfit-alpha-v30";
-import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260813-outfit-alpha-v30";
+import { createMatchState, hitBall } from "../js/game.js?v=20260814-arena-safe-zones-v37";
+import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260814-arena-safe-zones-v37";
 import { readFile } from "node:fs/promises";
 
 // Le asserzioni confrontano etichette tradotte, quindi la lingua va fissata qui
 // invece di ereditare il default dell'interfaccia. L'import deve usare la STESSA
 // specifica di game.js: i moduli sono importati con una query di cache busting e
-// `i18n.js` e `i18n.js?v=20260813-outfit-alpha-v30` sono due istanze distinte, quindi setLang su una
+// `i18n.js` e `i18n.js?v=20260814-arena-safe-zones-v37` sono due istanze distinte, quindi setLang su una
 // non ha effetto sull'altra. La specifica viene letta dal sorgente, cosi' non
 // va aggiornata a ogni bump di versione.
 const gameSource = await readFile(new URL("../js/game.js", import.meta.url), "utf8");

@@ -1,11 +1,12 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture } from "./data.js?v=20260814-arena-depth-v34";
-import { getMatchInfo } from "./game.js?v=20260814-arena-depth-v34";
-import { getVolume, isMuted } from "./audio.js?v=20260814-arena-depth-v34";
-import { getLang, t } from "./i18n.js?v=20260814-arena-depth-v34";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-depth-v34";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture } from "./data.js?v=20260814-arena-safe-zones-v37";
+import { getMatchInfo } from "./game.js?v=20260814-arena-safe-zones-v37";
+import { getVolume, isMuted } from "./audio.js?v=20260814-arena-safe-zones-v37";
+import { getLang, t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-safe-zones-v37";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
+const DRILL_KEY = "padel.drill";
 const CAREER_KEY = "padel.career";
 const DEFAULT_CAREER = {
   season: 1,
@@ -187,6 +188,44 @@ export function resetSeasonObjectives() {
   ui.career.seasonProgress = emptySeasonProgress();
   ensureSeasonObjectives();
   saveCareer(ui.career);
+}
+
+/**
+ * Record dell'allenamento, uno per esercizio.
+ *
+ * Il record viveva sull'oggetto del drill e moriva con la sessione: non restava
+ * niente per cui tornare, mentre la carriera i suoi progressi li conserva. Sta
+ * qui e non in `drill.js` perche' quel file deve restare eseguibile senza DOM —
+ * lo importa l'audit in Node, dove `localStorage` non esiste.
+ *
+ * La chiave e' per esercizio: i punteggi non sono confrontabili fra un tiro al
+ * bersaglio e uno scambio, e un record unico avrebbe premiato solo il piu'
+ * generoso.
+ */
+export function loadDrillRecords() {
+  try {
+    const raw = localStorage.getItem(DRILL_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function drillRecord(exerciseId) {
+  return loadDrillRecords()[exerciseId] ?? 0;
+}
+
+/** Salva solo se e' un miglioramento, e ritorna il record aggiornato. */
+export function saveDrillRecord(exerciseId, score) {
+  const records = loadDrillRecords();
+  if (score <= (records[exerciseId] ?? 0)) return records[exerciseId] ?? 0;
+  records[exerciseId] = score;
+  try {
+    localStorage.setItem(DRILL_KEY, JSON.stringify(records));
+  } catch {
+    // persistenza non disponibile: il record vale per questa sessione
+  }
+  return score;
 }
 
 export function loadPrefs() {

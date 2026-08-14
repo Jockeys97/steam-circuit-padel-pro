@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import path from "node:path";
-import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260813-outfit-alpha-v30";
+import { ATHLETES, ATHLETE_OUTFITS } from "../js/data.js?v=20260814-arena-safe-zones-v37";
 
 const unlockables = ["oracolo", "colosso"];
 const states = ["idle", "action", "run"];
@@ -37,6 +37,18 @@ async function frameMetrics(file, frames) {
     metrics.push({ height: maxY - minY + 1, alpha: alphaTotal / opaquePixels });
   }
   return metrics;
+}
+
+async function visibleLuma(file) {
+  const { data } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let pixels = 0;
+  let total = 0;
+  for (let offset = 0; offset < data.length; offset += 4) {
+    if (data[offset + 3] < 24) continue;
+    total += data[offset] * 0.2126 + data[offset + 1] * 0.7152 + data[offset + 2] * 0.0722;
+    pixels += 1;
+  }
+  return total / Math.max(1, pixels);
 }
 
 for (const athleteId of unlockables) {
@@ -75,6 +87,14 @@ for (const athleteId of unlockables) {
   for (const outfit of ATHLETE_OUTFITS[athleteId]) {
     if (outfit.id === "base") continue;
     assert.ok(outfit.sprites, `${athleteId}/${outfit.id}: fogli outfit mancanti`);
+  }
+  if (athleteId === "oracolo") {
+    const idleLuma = await visibleLuma(path.join(root, athlete.sprite));
+    const actionLuma = await visibleLuma(path.join(root, athlete.actionSprite));
+    const runLuma = await visibleLuma(path.join(root, athlete.runSprite));
+    const animatedLuma = (actionLuma + runLuma) / 2;
+    assert.ok(idleLuma <= animatedLuma * 1.75,
+      `oracolo/front/idle: stile troppo luminoso rispetto alle animazioni (${idleLuma.toFixed(1)} vs ${animatedLuma.toFixed(1)})`);
   }
 }
 

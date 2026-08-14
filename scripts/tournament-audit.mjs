@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { ARENAS, AI_OPPONENTS, tournamentFixture } from "../js/data.js?v=20260814-arena-depth-v34";
+import { ARENAS, AI_OPPONENTS, tournamentFixture } from "../js/data.js?v=20260814-arena-safe-zones-v37";
 
 /**
  * Il tabellone del torneo.

@@ -160,6 +160,105 @@ con un'asserzione che impedisce di reintrodurre la seconda tabella. La lezione �
 stessa del generatore pseudocasuale: quando un valore non cambia l'esito, il primo
 sospettato è lo strumento.
 
+### 9. L'allenamento insegnava una fisica che non esisteva
+
+`drill.js` era un secondo motore: gravita' propria, misuratore proprio, un
+"perfetto" fissato a `0.62`. Nessuna finestra di timing, nessuna qualita' del
+colpo, nessuna energia dello scambio, nessuna statistica dell'atleta, nessun
+vetro. Non allenava male: allenava **un altro gioco**. Ed e' il difetto peggiore
+di tutti, perche' non si manifesta come un errore — si manifesta come un
+giocatore che si allena e non migliora.
+
+Ora l'allenamento *e'* una partita: `createMatchState` costruisce lo stato vero e
+`updateMatch` lo fa avanzare. Il file si limita a due cose che il match non fa,
+mandare la palla e dare un punteggio, e ogni meccanica arriva gratis — comprese
+quelle che verranno ritarate domani. La palla non viene nemmeno costruita a mano:
+la manda `hitBall` con `forceContact`, quindi quello che arriva e' un colpo vero,
+con la sua dispersione e la fisica dell'arena scelta.
+
+Il motore non e' stato toccato. Gli avversari, dove servono immobili, si fermano
+alzando il loro `hitCooldown`: `hitBall` rifiuta il colpo quando e' positivo.
+Nessuna modalita' speciale da mantenere dentro `game.js`.
+
+Tre esercizi, uno per meccanica che prima non era allenabile: bersagli che
+chiedono il taglio o il piatto, pallonetti da chiudere con lo x2/x3, e uno
+scambio pieno dove l'energia governa timing e qualita'.
+
+### 10. Il campo era un menu
+
+Con l'allenamento in corso, la barra spaziatrice premeva il bottone col fuoco e
+le frecce spostavano il fuoco del menu. La causa stava in una riga:
+
+```js
+const menuActive = !matchState?.running || matchState?.paused;
+```
+
+L'allenamento non usa `matchState`, quindi la condizione era vera per tutto
+l'esercizio, e il ramo dei menu intercettava i tasti con un `return` prima di
+`keys.add(key)`. Al campo non arrivava un solo comando: il vecchio allenamento
+rispondeva solo perche' leggeva lo spazio dal `keyup`, che non era intercettato.
+
+Non si vede leggendo il codice del drill, e nessun audit lo prende: l'ho trovato
+fotografando la schermata e chiedendomi perche' tornasse al menu.
+
+### 11. Il tiro al bersaglio premiava il tasto, non il colpo
+
+La coerenza del colpo si giudicava da `backspin > 0.5`, cioe' da un flag
+dell'input: diceva soltanto *"hai premuto X"*. Ma il taglio, secondo il documento
+di design, compra **un rimbalzo schiacciato** — e quello e' un esito, non un
+comando. Un taglio mal eseguito passava identico a uno riuscito.
+
+Misurare l'esito ha richiesto due tentativi. Il primo, l'apice del secondo
+rimbalzo, ha dato **129 in tutti e sei i casi** su 40 semi ciascuno: costante
+sospetta, e infatti lo strumento era rotto. Tracciando la quota si e' visto
+perche':
+
+```
+rimbalzo 1 a y=120 vz=-249
+  z=-2 y=120     ← la palla non si muove piu'
+  z=-2 y=120
+```
+
+Dopo il primo rimbalzo il punto e' gia' assegnato, e durante `pointPause` la
+fisica non avanza: **il secondo rimbalzo non e' osservabile** dall'allenamento.
+
+Il numero giusto era un passo prima — la velocita' verticale all'impatto, da cui
+il motore ricava l'altezza del rimbalzo. Misurata su 30 prove per livello di
+carica:
+
+| colpo | |vz| all'impatto |
+|---|---|
+| piatto | 227 – 259 |
+| taglio | 181 – 221 |
+
+Non si sovrappongono, ma il divario e' di **6 unita'**: una soglia secca li' in
+mezzo sarebbe l'interruttore che la sezione 3 dice di non usare. Il punteggio e'
+quindi continuo fra i due riferimenti, e un taglio a meta' prende un voto a meta'.
+
+Va letta *prima* del passo di simulazione: dopo l'impatto il motore ha gia'
+riflesso e attenuato `vz`, quindi letta dopo non direbbe piu' con quanta forza la
+palla e' arrivata a terra.
+
+### 12. Valutare senza diagnosticare insegna a meta'
+
+L'allenamento dava voto e punti e taceva sul motivo. Ora ogni tentativo chiude con
+una diagnosi — troppo corta, troppo profonda, larga, dentro ma con un rimbalzo
+troppo alto, smash difeso, arrivato a energia scarica — e l'audit verifica due
+cose: che **nessun tentativo si chiuda senza diagnosi**, e che ogni chiave esista
+in entrambe le lingue. `t()` restituisce la chiave grezza quando manca la
+traduzione, quindi un buco finirebbe a schermo come `drillWhyWide`.
+
+Con la stessa passata: il record ora sopravvive alla sessione, in
+`localStorage` e **per esercizio** (i punteggi di un tiro al bersaglio e di uno
+scambio non sono confrontabili); la difficolta' si scoglie sulla schermata invece
+di essere ereditata in silenzio da quella della partita rapida; e c'e' l'esercizio
+del **servizio**, che usa `prepareServe` del motore e mostra i doppi falli —
+il percorso che prima della dispersione d'esecuzione era irraggiungibile.
+
+La persistenza vive in `ui.js` e non in `drill.js`: quel file deve restare
+eseguibile senza DOM, perche' l'audit lo importa in Node dove `localStorage` non
+esiste.
+
 ---
 
 ## Quando il banco di prova mente
@@ -203,6 +302,7 @@ node scripts/smash-input-audit.mjs       # doppio tap, degrado, risposta al serv
 node scripts/difficulty-audit.mjs        # scala dei tre livelli
 node scripts/controller-tactics-audit.mjs # colpi tecnici, movimento, tattiche
 node scripts/career-audit.mjs            # stelle raggiungibili, rampa, farm, finale
+node scripts/drill-audit.mjs             # l'allenamento gira sul motore del gioco
 node scripts/module-contract-audit.mjs   # ogni import trova il suo export
 node scripts/modules-audit.mjs           # ogni modulo si valuta senza esplodere
 ```
@@ -251,12 +351,12 @@ python3 -m http.server 8000
 ```
 
 I moduli usano una query di versione (`?v=…`) come cache busting. **Cambiandone uno,
-vanno aggiornate tutte e 23 le occorrenze** in `index.html` e `js/*.js`: se restano
+vanno aggiornate tutte e 25 le occorrenze** in `index.html` e `js/*.js`: se restano
 disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un import
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260813-outfit-alpha-v30" index.html js/*.js styles.css   # deve dare 23 in totale
+grep -c "20260814-arena-safe-zones-v37" index.html js/*.js styles.css   # deve dare 25 in totale
 ```
 
 ---

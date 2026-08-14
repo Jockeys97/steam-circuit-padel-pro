@@ -158,6 +158,101 @@ an assertion that prevents reintroducing the second table. The lesson is the sam
 pseudo-random generator: when a value doesn't move the outcome, the instrument is the
 first suspect.
 
+### 9. Training taught physics that did not exist
+
+`drill.js` was a second engine: its own gravity, its own meter, a "perfect"
+pinned at `0.62`. No timing window, no shot quality, no rally energy, no athlete
+stats, no glass. It didn't train badly — it trained **a different game**. And
+that is the worst kind of defect, because it doesn't surface as an error: it
+surfaces as a player who practises and doesn't improve.
+
+Training is now a match: `createMatchState` builds the real state and
+`updateMatch` advances it. The file only does the two things a match doesn't —
+feed the ball and score the objectives — and every mechanic comes for free,
+including the ones that get retuned tomorrow. The ball isn't even hand-built:
+`hitBall` with `forceContact` sends it, so what arrives is a real shot, with its
+own spread and the physics of the chosen arena.
+
+The engine was left untouched. Where the drill needs the rivals frozen, they stop
+by raising their `hitCooldown`: `hitBall` refuses the shot while it is positive.
+No special mode to maintain inside `game.js`.
+
+Three exercises, one per mechanic that wasn't trainable before: targets that ask
+for slice or drive, lobs to close out with x2/x3, and a full rally where energy
+drives timing and quality.
+
+### 10. The court was a menu
+
+With training running, the space bar pressed the focused button and the arrow
+keys moved the menu focus. The cause was one line:
+
+```js
+const menuActive = !matchState?.running || matchState?.paused;
+```
+
+Training doesn't use `matchState`, so the condition held for the whole exercise
+and the menu branch swallowed the keys with a `return` before `keys.add(key)`.
+Not a single command reached the court: the old drill only responded because it
+read space from `keyup`, which wasn't intercepted.
+
+You can't see it by reading the drill code, and no audit catches it: I found it by
+screenshotting the screen and asking why it kept returning to the menu.
+
+### 11. Target practice rewarded the button, not the shot
+
+Shot coherence was judged from `backspin > 0.5` — an input flag that only said
+*"you pressed X"*. But slice, per the design document, buys **a squashed bounce**,
+and that is an outcome, not a command. A badly executed slice passed exactly like
+a good one.
+
+Measuring the outcome took two attempts. The first, the apex of the second bounce,
+returned **129 in all six cases** across 40 seeds each: a suspicious constant, and
+indeed the instrument was broken. Tracing the height showed why:
+
+```
+bounce 1 at y=120 vz=-249
+  z=-2 y=120     ← the ball no longer moves
+  z=-2 y=120
+```
+
+After the first bounce the point is already awarded, and during `pointPause` the
+physics doesn't advance: **the second bounce is not observable** from training.
+
+The right number was one step earlier — the vertical velocity at impact, from
+which the engine derives the bounce height. Measured over 30 trials per charge
+level:
+
+| shot | |vz| at impact |
+|---|---|
+| flat | 227 – 259 |
+| slice | 181 – 221 |
+
+They don't overlap, but the gap is **6 units**: a hard threshold in the middle
+would be the switch section 3 says not to use. Scoring is therefore continuous
+between the two references, and a half-executed slice earns a half mark.
+
+It has to be read *before* the simulation step: after impact the engine has
+already reflected and damped `vz`, so reading it afterwards would no longer say
+how hard the ball arrived.
+
+### 12. Scoring without diagnosing teaches half the lesson
+
+Training gave a grade and points and stayed silent on the reason. Every attempt
+now closes with a diagnosis — too short, too deep, wide, in but bouncing too high,
+smash defended, arrived on empty — and the audit checks two things: that **no
+attempt closes without one**, and that every key exists in both languages. `t()`
+returns the raw key when a translation is missing, so a hole would reach the
+screen as `drillWhyWide`.
+
+In the same pass: the record now survives the session, in `localStorage` and **per
+exercise** (target-practice and rally scores aren't comparable); difficulty is
+chosen on the screen instead of being silently inherited from the quick match; and
+there is a **serve** exercise, which uses the engine's `prepareServe` and shows
+double faults — the path that was unreachable before execution spread existed.
+
+Persistence lives in `ui.js`, not `drill.js`: that file must stay runnable without
+a DOM, because the audit imports it in Node where `localStorage` doesn't exist.
+
 ---
 
 ## When the test harness lies
@@ -201,6 +296,7 @@ node scripts/smash-input-audit.mjs        # double tap, downgrades, serve return
 node scripts/difficulty-audit.mjs         # the three-difficulty ladder
 node scripts/controller-tactics-audit.mjs # technical shots, movement, tactics
 node scripts/career-audit.mjs             # reachable stars, ramp, farming, finale
+node scripts/drill-audit.mjs              # training runs on the game engine
 node scripts/module-contract-audit.mjs    # every import finds its export
 node scripts/modules-audit.mjs            # every module evaluates without throwing
 ```
@@ -248,13 +344,13 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Modules carry a version query (`?v=…`) for cache busting. **If you change one, all 23
+Modules carry a version query (`?v=…`) for cache busting. **If you change one, all 25
 occurrences** in `index.html` and `js/*.js` must be updated: leave them out of sync and the
 browser can serve an old module alongside a new one — and an import that can't find its
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260813-outfit-alpha-v30" index.html js/*.js styles.css   # must total 23
+grep -c "20260814-arena-safe-zones-v37" index.html js/*.js styles.css   # must total 25
 ```
 
 ---

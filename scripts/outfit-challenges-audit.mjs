@@ -6,7 +6,7 @@ import {
   CAREER_POINTS_TO_WIN,
   isUnlocked,
   outfitChallengeMet,
-} from "../js/data.js?v=20260813-arena-expansion-v32";
+} from "../js/data.js?v=20260814-arena-safe-zones-v37";
 
 /**
  * Le sfide dei completi. Non verifica che il codice giri: verifica che le sfide

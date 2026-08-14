@@ -1309,8 +1309,21 @@ kbd {
    perche' e' lo stesso gesto — scegliere fra alternative esclusive — e imparare
    due controlli diversi per la stessa cosa non ha motivo. */
 .drill-seg {
-  max-width: 460px;
-  margin: 0 auto 14px;
+  max-width: 520px;
+  margin: 0 auto 10px;
+}
+
+/* La difficolta' e' una scelta secondaria rispetto all'esercizio: resta la stessa
+   griglia ma piu' piccola e smorzata, cosi' la gerarchia si legge. */
+.drill-seg--difficulty {
+  max-width: 420px;
+  margin-bottom: 16px;
+  opacity: 0.86;
+}
+
+.drill-seg--difficulty button {
+  height: 34px;
+  font-size: 0.62rem;
 }
 
 .drill-hud {

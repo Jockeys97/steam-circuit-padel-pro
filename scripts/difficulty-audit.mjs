@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { createMatchState, hitBall, performServe, updateMatch } from "../js/game.js?v=20260813-outfit-alpha-v30";
-import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260813-outfit-alpha-v30";
+import { createMatchState, hitBall, performServe, updateMatch } from "../js/game.js?v=20260814-arena-safe-zones-v37";
+import { AI_OPPONENTS, ARENAS, ATHLETES } from "../js/data.js?v=20260814-arena-safe-zones-v37";
 
 const EMPTY_INPUT = {
   moveX: 0,

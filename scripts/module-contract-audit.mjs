@@ -52,10 +52,16 @@ for (const file of jsFiles) moduleExports.set(file, exportsOf(read(path.join("js
 const IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*["']\.\/([A-Za-z0-9_.-]+\.js)(\?v=[^"']*)?["']/g;
 let checked = 0;
 const missing = [];
+const unversioned = [];
 for (const file of jsFiles) {
   const source = read(path.join("js", file));
   for (const m of source.matchAll(IMPORT_RE)) {
-    const [, bindings, target] = m;
+    const [, bindings, target, query] = m;
+    // Un import senza query di versione sfuggiva al controllo di allineamento
+    // qui sotto, che conta solo le query presenti: `drill.js` importava
+    // `./data.js` nudo e il browser ne teneva una seconda istanza separata,
+    // proprio la trappola dell'identita' dei moduli descritta nel README.
+    if (!query) unversioned.push(`${file} importa ${target} senza query di versione`);
     const available = moduleExports.get(target);
     assert(available, `${file} importa da ${target}, che non esiste`);
     for (const part of bindings.split(",")) {
@@ -69,6 +75,7 @@ for (const file of jsFiles) {
   }
 }
 assert.deepEqual(missing, [], `Import senza export corrispondente:\n  ${missing.join("\n  ")}`);
+assert.deepEqual(unversioned, [], `Import locali senza cache busting:\n  ${unversioned.join("\n  ")}`);
 
 // ── La query di versione deve essere una sola ─────────────────────────────
 const VERSION_RE = /\?v=([A-Za-z0-9_.-]+)/g;

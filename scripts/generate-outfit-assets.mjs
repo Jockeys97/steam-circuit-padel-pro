@@ -57,7 +57,9 @@ const athletes = {
     primary: (h, s) => h >= 245 && h <= 292 && s >= 0.28,
     accent: (h, s, v) => h >= 245 && h <= 305 && s >= 0.2 && v >= 0.45,
     source: {
-      idle: "oracolo-idle-unique.webp",
+      // Stesso linguaggio grafico dell'action sheet: la vecchia idle aveva
+      // capelli bianchi e bagliori ciano che sul campo sembravano trasparenza.
+      idle: "oracolo-idle-consistent-v2.webp",
       action: "oracolo-action-unique.webp",
       run: "oracolo-run-unique.webp",
     },
@@ -250,10 +252,13 @@ async function createSheet(athleteId, athlete, variant, sheetName, sourceRelativ
     .extractChannel(0)
     .raw()
     .toBuffer();
+  const targetName = athleteId === "oracolo" && (sheetName === "idle" || sheetName === "back-idle")
+    ? `${sheetName}-v2.webp`
+    : `${sheetName}.webp`;
   await sharp(resizedColor, { raw: { width: targetWidth, height: targetHeight, channels: 3 } })
     .joinChannel(resizedAlpha, { raw: { width: targetWidth, height: targetHeight, channels: 1 } })
     .webp({ lossless: true, effort: 6 })
-    .toFile(path.join(outDir, `${sheetName}.webp`));
+    .toFile(path.join(outDir, targetName));
 }
 
 // Le anteprime vengono mostrate come card grandi, con lo stesso stile di quelle
@@ -392,11 +397,15 @@ async function createPreviews(athleteId, athlete) {
   await Promise.all(tasks);
 }
 
+const athleteFilter = process.argv[2];
+const sheetFilter = process.argv[3];
 for (const [athleteId, athlete] of Object.entries(athletes)) {
-  await createPreviews(athleteId, athlete);
+  if (athleteFilter && athleteId !== athleteFilter) continue;
+  if (!sheetFilter) await createPreviews(athleteId, athlete);
   const athleteVariants = athlete.concepts ? Object.keys(variants) : ["signature", "mythic"];
   for (const variant of athleteVariants) {
     for (const [sheetName, sourceName] of sheets) {
+      if (sheetFilter && sheetName !== sheetFilter) continue;
       const side = sheetName.startsWith("back-") ? "back/" : "";
       const sourceKey = sheetName.replace("back-", "");
       const sourceRelative = athlete.source ? `${side}${athlete.source[sourceKey]}` : sourceName(athleteId);

@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260814-arena-depth-v34";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260814-arena-safe-zones-v37";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260814-arena-depth-v34";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-arena-depth-v34";
-import { setReduceMotion } from "./fx.js?v=20260814-arena-depth-v34";
-import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-arena-depth-v34";
-import { getLang, setLang, t } from "./i18n.js?v=20260814-arena-depth-v34";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-depth-v34";
+} from "./game.js?v=20260814-arena-safe-zones-v37";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-arena-safe-zones-v37";
+import { setReduceMotion } from "./fx.js?v=20260814-arena-safe-zones-v37";
+import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-arena-safe-zones-v37";
+import { getLang, setLang, t } from "./i18n.js?v=20260814-arena-safe-zones-v37";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-safe-zones-v37";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260814-arena-depth-v34";
+} from "./render.js?v=20260814-arena-safe-zones-v37";
 import {
   applyLanguage,
   awardObjectives,
@@ -29,6 +29,8 @@ import {
   bindNavigation,
   collectPrefs,
   currentFixture,
+  drillRecord,
+  saveDrillRecord,
   ensureSeasonObjectives,
   getAiForMatch,
   loadPrefs,
@@ -48,7 +50,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260814-arena-depth-v34";
+} from "./ui.js?v=20260814-arena-safe-zones-v37";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1380,13 +1382,18 @@ function startDrill() {
     ui.drillExercise ?? DRILL_EXERCISES[0].id,
     athlete,
     ui.selectedArena ?? ARENAS[0],
-    getAiForMatch("quick", 0, ui.aiDifficulty),
+    // Difficolta' propria dell'allenamento: prima ereditava in silenzio quella
+    // della partita rapida, e non c'era modo di accorgersene ne' di cambiarla.
+    getAiForMatch("quick", 0, ui.drillDifficulty ?? ui.aiDifficulty),
     {
       playerMate: lineup.playerMate,
       opponent: lineup.opponent,
       opponentMate: lineup.opponentMate,
     },
   );
+  // Il record sopravvive alla sessione, quindi va riportato nello stato: senza
+  // questo la casella "Record" ripartirebbe da zero a ogni apertura.
+  drillState.best = drillRecord(drillState.exercise.id);
   drillLastTime = performance.now();
   drillAccumulator = 0;
   syncDrillChrome();
@@ -1403,6 +1410,10 @@ function syncDrillChrome() {
   if (hint) hint.textContent = t(`drill_${id}_hint`);
   document.querySelectorAll("#drillSeg button").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.value === id);
+  });
+  const difficolta = ui.drillDifficulty ?? ui.aiDifficulty;
+  document.querySelectorAll("#drillDiffSeg button").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.value === difficolta);
   });
   const labels = drillState ? drillMetrics(drillState) : [];
   labels.forEach((metric, index) => {
@@ -1429,9 +1440,12 @@ function drawDrillOverlay(now) {
     c.font = "30px 'Lilita One', sans-serif";
     c.textAlign = "center";
     c.fillText(t("drillReady"), cx, 430);
+    // Solo il richiamo breve: il suggerimento dettagliato vive nella riga sotto
+    // il campo, dove l'HTML lo manda a capo. Qui, disegnato su una riga sola,
+    // attraversava il campo e passava sopra i giocatori.
     c.fillStyle = "rgba(255,255,255,0.85)";
     c.font = "15px 'Lilita One', sans-serif";
-    c.fillText(t(`drill_${d.exercise.id}_hint`), cx, 466);
+    c.fillText(t("drillHint1"), cx, 466);
   }
 
   // Il misuratore di carica e la finestra di timing non si disegnano piu' qui:
@@ -1449,6 +1463,13 @@ function drawDrillOverlay(now) {
     c.fillStyle = "#ffffff";
     c.font = "18px 'Lilita One', sans-serif";
     c.fillText(`${t("drillPoints")} +${d.points}`, cx, 414);
+    // Perche' e' andata cosi'. Prima il riepilogo dava voto e punti e taceva sul
+    // motivo: un esercizio che valuta senza diagnosticare insegna a metà.
+    if (d.diagnosis) {
+      c.fillStyle = "rgba(255,255,255,0.82)";
+      c.font = "15px 'Nunito', sans-serif";
+      c.fillText(t(d.diagnosis), cx, 444);
+    }
   }
 }
 
@@ -1604,6 +1625,18 @@ function bindDrillSelector() {
       else syncDrillChrome();
     });
   });
+  // Cambiare difficolta' ricostruisce lo stato: il profilo dell'avversario entra
+  // nelle racchette quando nascono, quindi non si puo' sostituire a esercizio in
+  // corso — e' lo stesso motivo per cui la formazione si risolve prima del match.
+  document.querySelectorAll("#drillDiffSeg button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const value = button.dataset.value;
+      if (!value || value === (ui.drillDifficulty ?? ui.aiDifficulty)) return;
+      ui.drillDifficulty = value;
+      if (drillState) startDrill();
+      else syncDrillChrome();
+    });
+  });
 }
 
 function drillLoop(now, generation) {
@@ -1622,6 +1655,9 @@ function drillLoop(now, generation) {
     // I comandi a colpo singolo valgono un passo solo, altrimenti lo stesso
     // colpo si accoda piu' volte nello stesso fotogramma.
     if (steps === 1) input = consumeOneShot(input);
+  }
+  if (drillState.score > drillState.best) {
+    drillState.best = saveDrillRecord(drillState.exercise.id, drillState.score);
   }
   drillMetrics(drillState).forEach((metric, index) => {
     const box = document.getElementById(`drillValue${index}`);

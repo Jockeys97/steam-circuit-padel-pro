@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { ATHLETES, ARENAS, BALANCE } from "../js/data.js?v=20260813-outfit-alpha-v30";
-import { DEMO_CONTENT, demoFilter } from "../js/build.js?v=20260813-outfit-alpha-v30";
+import { ATHLETES, ARENAS, BALANCE } from "../js/data.js?v=20260814-arena-safe-zones-v37";
+import { DEMO_CONTENT, demoFilter } from "../js/build.js?v=20260814-arena-safe-zones-v37";
 
 // `demoFilter` guarda IS_DEMO, che fuori dal browser e' false. Qui si verifica
 // il contenuto dichiarato, non il rilevamento: quello dipende dal contesto.
