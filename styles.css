@@ -2083,7 +2083,10 @@ kbd {
 .match-setup {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
+  /* Ogni cornice alta quanto il suo contenuto. Con `stretch` la difficolta' —
+     una riga di pulsanti — veniva tirata all'altezza della lunghezza partita,
+     che ne occupa due, e si ritrovava con un vuoto dentro. */
+  align-items: start;
   gap: 18px;
   width: min(760px, 100%);
   margin: 26px auto 0;
@@ -2134,10 +2137,15 @@ kbd {
   content: "";
 }
 
-/* Il segmentato spinto in fondo: i due gruppi restano allineati fra loro anche
-   se un'etichetta va a capo. */
+/* Il segmentato sta sotto la sua etichetta e basta.
+   Prima era spinto in fondo con `margin-top: auto`, per tenere i due segmentati
+   allineati fra loro quando un'etichetta andava a capo. Da quando la lunghezza
+   partita occupa due righe i due non possono piu' essere allineati — hanno
+   altezze diverse — e quella regola lasciava la difficolta' incollata in fondo
+   con un buco fra il titolo e i pulsanti. Meglio lo spazio in fondo alla
+   cornice, che non separa niente, che in mezzo. */
 .match-setup .segmented {
-  margin-top: auto;
+  margin-top: 0;
 }
 
 .setup-group__hint {
@@ -3240,6 +3248,7 @@ body.mode-colorblind .hero-preview {
 #lengthSeg {
   grid-auto-flow: row;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: start;
 }
 
 @media (max-width: 720px) {
