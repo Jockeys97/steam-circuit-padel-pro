@@ -89,6 +89,11 @@ export const BALANCE = {
   basePaddleWidth: 112,
   // Fascia di contatto, in multipli della larghezza della racchetta.
   playerContactReach: 0.66,
+  // Profondita' della finestra, in multipli dell'allungo. Il giocatore piu'
+  // stretto dell'IA: e' lui che deve posizionarsi, non l'avversario che deve
+  // perdonare.
+  playerDepthReach: 1.0,
+  aiDepthReach: 1.3,
   aiContactReachBase: 0.44,
   aiContactReachSkill: 0.34,
   hitCooldownPlayer: 0.18,

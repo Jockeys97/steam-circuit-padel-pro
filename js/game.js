@@ -774,7 +774,14 @@ function canHit(paddle, ball) {
   // The returner must let a serve bounce in the diagonal service box.
   if (ball.serveInFlight || ball.netFaultOwner) return false;
   const withinX = Math.abs(ball.x - paddle.x) < contactWidth(paddle, ball);
-  const withinY = Math.abs(ball.y - paddle.y) < paddle.reach * 1.3;
+  // Profondita' della finestra di contatto. Era 1,3 dell'allungo per tutti, e
+  // in pixel faceva 134 su una meta' campo profonda 254: si colpiva una palla
+  // lontana piu' di mezza profondita' di campo. In orizzontale la fascia e' il
+  // 22% della larghezza, in verticale era il 53% — di qui la sensazione che il
+  // colpo venisse dato buono anche stando distanti.
+  const withinY = Math.abs(ball.y - paddle.y) < paddle.reach * (paddle.isPlayer
+    ? BALANCE.playerDepthReach
+    : BALANCE.aiDepthReach);
   const side = paddle.isPlayer ? "player" : "ai";
   return withinX && withinY && ballPlayableDirection(side, ball)
     && ball.z <= BALANCE.playableHitHeight;
