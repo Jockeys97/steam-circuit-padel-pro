@@ -462,9 +462,15 @@ function challengeLabel(challenge) {
 }
 
 function lockLabel(unlock) {
+  // Il singolare va scelto: "1 trofei" si leggeva nella griglia delle arene e
+  // sulle card degli atleti bloccati.
   const parts = [];
-  if (unlock?.trophies) parts.push(t("unlockTrophies", { n: unlock.trophies }));
-  if (unlock?.stars) parts.push(t("unlockStars", { n: unlock.stars }));
+  if (unlock?.trophies) {
+    parts.push(t("unlockTrophies", { n: unlock.trophies, word: t(unlock.trophies === 1 ? "trophyOne" : "trophyMany") }));
+  }
+  if (unlock?.stars) {
+    parts.push(t("unlockStars", { n: unlock.stars, word: t(unlock.stars === 1 ? "starOne" : "starMany") }));
+  }
   return parts.join(" · ");
 }
 
@@ -858,47 +864,102 @@ export function renderAthletes(onSelect, selectedId = null) {
 }
 
 /**
- * Tutti gli obiettivi del guardaroba in un posto solo.
+ * Tutto quello che si puo' sbloccare, in un posto solo.
  *
- * La sfida era gia' scritta sulla card di ogni completo bloccato, ma dentro il
- * guardaroba del suo atleta: per vederle tutte e venti bisognava aprire sei
- * guardaroba, e nessuno lo fa. Un elenco spuntabile invece si legge in dieci
- * secondi ed e' quello che fa venire voglia di rigiocare — si vede cosa manca.
+ * Le condizioni erano gia' scritte, ma sparse dove servivano: la sfida di un
+ * completo sulla sua card nel guardaroba, il costo di un atleta sulla card
+ * bloccata nel selettore, quello di un'arena nella griglia delle arene. Per
+ * sapere cosa restava da prendere bisognava girare quattro schermate, e nessuno
+ * lo fa: il gioco aveva una lista di obiettivi che non si poteva leggere.
  *
- * Gli atleti non ancora sbloccati restano visibili con le loro sfide: sapere
- * cosa c'e' dopo vale piu' che nasconderlo.
+ * Tre sezioni perche' sono tre economie diverse e conviene che si vedano tali:
+ * i personaggi e le arene si comprano con la progressione — stelle e trofei — i
+ * costumi si vincono con una prova sul campo.
  */
 export function renderChallenges() {
   const board = document.getElementById("challengeBoard");
   if (!board) return;
-  const vinti = ui.career.outfitsWon ?? {};
-  const tutti = ATHLETES.flatMap((atleta) => outfitsForAthlete(atleta.id).filter((o) => o.challenge));
-  const fatti = tutti.filter((o) => vinti[o.unlockKey] || ui.career.unlockAll).length;
+  const career = ui.career;
+  const vinti = career.outfitsWon ?? {};
+  const tutto = career.unlockAll === true;
 
-  board.innerHTML = `
-    <p class="challenge-board__count">${t("challengeCount", { done: fatti, total: tutti.length })}</p>
-    ${ATHLETES.map((atleta) => {
-      const completi = outfitsForAthlete(atleta.id).filter((o) => o.challenge);
-      if (!completi.length) return "";
-      const bloccato = !isUnlocked(atleta, ui.career);
-      return `
-        <section class="challenge-group">
-          <h3 style="color:${atleta.color}">${t(`athlete_${atleta.id}_name`)}
-            <small>${bloccato ? t("challengeLockedAthlete") : t(`athlete_${atleta.id}_role`)}</small>
-          </h3>
-          ${completi.map((completo) => {
-            const fatto = Boolean(vinti[completo.unlockKey]) || ui.career.unlockAll;
-            return `
-              <div class="challenge-row${fatto ? " is-done" : ""}">
-                <span class="challenge-row__mark">${fatto ? "🏅" : "🎯"}</span>
-                <span class="challenge-row__name">${t(completo.nameKey)}</span>
-                <span class="challenge-row__what">${challengeLabel(completo.challenge)}</span>
-                <span class="challenge-row__state">${fatto ? t("challengeDone") : t("challengeTodo")}</span>
-              </div>`;
-          }).join("")}
-        </section>`;
-    }).join("")}
-  `;
+  const riga = ({ fatto, nome, come, ruolo, statoFatto, statoDaFare, colore }) => `
+    <div class="challenge-row${fatto ? " is-done" : ""}">
+      <span class="challenge-row__mark">${fatto ? "🏅" : "🎯"}</span>
+      <span class="challenge-row__name"${colore ? ` style="color:${colore}"` : ""}>${nome}${ruolo ? ` <small>${ruolo}</small>` : ""}</span>
+      <span class="challenge-row__what">${come}</span>
+      <span class="challenge-row__state">${fatto ? statoFatto : statoDaFare}</span>
+    </div>`;
+
+  // Quanto manca, non solo quanto costa: "6 stelle" e' un prezzo, "4/6 stelle" e'
+  // un obiettivo. La frazione tiene insieme requisito e progresso — appendere
+  // i due totali in fondo ("5 trofei · 18 stelle · ne hai 1 · ne hai 4") li
+  // staccava da cio' a cui si riferivano.
+  const quanti = (avuti, servono, unoKey, tantiKey) =>
+    `${Math.min(avuti, servono)}/${servono} ${t(servono === 1 ? unoKey : tantiKey)}`;
+  const costo = (unlock) => {
+    const parti = [];
+    if (unlock?.trophies) parti.push(`🏆 ${quanti(career.trophies ?? 0, unlock.trophies, "trophyOne", "trophyMany")}`);
+    if (unlock?.stars) parti.push(`⭐ ${quanti(career.stars ?? 0, unlock.stars, "starOne", "starMany")}`);
+    return parti.join(" · ");
+  };
+
+  const sezione = (titolo, fatti, totale, corpo) => `
+    <section class="challenge-section">
+      <h2>${titolo} <span class="challenge-section__count">${fatti}/${totale}</span></h2>
+      ${corpo}
+    </section>`;
+
+  // --- personaggi ---
+  const atletiSbloccabili = ATHLETES.filter((a) => a.unlock);
+  const atletiFatti = atletiSbloccabili.filter((a) => isUnlocked(a, career)).length;
+  const bloccoAtleti = atletiSbloccabili.map((atleta) => riga({
+    fatto: isUnlocked(atleta, career),
+    nome: t(`athlete_${atleta.id}_name`),
+    ruolo: t(`athlete_${atleta.id}_role`),
+    come: costo(atleta.unlock),
+    statoFatto: t("challengeUnlocked"),
+    statoDaFare: t("challengeLocked"),
+    colore: atleta.color,
+  })).join("");
+
+  // --- costumi ---
+  const completi = ATHLETES.flatMap((a) => outfitsForAthlete(a.id).filter((o) => o.challenge));
+  const completiFatti = completi.filter((o) => tutto || vinti[o.unlockKey]).length;
+  const bloccoCompleti = ATHLETES.map((atleta) => {
+    const suoi = outfitsForAthlete(atleta.id).filter((o) => o.challenge);
+    if (!suoi.length) return "";
+    return `
+      <div class="challenge-group">
+        <h3 style="color:${atleta.color}">${t(`athlete_${atleta.id}_name`)}
+          <small>${isUnlocked(atleta, career) ? t(`athlete_${atleta.id}_role`) : t("challengeLockedAthlete")}</small>
+        </h3>
+        ${suoi.map((completo) => riga({
+          fatto: tutto || Boolean(vinti[completo.unlockKey]),
+          nome: t(completo.nameKey),
+          come: challengeLabel(completo.challenge),
+          statoFatto: t("challengeDone"),
+          statoDaFare: t("challengeTodo"),
+        })).join("")}
+      </div>`;
+  }).join("");
+
+  // --- arene ---
+  const areneSbloccabili = ARENAS.filter((a) => a.unlock);
+  const areneFatte = areneSbloccabili.filter((a) => isUnlocked(a, career)).length;
+  const bloccoArene = areneSbloccabili.map((arena) => riga({
+    fatto: isUnlocked(arena, career),
+    nome: t(`arena_${arena.id}_name`),
+    come: costo(arena.unlock),
+    statoFatto: t("challengeUnlocked"),
+    statoDaFare: t("challengeLocked"),
+    colore: arena.palette?.accent,
+  })).join("");
+
+  board.innerHTML =
+    sezione(t("sectionAthletes"), atletiFatti, atletiSbloccabili.length, bloccoAtleti)
+    + sezione(t("sectionOutfits"), completiFatti, completi.length, bloccoCompleti)
+    + sezione(t("sectionArenas"), areneFatte, areneSbloccabili.length, bloccoArene);
 }
 
 export function renderArenas(onSelect) {
