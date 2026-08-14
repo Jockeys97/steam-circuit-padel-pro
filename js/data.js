@@ -85,7 +85,20 @@ export const BALANCE = {
   netClearance: 42,
   playableHitHeight: 108,
   serviceBounceTime: 0.92,
-  basePaddleSpeed: 498,
+  // Velocita' del giocatore, in pixel al secondo. Era 498, e il problema non era
+  // il numero ma il suo rapporto con la palla: un drive a piena carica viaggia a
+  // 520 px/s di media e uno smash a 580, quindi il colpo piu' forte del gioco
+  // superava chi corre del 9% e lo smash del 21%. Un drive piano (212) e un
+  // pallonetto (155) andavano a un terzo della velocita' di chi doveva
+  // rincorrerli: si arrivava ovunque camminando, e La Pantera a 647 px/s era
+  // piu' veloce di un drive tirato.
+  //
+  // A 360 i rapporti diventano 1,50x sul drive pieno e 1,68x sullo smash: un
+  // colpo forte puo' batterti, uno piano no. Ed e' quello che mette la forbice
+  // dell'IA — da 319 del Rivale a 429 della Leggenda — a cavallo di quella degli
+  // atleti, invece che tutta sotto: prima si era piu' veloci di ogni avversario,
+  // Leggenda compresa, dall'11% al 51%.
+  basePaddleSpeed: 360,
   basePaddleWidth: 112,
   // Fascia di contatto, in multipli della larghezza della racchetta.
   playerContactReach: 0.66,
