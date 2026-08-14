@@ -2,6 +2,8 @@
 
 # Steam Circuit Padel Pro
 
+[![audit](https://github.com/Jockeys97/steam-circuit-padel-pro/actions/workflows/audit.yml/badge.svg)](https://github.com/Jockeys97/steam-circuit-padel-pro/actions/workflows/audit.yml)
+
 A steampunk arcade padel game in HTML5 Canvas. Playable in the browser, no install.
 
 **Zero dependencies**: no `package.json`, no npm, no bundler. 8,500 lines of plain
