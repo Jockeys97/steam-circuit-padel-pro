@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
+import { ATHLETES, ARENAS, AI_OPPONENTS, ATHLETE_OUTFITS, OBJECTIVE_DEFS } from "../js/data.js?v=20260814-feedback-confirm-v39";
+
 /**
  * Le due lingue devono dire le stesse cose.
  *
@@ -63,8 +65,34 @@ const usate = new Set([
 const mancanti = [...usate].filter((k) => !chiavi.it.has(k) && !PREFISSI_DINAMICI.some((p) => k.startsWith(p)));
 assert.deepEqual(mancanti, [], `Chiavi usate ma mai definite: ${mancanti.join(", ")}`);
 
+// Le chiavi composte a runtime — `ai_${id}_name`, `athlete_${id}_desc` — erano
+// escluse dal controllo qui sopra, perche' cercarle nel testo non ha senso: nel
+// codice non compaiono mai per intero. Ma sono proprio quelle che nessuno
+// controlla a occhio, e infatti `ai_leggenda_name` e' mancata per giorni: la
+// Leggenda si presentava a schermo come "AI_LEGGENDA_NAME" durante la partita.
+//
+// La soluzione non e' escluderle, e' generarle: gli identificativi stanno nei
+// dati, quindi le chiavi attese si costruiscono e si verificano tutte.
+const attese = [];
+for (const atleta of ATHLETES) {
+  for (const suffisso of ["name", "role", "desc", "special"]) attese.push(`athlete_${atleta.id}_${suffisso}`);
+}
+for (const arena of ARENAS) {
+  for (const suffisso of ["name", "desc"]) attese.push(`arena_${arena.id}_${suffisso}`);
+}
+for (const avversario of AI_OPPONENTS) attese.push(`ai_${avversario.id}_name`);
+for (const lista of Object.values(ATHLETE_OUTFITS)) {
+  for (const completo of lista) if (completo.nameKey) attese.push(completo.nameKey);
+}
+for (const id of Object.keys(OBJECTIVE_DEFS)) attese.push(`obj_${id}`);
+
+const composteMancanti = attese.filter((k) => !chiavi.it.has(k));
+assert.deepEqual(composteMancanti, [],
+  `Chiavi composte a runtime e mai definite — escono a schermo cosi' come sono: ${composteMancanti.join(", ")}`);
+
 console.log(JSON.stringify({
   chiavi: chiavi.it.size,
   usateEsplicitamente: usate.size,
+  composteVerificate: attese.length,
   lingue: 2,
 }, null, 2));
