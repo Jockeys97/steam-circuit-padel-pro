@@ -1,4 +1,4 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-arena-expansion-v32";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-arena-expansion-v32";
 import {
   createMatchState,
   resetReplayBuffer,
@@ -872,9 +872,11 @@ function startMatch() {
   matchState.opponentMateAthlete = lineup.opponentMate;
   matchState.pvpAthlete = matchState.opponentAthlete;
   matchState.controlMode = ui.controlMode;
-  if (ui.selectedMode === "quick" && ui.matchLength !== "set") {
-    matchState.scoring = "points";
-    matchState.pointsToWin = ui.matchLength === "points21" ? 21 : 11;
+  if (ui.selectedMode === "quick") {
+    // Il formato arriva tutto da `MATCH_FORMATS`: prima la scelta era un `if`
+    // sui due formati a punti e tutto il resto ricadeva sul set pieno, quindi
+    // aggiungerne uno voleva dire toccare questa riga invece che una tabella.
+    Object.assign(matchState, MATCH_FORMATS[ui.matchLength] ?? MATCH_FORMATS.points11);
   } else if (ui.selectedMode === "career") {
     matchState.scoring = "points";
     matchState.pointsToWin = CAREER_POINTS_TO_WIN;
@@ -1696,7 +1698,7 @@ if (["assisted", "semi", "manual"].includes(prefs.controlMode)) ui.controlMode =
 if (Number.isFinite(prefs.gamepadDeadzone)) ui.gamepadDeadzone = Math.min(0.3, Math.max(0.08, prefs.gamepadDeadzone));
 if (typeof prefs.vibration === "boolean") ui.vibration = prefs.vibration;
 if (["easy", "medium", "hard", "legend"].includes(prefs.aiDifficulty)) ui.aiDifficulty = prefs.aiDifficulty;
-if (["points11", "points21", "set"].includes(prefs.matchLength)) ui.matchLength = prefs.matchLength;
+if (MATCH_FORMAT_IDS.includes(prefs.matchLength)) ui.matchLength = prefs.matchLength;
 if (Number.isFinite(prefs.volume)) setVolume(Math.min(1, Math.max(0, prefs.volume)));
 if (typeof prefs.reduceMotion === "boolean") ui.reduceMotion = prefs.reduceMotion;
 if (typeof prefs.colorblind === "boolean") ui.colorblind = prefs.colorblind;
@@ -2003,7 +2005,21 @@ window.addEventListener("keydown", (event) => {
       return;
     }
   }
-  const menuActive = !matchState?.running || matchState?.paused;
+  // L'allenamento e' gioco, non un menu. `menuActive` guardava solo `matchState`,
+  // che durante l'allenamento non e' in corso: la condizione era quindi vera per
+  // tutto l'esercizio, e il ramo qui sotto intercettava spazio e frecce con un
+  // `return` prima di `keys.add(key)`. Lo spazio premeva il bottone col fuoco e
+  // le frecce spostavano il fuoco del menu — al campo non arrivava un comando.
+  const drillActive = Boolean(drillState?.running);
+  if (drillActive && key === "escape") {
+    // L'uscita deve fermare anche il ciclo, altrimenti l'esercizio continua a
+    // girare invisibile dietro il menu.
+    event.preventDefault();
+    stopDrill();
+    showScreen("menu");
+    return;
+  }
+  const menuActive = (!matchState?.running || matchState?.paused) && !drillActive;
   if (menuActive) {
     if (key === "arrowup" || key === "arrowdown" || key === "arrowleft" || key === "arrowright") {
       event.preventDefault();

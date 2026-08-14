@@ -1,7 +1,7 @@
-import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260813-outfit-alpha-v30";
-import { clamp } from "./render.js?v=20260813-outfit-alpha-v30";
-import { sfx } from "./audio.js?v=20260813-outfit-alpha-v30";
-import { t } from "./i18n.js?v=20260813-outfit-alpha-v30";
+import { BALANCE, COURT, EVENT_LINES, ROSTER_AVERAGE } from "./data.js?v=20260813-arena-expansion-v32";
+import { clamp } from "./render.js?v=20260813-arena-expansion-v32";
+import { sfx } from "./audio.js?v=20260813-arena-expansion-v32";
+import { t } from "./i18n.js?v=20260813-arena-expansion-v32";
 import {
   emitBurst,
   emitDust,
@@ -10,7 +10,7 @@ import {
   isReduceMotion,
   resetFx,
   updateFx,
-} from "./fx.js?v=20260813-outfit-alpha-v30";
+} from "./fx.js?v=20260813-arena-expansion-v32";
 
 /**
  * Generatore pseudocasuale tenuto DENTRO lo stato. Serve a tre cose: rendere la
@@ -1918,23 +1918,44 @@ function gameWon(points, opponent) {
   return points >= 4 && points - opponent >= 2;
 }
 
+/**
+ * Il formato della partita, in un posto solo.
+ *
+ * Erano numeri fissi dentro `finishGame` e `finishSet`: sei game per set,
+ * margine di due, tie-break sul 6-6, e i set da vincere dedotti dalla modalita'.
+ * Bastavano finche' i formati erano due; per i formati brevi del padel — al
+ * meglio di tre o di cinque game — servono parametri. I valori qui sotto sono
+ * esattamente quelli di prima, quindi una partita che non li imposta si comporta
+ * come si e' sempre comportata.
+ */
+function matchFormat(state) {
+  return {
+    gamesToWin: state.gamesToWin ?? 6,
+    gameMargin: state.gameMargin ?? 2,
+    // `null` significa nessun tie-break: nei formati brevi il margine e' uno e
+    // il set si chiude al primo game utile, quindi il 6-6 non si presenta.
+    tieBreakAt: state.tieBreakAt === undefined ? 6 : state.tieBreakAt,
+    setsToWin: state.setsToWin ?? (state.mode === "tournament" ? 2 : 1),
+  };
+}
+
 function finishSet(state, winner) {
   state.sets[winner] += 1;
   state.games = { player: 0, ai: 0 };
   state.tieBreak = false;
   state.tieBreakPoints = { player: 0, ai: 0 };
   addEvent(state, winner === "player" ? t("setToYou") : t("setToCircuit"));
-  const targetSets = state.mode === "tournament" ? 2 : 1;
-  if (state.sets[winner] >= targetSets) state.result = { winner };
+  if (state.sets[winner] >= matchFormat(state).setsToWin) state.result = { winner };
 }
 
 function finishGame(state, winner) {
   state.games[winner] += 1;
   state.points = { player: 0, ai: 0 };
   const loser = other(winner);
-  if (state.games[winner] >= 6 && state.games[winner] - state.games[loser] >= 2) {
+  const { gamesToWin, gameMargin, tieBreakAt } = matchFormat(state);
+  if (state.games[winner] >= gamesToWin && state.games[winner] - state.games[loser] >= gameMargin) {
     finishSet(state, winner);
-  } else if (state.games.player === 6 && state.games.ai === 6) {
+  } else if (tieBreakAt !== null && state.games.player === tieBreakAt && state.games.ai === tieBreakAt) {
     state.tieBreak = true;
     state.tieBreakPoints = { player: 0, ai: 0 };
     addEvent(state, t("tieBreak"));

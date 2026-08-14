@@ -501,6 +501,29 @@ export const ARENAS = [
   },
 ];
 
+/**
+ * I formati di partita della Rapida.
+ *
+ * I due a punti sono la versione arcade, comoda per una partita veloce o per
+ * inseguire una sfida del guardaroba. Gli altri seguono il padel vero: si vince
+ * un game a 4 punti con due di scarto, un set a N game, una partita a N set.
+ *
+ * Nei formati brevi il margine e' uno e non c'e' tie-break: chiedere due game di
+ * scarto su un "al meglio di tre" significherebbe non poterlo vincere 2-1, cioe'
+ * il risultato piu' probabile. Il set pieno resta a sei game, due di scarto e
+ * tie-break sul 6-6, come si gioca davvero.
+ */
+export const MATCH_FORMATS = {
+  points11: { scoring: "points", pointsToWin: 11 },
+  points21: { scoring: "points", pointsToWin: 21 },
+  games3: { scoring: "tennis", gamesToWin: 2, gameMargin: 1, tieBreakAt: null, setsToWin: 1 },
+  games5: { scoring: "tennis", gamesToWin: 3, gameMargin: 1, tieBreakAt: null, setsToWin: 1 },
+  set: { scoring: "tennis", gamesToWin: 6, gameMargin: 2, tieBreakAt: 6, setsToWin: 1 },
+  match2: { scoring: "tennis", gamesToWin: 6, gameMargin: 2, tieBreakAt: 6, setsToWin: 2 },
+};
+
+export const MATCH_FORMAT_IDS = Object.keys(MATCH_FORMATS);
+
 export const AI_OPPONENTS = [
   { id: "rivale", name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
   { id: "ingegnere", name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
