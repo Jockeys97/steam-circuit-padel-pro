@@ -484,10 +484,16 @@ function contactWidth(paddle, ball) {
 }
 
 function responderForecast(paddle, ball) {
-  if (!ballPlayableDirection("player", ball)) return { score: Infinity, reachable: false };
+  // Restituisce `contactX` in tutti i rami, come fa gia' `aiResponderForecast`.
+  // Il valore veniva calcolato e poi buttato: chi leggeva questo oggetto per
+  // posizionarsi trovava `undefined` e propagava un NaN nella coordinata della
+  // racchetta. Le due funzioni sono gemelle e devono avere la stessa forma.
+  if (!ballPlayableDirection("player", ball)) {
+    return { score: Infinity, reachable: false, contactX: paddle.x };
+  }
   const contactY = clamp(paddle.y, COURT.netY + 42, COURT.bottom - 42);
   const time = (contactY - ball.y) / ball.vy;
-  if (time < 0.04 || time > 1.65) return { score: Infinity, reachable: false };
+  if (time < 0.04 || time > 1.65) return { score: Infinity, reachable: false, contactX: paddle.x };
 
   const contactX = reflectedCourtX(ball.x + ball.vx * time);
   const contactZ = Math.max(0, ball.z + ball.vz * time - 0.5 * BALANCE.ballGravity * time * time);
@@ -502,6 +508,7 @@ function responderForecast(paddle, ball) {
   return {
     score: travelTime + lateBy * 3.2 + heightPenalty,
     reachable: lateBy <= 0.1 && contactZ <= BALANCE.playableHitHeight + 12,
+    contactX,
   };
 }
 
