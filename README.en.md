@@ -454,7 +454,7 @@ browser can serve an old module alongside a new one — and an import that can't
 export doesn't degrade, the game simply won't start.
 
 ```bash
-grep -c "20260814-feedback-v38" index.html js/*.js styles.css   # must total 25
+grep -c "20260814-feedback-confirm-v39" index.html js/*.js styles.css   # must total 25
 ```
 
 ---

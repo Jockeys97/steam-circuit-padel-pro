@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-feedback-v38";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, FEEDBACK, FEEDBACK_TOPICS } from "./data.js?v=20260814-feedback-confirm-v39";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260814-feedback-v38";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-feedback-v38";
-import { setReduceMotion } from "./fx.js?v=20260814-feedback-v38";
-import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-feedback-v38";
-import { getLang, setLang, t } from "./i18n.js?v=20260814-feedback-v38";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-feedback-v38";
+} from "./game.js?v=20260814-feedback-confirm-v39";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-feedback-confirm-v39";
+import { setReduceMotion } from "./fx.js?v=20260814-feedback-confirm-v39";
+import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-feedback-confirm-v39";
+import { getLang, setLang, t } from "./i18n.js?v=20260814-feedback-confirm-v39";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-feedback-confirm-v39";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260814-feedback-v38";
+} from "./render.js?v=20260814-feedback-confirm-v39";
 import {
   applyLanguage,
   awardObjectives,
@@ -56,7 +56,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260814-feedback-v38";
+} from "./ui.js?v=20260814-feedback-confirm-v39";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1679,12 +1679,16 @@ function renderFeedback() {
   if (stato) {
     const inCoda = loadFeedbackQueue().filter((e) => !e.sent).length;
     stato.textContent = inCoda ? t("feedbackQueued", { n: inCoda }) : "";
+    stato.classList.remove("feedback__status--sent");
   }
 }
 
 function feedbackStatus(key, params = {}) {
   const stato = feedbackEl("feedbackStatus");
-  if (stato) stato.textContent = t(key, params);
+  if (stato) {
+    stato.textContent = t(key, params);
+    stato.classList.toggle("feedback__status--sent", key === "feedbackSent");
+  }
 }
 
 /** Raccoglie il modulo in una voce di coda, o `null` se manca il messaggio. */
@@ -1746,8 +1750,9 @@ function bindFeedback() {
     feedbackStatus("feedbackSaved");
     renderFeedback();
     const esito = await flushFeedback();
+    let statusKey;
     if (esito.ok && esito.sent) {
-      feedbackStatus("feedbackSent");
+      statusKey = "feedbackSent";
     } else if (esito.reason === "offline" || esito.reason === "rejected") {
       // L'endpoint c'e' ma non ha consegnato: rete assente, funzione non ancora
       // configurata, quota esaurita. Il giocatore non deve restare a mani vuote,
@@ -1756,9 +1761,9 @@ function bindFeedback() {
       const ripiego = feedbackMailto(entry);
       if (ripiego) {
         window.location.href = ripiego;
-        feedbackStatus("feedbackMailOpened");
+        statusKey = "feedbackMailOpened";
       } else {
-        feedbackStatus(esito.reason === "offline" ? "feedbackOffline" : "feedbackLocalOnly");
+        statusKey = esito.reason === "offline" ? "feedbackOffline" : "feedbackLocalOnly";
       }
     } else if (esito.reason === "no-endpoint") {
       // Nessun server a cui parlare. Con un recapito configurato si apre il client
@@ -1768,12 +1773,16 @@ function bindFeedback() {
       const mailto = feedbackMailto(entry);
       if (mailto) {
         window.location.href = mailto;
-        feedbackStatus("feedbackMailOpened");
+        statusKey = "feedbackMailOpened";
       } else {
-        feedbackStatus(await copyFeedback(entry) ? "feedbackCopied" : "feedbackLocalOnly");
+        statusKey = await copyFeedback(entry) ? "feedbackCopied" : "feedbackLocalOnly";
       }
     }
+    // `renderFeedback` aggiorna normalmente lo stato con la coda residua.
+    // La conferma conclusiva va quindi scritta dopo, altrimenti un invio riuscito
+    // verrebbe nascosto subito da una stringa vuota.
     renderFeedback();
+    if (statusKey) feedbackStatus(statusKey);
   });
 
   // `data-action` e' riservato alla tabella di navigazione: usarlo per un'azione
@@ -2208,6 +2217,15 @@ document.addEventListener("pointerover", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  // Un campo di testo fa parte del modulo, non della navigazione del menu. Senza
+  // questa uscita, lo spazio della textarea attivava il bottone "Indietro" che
+  // aveva il fuoco e riportava al menu principale invece di scrivere uno spazio.
+  const target = event.target;
+  const isTextEntry = target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || target?.isContentEditable;
+  if (isTextEntry) return;
   initAudio();
   const key = event.key.toLowerCase();
   if ([" ", "meta", "alt", "tab", "z", "arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) {

@@ -3371,6 +3371,35 @@ body.mode-colorblind .hero-preview {
   color: var(--green);
 }
 
+/* La consegna riuscita merita una conferma distinta dalla semplice coda locale:
+   il messaggio dice esplicitamente che e' arrivato e il segno di spunta la rende
+   riconoscibile a colpo d'occhio. */
+.feedback__status--sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(83, 255, 168, 0.58);
+  border-radius: 8px;
+  background: rgba(31, 183, 111, 0.16);
+  color: #b9ffe0;
+}
+
+.feedback__status--sent::before {
+  content: "✓";
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #072219;
+  font-size: 0.76rem;
+  font-weight: 1000;
+}
+
 @media (max-width: 560px) {
   .feedback-topics {
     grid-template-columns: repeat(2, minmax(0, 1fr));

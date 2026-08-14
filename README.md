@@ -463,7 +463,7 @@ disallineate il browser può servire un modulo vecchio insieme a uno nuovo, e un
 che non trova il proprio export non degrada — il gioco non parte.
 
 ```bash
-grep -c "20260814-feedback-v38" index.html js/*.js styles.css   # deve dare 25 in totale
+grep -c "20260814-feedback-confirm-v39" index.html js/*.js styles.css   # deve dare 25 in totale
 ```
 
 ---

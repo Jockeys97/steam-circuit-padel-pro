@@ -1,5 +1,5 @@
-import { BALANCE, COURT, AI_OPPONENTS } from "./data.js?v=20260814-feedback-v38";
-import { createMatchState, hitBall, prepareServe, updateMatch } from "./game.js?v=20260814-feedback-v38";
+import { BALANCE, COURT, AI_OPPONENTS } from "./data.js?v=20260814-feedback-confirm-v39";
+import { createMatchState, hitBall, prepareServe, updateMatch } from "./game.js?v=20260814-feedback-confirm-v39";
 
 /**
  * Allenamento.
