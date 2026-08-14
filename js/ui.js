@@ -1,8 +1,8 @@
-import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture } from "./data.js?v=20260813-arena-expansion-v32";
-import { getMatchInfo } from "./game.js?v=20260813-arena-expansion-v32";
-import { getVolume, isMuted } from "./audio.js?v=20260813-arena-expansion-v32";
-import { getLang, t } from "./i18n.js?v=20260813-arena-expansion-v32";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-arena-expansion-v32";
+import { ATHLETES, ARENAS, AI_OPPONENTS, COURT, isUnlocked, outfitChallengeMet, seasonObjectives, matchObjective, OBJECTIVE_DEFS, UNLOCK_CODE, outfitsForAthlete, SEASON_METRIC_AGG, emptySeasonProgress, CAREER_MATCHES, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON, careerAiProfile, careerFixture, tournamentFixture } from "./data.js?v=20260814-arena-depth-v34";
+import { getMatchInfo } from "./game.js?v=20260814-arena-depth-v34";
+import { getVolume, isMuted } from "./audio.js?v=20260814-arena-depth-v34";
+import { getLang, t } from "./i18n.js?v=20260814-arena-depth-v34";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-depth-v34";
 
 const PREFS_KEY = "padel.prefs";
 const HISTORY_KEY = "padel.history";
@@ -285,6 +285,11 @@ export function selectableArenas() {
  */
 export function currentFixture() {
   return careerFixture(ui.career.season, ui.career.matchIndex, selectableArenas());
+}
+
+/** Il campo del turno di torneo in corso, deciso dal tabellone. */
+export function currentTournamentFixture() {
+  return tournamentFixture(ui.tournamentRound, selectableArenas());
 }
 
 /**
@@ -971,7 +976,11 @@ export function renderArenas(onSelect) {
   // stesso, quindi era una scelta che il gioco buttava via — lo stesso difetto
   // degli avversari. Le altre arene restano visibili, spente: si vede dove si
   // andra' a giocare nelle prossime giornate.
-  const dettata = ui.selectedMode === "career" ? currentFixture().arena : null;
+  const dettata = ui.selectedMode === "career"
+    ? currentFixture().arena
+    : ui.selectedMode === "tournament"
+      ? currentTournamentFixture().arena
+      : null;
 
   demoFilter(ARENAS, DEMO_CONTENT.arenas).forEach((arena) => {
     const locked = !isUnlocked(arena, ui.career);
@@ -986,11 +995,15 @@ export function renderArenas(onSelect) {
       <div class="arena-card__preview" style="--accent:${arena.palette.accent};background-image:linear-gradient(180deg, transparent 45%, rgba(5, 9, 29, 0.7) 100%),url('${arena.image}')" aria-hidden="true">
         <span>${t(`arena_${arena.id}_name`)}</span>
         ${locked ? `<span class="lock-badge">🔒</span>` : ""}
-        ${dettata && !fuoriGiornata ? `<span class="arena-card__badge">${t("arenaByCalendar")}</span>` : ""}
+        ${dettata && !fuoriGiornata ? `<span class="arena-card__badge">${ui.selectedMode === "tournament" ? t("arenaByBracket") : t("arenaByCalendar")}</span>` : ""}
       </div>
       <div class="arena-card__body">
         <h3>${t(`arena_${arena.id}_name`)}</h3>
-        <p>${locked ? lockLabel(arena.unlock) : fuoriGiornata ? t("arenaOtherMatchday") : t(`arena_${arena.id}_desc`)}</p>
+        <p>${locked
+          ? lockLabel(arena.unlock)
+          : fuoriGiornata
+            ? t(ui.selectedMode === "tournament" ? "arenaOtherRound" : "arenaOtherMatchday")
+            : t(`arena_${arena.id}_desc`)}</p>
       </div>
     `;
     if (fuoriGiornata) {
@@ -1236,7 +1249,12 @@ export function showResult(state, winner) {
       const rival = rivalNarrative(true, state.careerRival);
       message.textContent = careerOutcomeText(state, true) + (rival ? ` ${rival}` : "");
     } else if (state.mode === "tournament" && ui.tournamentRound < 2) {
-      message.textContent = t("tourneyNext", { n: ui.tournamentRound + 1 });
+      // `tournamentRound` e' gia' stato incrementato: l'arena e' quella del turno
+      // che sta per iniziare, e il giocatore non ripassa dalla selezione.
+      message.textContent = t("tourneyNext", {
+        n: ui.tournamentRound,
+        arena: t(`arena_${currentTournamentFixture().arena.id}_name`),
+      });
     } else if (state.mode === "tournament") {
       message.textContent = t("tourneyWin");
     } else {

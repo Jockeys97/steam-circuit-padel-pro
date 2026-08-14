@@ -281,8 +281,8 @@ export const ATHLETES = [
     id: "oracolo",
     name: "L'ORACOLO",
     image: "assets/athletes/oracolo.webp",
-    sprite: "assets/sprites/oracolo-idle-unique.webp",
-    backSprite: "assets/sprites/back/oracolo-idle-unique.webp",
+    sprite: "assets/sprites/oracolo-idle-consistent-v2.webp",
+    backSprite: "assets/sprites/back/oracolo-idle-consistent-v2.webp",
     actionSprite: "assets/sprites/oracolo-action-unique.webp",
     backActionSprite: "assets/sprites/back/oracolo-action-unique.webp",
     runSprite: "assets/sprites/oracolo-run-unique.webp",
@@ -356,9 +356,14 @@ export const ROSTER_AVERAGE = (() => {
  */
 function outfitSpritePaths(athleteId, outfitId) {
   const root = `assets/outfits/${athleteId}/${outfitId}`;
+  // La prima idle dell'Oracolo apparteneva a un concept luminoso differente:
+  // a schermo sembrava semitrasparente quando il motore lasciava corsa/azione.
+  // I nomi v2 evitano inoltre che la cache riproponga quei vecchi fogli.
+  const idleName = athleteId === "oracolo" ? "idle-v2.webp" : "idle.webp";
+  const backIdleName = athleteId === "oracolo" ? "back-idle-v2.webp" : "back-idle.webp";
   return {
-    sprite: `${root}/idle.webp`,
-    backSprite: `${root}/back-idle.webp`,
+    sprite: `${root}/${idleName}`,
+    backSprite: `${root}/${backIdleName}`,
     actionSprite: `${root}/action.webp`,
     backActionSprite: `${root}/back-action.webp`,
     runSprite: `${root}/run.webp`,
@@ -751,6 +756,35 @@ export function careerAiProfile(season, matchIndex) {
  * entrano in calendario, cosi' il calendario non puo' mandarti dove non puoi
  * ancora giocare.
  */
+/**
+ * Il campo di un turno di torneo.
+ *
+ * Il torneo giocava tutti e tre i turni nella stessa arena: si sceglieva una
+ * volta e `rematch` ripartiva senza ripassare dalla selezione. Tre finali di
+ * fila nello stesso campo, e le arene piu' difficili — quelle che costano
+ * trofei e stelle — non comparivano mai in torneo.
+ *
+ * Ora il tabellone viaggia, e sale. Le arene disponibili si ordinano per quanto
+ * costano sbloccarle e i tre turni pescano all'inizio, a meta' e alla fine:
+ * la finale si gioca sempre nel campo piu' prestigioso a cui si ha diritto, che
+ * e' il motivo per cui lo si e' sbloccato.
+ */
+export function tournamentFixture(round, availableArenas = ARENAS) {
+  const pool = (availableArenas.length ? availableArenas : ARENAS)
+    .slice()
+    .sort((a, b) => prestigio(a) - prestigio(b));
+  const turni = 3;
+  const indice = pool.length === 1
+    ? 0
+    : Math.round((Math.min(round, turni - 1) / (turni - 1)) * (pool.length - 1));
+  return { arena: pool[indice], round };
+}
+
+/** Quanto costa sbloccare un'arena: serve solo a ordinarle per prestigio. */
+function prestigio(arena) {
+  return (arena.unlock?.trophies ?? 0) * 10 + (arena.unlock?.stars ?? 0);
+}
+
 export function careerFixture(season, matchIndex, availableArenas = ARENAS) {
   const pool = availableArenas.length ? availableArenas : ARENAS;
   const arena = pool[(season * 3 + matchIndex) % pool.length];

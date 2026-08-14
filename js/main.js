@@ -1,14 +1,14 @@
-import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260813-arena-expansion-v32";
+import { ARENAS, ATHLETES, BALANCE, COURT, MATCH_FORMATS, MATCH_FORMAT_IDS, matchObjective, outfitsForAthlete, CAREER_MATCHES, CAREER_POINTS_TO_WIN, CAREER_PROMOTION_WINS, CAREER_FINAL_SEASON } from "./data.js?v=20260814-arena-depth-v34";
 import {
   createMatchState,
   resetReplayBuffer,
   updateMatch,
-} from "./game.js?v=20260813-arena-expansion-v32";
-import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260813-arena-expansion-v32";
-import { setReduceMotion } from "./fx.js?v=20260813-arena-expansion-v32";
-import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260813-arena-expansion-v32";
-import { getLang, setLang, t } from "./i18n.js?v=20260813-arena-expansion-v32";
-import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260813-arena-expansion-v32";
+} from "./game.js?v=20260814-arena-depth-v34";
+import { getVolume, initAudio, isMuted, music, setMuted, setVolume } from "./audio.js?v=20260814-arena-depth-v34";
+import { setReduceMotion } from "./fx.js?v=20260814-arena-depth-v34";
+import { createDrill, updateDrill, drillMetrics, DRILL_EXERCISES } from "./drill.js?v=20260814-arena-depth-v34";
+import { getLang, setLang, t } from "./i18n.js?v=20260814-arena-depth-v34";
+import { IS_DEMO, DEMO_CONTENT, demoFilter } from "./build.js?v=20260814-arena-depth-v34";
 import {
   drawArena,
   drawActiveIndicator,
@@ -21,7 +21,7 @@ import {
   drawShotFeedback,
   drawTeamGeometry,
   drawTimingHud,
-} from "./render.js?v=20260813-arena-expansion-v32";
+} from "./render.js?v=20260814-arena-depth-v34";
 import {
   applyLanguage,
   awardObjectives,
@@ -36,6 +36,7 @@ import {
   renderArenas,
   awardOutfitChallenges,
   renderAthletes,
+  currentTournamentFixture,
   renderChallenges,
   resolveLineup,
   renderHistory,
@@ -47,7 +48,7 @@ import {
   showScreen,
   ui,
   updateHud,
-} from "./ui.js?v=20260813-arena-expansion-v32";
+} from "./ui.js?v=20260814-arena-depth-v34";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -849,7 +850,14 @@ function startMatch() {
   const athlete = athleteWithOutfit(ui.selectedAthlete ?? ATHLETES[0]);
   // In carriera l'arena arriva dal calendario di stagione, non dal menu: va
   // risolta prima di costruire la partita, perche' il campo entra nella fisica.
-  const fixture = ui.selectedMode === "career" ? currentFixture() : null;
+  // Anche il torneo ha un calendario: i tre turni si giocavano tutti nel campo
+  // scelto una volta sola, perche' `rematch` riparte senza ripassare dalla
+  // selezione delle arene.
+  const fixture = ui.selectedMode === "career"
+    ? currentFixture()
+    : ui.selectedMode === "tournament"
+      ? currentTournamentFixture()
+      : null;
   const arena = fixture?.arena ?? ui.selectedArena ?? ARENAS[0];
   const ai = getAiForMatch(ui.selectedMode, ui.tournamentRound, ui.aiDifficulty);
   const humanMode = ui.selectedMode === "quick" ? (ui.playerMode ?? "solo") : "solo";
