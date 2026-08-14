@@ -1218,8 +1218,17 @@ function chooseComputerShot(state, paddle, profile, contactHeight = 0, aiTiming 
     drive: { depth: 168, lateral: 126, margin: 84, flightTime: 0.98 },
   };
   const setup = shotSetups[kind] ?? shotSetups.drive;
+  // Quanto largo mira, non quanto sbaglia. Erano due cose confuse in una: il
+  // bersaglio stava a `lateral` fisso dal centro — 126 px per il drive su una
+  // semi-larghezza di 400, cioe' il 31% — e l'unica cosa che cambiava con la
+  // bravura era la dispersione, che *cala*. Ne seguiva che la Leggenda fosse
+  // piu' centrale dell'Ingegnere: misurato, i suoi colpi cadevano nel terzo
+  // centrale nel 100% dei casi contro l'83%, e mai uno vicino alla riga.
+  // Adesso l'ampiezza della mira cresce con la difficolta'; la precisione con
+  // cui la rispetta continua a crescere per conto suo.
+  const ampiezza = BALANCE.aiAimWidthBase + profile.skill * BALANCE.aiAimWidthSkill;
   const x = clamp(
-    centerX + sideBias * setup.lateral + (nextRandom(state) - 0.5) * accuracyError,
+    centerX + sideBias * setup.lateral * ampiezza + (nextRandom(state) - 0.5) * accuracyError,
     COURT.left + setup.margin,
     COURT.right - setup.margin,
   );

@@ -149,8 +149,57 @@ const piuFacile = quantoPallonetta(0, COURT.netY + 70);
 assert.ok(aRete > piuFacile + 0.1,
   `Il livello piu' duro deve pallonettare piu' del piu' facile: ${(aRete * 100).toFixed(0)}% contro ${(piuFacile * 100).toFixed(0)}%`);
 
+// --- e deve muovere l'avversario ------------------------------------------
+//
+// Il bersaglio laterale era a distanza fissa dal centro e l'unica cosa che
+// cambiava con la bravura era la dispersione, che cala. Ne seguiva l'assurdo:
+// la Leggenda era piu' centrale dell'Ingegnere — 100% dei rimbalzi nel terzo
+// centrale contro l'83% — perche' colpiva con piu' precisione un bersaglio che
+// stava in mezzo. Un avversario che non ti sposta non e' un avversario difficile.
+
+function scartoDalCentro(aiIndex, quanti = 300) {
+  const centro = (COURT.left + COURT.right) / 2;
+  const semi = (COURT.right - COURT.left) / 2;
+  const scarti = [];
+  for (let i = 0; i < quanti; i += 1) {
+    const state = createMatchState("quick", ATHLETES[0], ARENAS[0], AI_OPPONENTS[aiIndex]);
+    state.rngState = i * 7919 + 21;
+    Object.assign(state, {
+      running: true, serving: false, pointPause: 0, lastHitterSide: "player", rallyHits: 4,
+      aiServiceReceiverKey: null, serviceReceiverKey: null, aiReceiverLocked: false,
+    });
+    Object.assign(state.player, { x: 480, y: 430, controlled: true, isPlayer: true, hitCooldown: 0 });
+    Object.assign(state.playerMate, { x: 670, y: 440, hitCooldown: 0 });
+    Object.assign(state.opponent, { x: 480, y: 150, hitCooldown: 0 });
+    Object.assign(state.opponentMate, { x: 600, y: 220, hitCooldown: 0 });
+    Object.assign(state.ball, { x: 480, y: 170, z: 60, vx: 0, vy: -80, vz: 0, bounces: { player: 0, ai: 0 }, crossedNet: true });
+    hitBall(state, state.opponent, 1, false, true);
+    for (let frame = 0; frame < 3000; frame += 1) {
+      state.aiReactionDelay = 99;
+      updateMatch(state, 1 / 240, VUOTO);
+      if (state.ball.bounces.player) { scarti.push(Math.abs(state.ball.x - centro) / semi); break; }
+      if (state.stats.pointsWon.player || state.stats.pointsWon.ai) break;
+    }
+  }
+  const medio = scarti.reduce((a, b) => a + b, 0) / scarti.length;
+  return { medio, centrale: scarti.filter((v) => v < 0.33).length / scarti.length };
+}
+
+const angoliFacile = scartoDalCentro(0);
+const angoliDuro = scartoDalCentro(AI_OPPONENTS.length - 1);
+
+assert.ok(angoliDuro.medio > 0.45,
+  `Il livello piu' duro deve spostare l'avversario: rimbalzi in media al `
+  + `${(angoliDuro.medio * 100).toFixed(0)}% della semi-larghezza dal centro`);
+assert.ok(angoliDuro.centrale < 0.2,
+  `Non puo' finire tutto nel terzo centrale: ${(angoliDuro.centrale * 100).toFixed(0)}%`);
+assert.ok(angoliDuro.medio > angoliFacile.medio + 0.05,
+  `Chi e' piu' bravo deve angolare di piu', non di meno: facile `
+  + `${(angoliFacile.medio * 100).toFixed(0)}%, duro ${(angoliDuro.medio * 100).toFixed(0)}%`);
+
 console.log(JSON.stringify({
   corto: { attacchiPercento: Math.round(tassoAttacco * 100), avanzataPx: Math.round(corto.avanzata), colpi: corto.colpi },
   profondo: { attacchiPercento: Math.round(tassoProfondo * 100), colpi: profondo.colpi },
   pallonettaContro: { rete: Math.round(aRete * 100), meta: Math.round(aMeta * 100), fondo: Math.round(alFondo * 100) },
+  angoli: { facile: Math.round(angoliFacile.medio * 100), duro: Math.round(angoliDuro.medio * 100) },
 }, null, 2));

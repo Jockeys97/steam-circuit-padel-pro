@@ -166,6 +166,11 @@ export const BALANCE = {
   sprintAccuracyPenalty: 0.12,
   // Quando l'IA alza la palla. Cresce con quanto sono avanti gli avversari e
   // con la difficolta': prendere il centro del campo deve costare.
+  // Ampiezza della mira dell'IA, moltiplicatore sul bersaglio laterale del
+  // colpo. Cresce con la difficolta': un avversario forte non tira piu' preciso
+  // verso il centro, tira piu' lontano dal centro.
+  aiAimWidthBase: 0.8,
+  aiAimWidthSkill: 1.4,
   aiLobBase: 0.05,
   aiLobForward: 0.15,
   aiLobSkill: 0.62,
