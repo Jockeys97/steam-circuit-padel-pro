@@ -63,6 +63,24 @@ const inesistenti = [...aperte].filter((a) => !schermate.includes(a));
 assert.deepEqual(inesistenti, [],
   `Il codice apre schermate che non esistono nel markup: ${inesistenti.join(", ")}`);
 
+// Il registro `screens` e' l'anello fra i due: `showScreen` spegne tutte le
+// schermate che conosce e accende quella richiesta, quindi una chiave mancante
+// non da' errore — lascia semplicemente la pagina vuota. E' successo con la
+// schermata Obiettivi: markup a posto, gestore a posto, `showScreen("challenges")`
+// chiamato, e cliccando non appariva niente. I due controlli qui sopra non lo
+// vedevano, perche' guardavano gli estremi e non l'anello in mezzo.
+const registro = ui.match(/const screens = \{(.*?)\n\};/s);
+assert.ok(registro, "Registro `screens` non trovato in ui.js");
+const registrate = new Set([...registro[1].matchAll(/\n {2}([A-Za-z][A-Za-z0-9]*):/g)].map((m) => m[1]));
+
+const nonRegistrate = schermate.filter((s) => !registrate.has(s));
+assert.deepEqual(nonRegistrate, [],
+  `Schermate nel markup ma assenti dal registro: cliccarle lascia la pagina vuota (${nonRegistrate.join(", ")})`);
+
+const registrateInutili = [...registrate].filter((r) => !schermate.includes(r));
+assert.deepEqual(registrateInutili, [],
+  `Il registro elenca schermate che non esistono: ${registrateInutili.join(", ")}`);
+
 console.log(JSON.stringify({
   azioni: azioni.size,
   gestori: gestori.size,

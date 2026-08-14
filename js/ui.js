@@ -235,6 +235,7 @@ const screens = {
   arena: document.getElementById("screen-arena"),
   help: document.getElementById("screen-help"),
   history: document.getElementById("screen-history"),
+  challenges: document.getElementById("screen-challenges"),
   profile: document.getElementById("screen-profile"),
   drill: document.getElementById("screen-drill"),
   settings: document.getElementById("screen-settings"),
