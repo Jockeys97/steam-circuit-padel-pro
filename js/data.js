@@ -98,7 +98,11 @@ export const BALANCE = {
   // dell'IA — da 319 del Rivale a 429 della Leggenda — a cavallo di quella degli
   // atleti, invece che tutta sotto: prima si era piu' veloci di ogni avversario,
   // Leggenda compresa, dall'11% al 51%.
-  basePaddleSpeed: 360,
+  // Scalati insieme, giocatori e IA, di 0,88 rispetto alla taratura precedente:
+  // abbassare il solo giocatore non era piu' possibile, sotto 347 l'avversario
+  // piu' facile lo superava in corsa. Scalando entrambi i rapporti fra i quattro
+  // livelli restano intatti e cresce solo il vantaggio della palla.
+  basePaddleSpeed: 317,
   basePaddleWidth: 112,
   // Fascia di contatto, in multipli della larghezza della racchetta.
   playerContactReach: 0.66,
@@ -660,16 +664,16 @@ export const MATCH_FORMATS = {
 export const MATCH_FORMAT_IDS = Object.keys(MATCH_FORMATS);
 
 export const AI_OPPONENTS = [
-  { id: "rivale", name: "Rivale del Circuito", skill: 0.46, speed: 352, power: 0.88 },
-  { id: "ingegnere", name: "Ingegnere del Vapore", skill: 0.6, speed: 388, power: 0.96 },
-  { id: "campione", name: "Campione Steampunk", skill: 0.76, speed: 428, power: 1.05 },
+  { id: "rivale", name: "Rivale del Circuito", skill: 0.46, speed: 310, power: 0.88 },
+  { id: "ingegnere", name: "Ingegnere del Vapore", skill: 0.6, speed: 341, power: 0.96 },
+  { id: "campione", name: "Campione Steampunk", skill: 0.76, speed: 377, power: 1.05 },
   // Leggenda: stessa progressione degli altri gradini (+0.14 skill, +42 velocita',
   // +0.09 potenza). Non e' un avversario che bara: reagisce in 55 ms invece che
   // in 90 e sbaglia molto meno, ma resta dentro le stesse regole.
   // `reactionSkill` tenuto a 0.78: sopra quella soglia intercetta lo smash prima
   // del vetro e annulla lo x2. La Leggenda e' piu' forte perche' sbaglia meno e
   // sceglie meglio, non perche' ha riflessi impossibili.
-  { id: "leggenda", name: "Leggenda del Circuito", skill: 0.90, reactionSkill: 0.78, speed: 452, power: 1.14 },
+  { id: "leggenda", name: "Leggenda del Circuito", skill: 0.90, reactionSkill: 0.78, speed: 398, power: 1.14 },
 ];
 
 export const EVENT_LINES = [
@@ -861,9 +865,12 @@ export function careerRival(season) {
 export const CAREER_RAMP = {
   skillCap: 0.96,
   powerCap: 1.2,
-  // Il gradino piu' alto e' la Leggenda a 452: oltre +48 la difesa dello smash
-  // diventa una lotteria di pixel, non una lettura.
-  speedCap: 500,
+  // Il gradino piu' alto e' la Leggenda a 398: oltre +44 la difesa dello smash
+  // diventa una lotteria di pixel, non una lettura. Il tetto segue la Leggenda,
+  // quindi va riscalato ogni volta che si scala la velocita' del campo — se
+  // resta indietro, la carriera continua a produrre avversari tarati su un
+  // gioco piu' rapido di quello che si sta giocando.
+  speedCap: 442,
   seasonGain: 0.05,
   matchGain: 0.04,
 };
